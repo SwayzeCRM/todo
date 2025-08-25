@@ -1552,6 +1552,60 @@
             }
         }
 
+        // Get progress data for webhook
+        function getProgressData(taskId) {
+            // Find the task being toggled and its group
+            const taskDetails = taskInstructions[taskId];
+            const currentTaskGroup = taskDetails?.groupInfo || null;
+            
+            // Calculate overall progress
+            const totalTasks = currentChecklist.length;
+            const completedTasks = currentChecklist.filter(t => t.completed).length;
+            const overallProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            
+            // Calculate group progress if task belongs to a group
+            let groupProgress = null;
+            let groupCompletedTasks = 0;
+            let groupTotalTasks = 0;
+            
+            if (currentTaskGroup) {
+                // Get all tasks in the same group
+                const tasksInGroup = currentChecklist.filter(t => {
+                    const taskInfo = taskInstructions[t.id];
+                    return taskInfo?.groupInfo?.id === currentTaskGroup.id;
+                });
+                
+                groupTotalTasks = tasksInGroup.length;
+                groupCompletedTasks = tasksInGroup.filter(t => t.completed).length;
+                groupProgress = groupTotalTasks > 0 ? Math.round((groupCompletedTasks / groupTotalTasks) * 100) : 0;
+            }
+            
+            // Get user's group information
+            const userGroup = currentUser?.user_group_id ? {
+                id: currentUser.user_group_id,
+                name: currentUser.user_group_name || 'Unknown Group'
+            } : null;
+            
+            return {
+                userGroup: userGroup,
+                currentTaskGroup: currentTaskGroup ? {
+                    id: currentTaskGroup.id,
+                    name: currentTaskGroup.name,
+                    displayOrder: currentTaskGroup.display_order
+                } : null,
+                groupProgress: {
+                    completed: groupCompletedTasks,
+                    total: groupTotalTasks,
+                    percentage: groupProgress
+                },
+                overallProgress: {
+                    completed: completedTasks,
+                    total: totalTasks,
+                    percentage: overallProgress
+                }
+            };
+        }
+        
         // Toggle task completion
         async function toggleTask(taskId, completed) {
             console.log('Toggling task:', taskId, completed);
@@ -1576,14 +1630,12 @@
             // Send webhook notification
             const params = getUrlParams();
             if (params.email && params.locationId) {
-                // Debug: Log currentUser to see what profile data is available
+                // Get progress data for the webhook
+                const progressData = getProgressData(taskId);
+                
+                // Debug: Log currentUser and progress data
                 console.log('Current user data for webhook:', currentUser);
-                console.log('User profile fields:', {
-                    firstName: currentUser?.first_name,
-                    lastName: currentUser?.last_name,
-                    cellPhone: currentUser?.cell_phone,
-                    companyName: currentUser?.company_name
-                });
+                console.log('Progress data for webhook:', progressData);
                 
                 await sendWebhook({
                     userEmail: params.email,
@@ -1597,7 +1649,12 @@
                     lastName: currentUser?.last_name || '',
                     cellPhone: currentUser?.cell_phone || '',
                     companyName: currentUser?.company_name || '',
-                    fullName: [currentUser?.first_name, currentUser?.last_name].filter(n => n).join(' ') || params.email
+                    fullName: [currentUser?.first_name, currentUser?.last_name].filter(n => n).join(' ') || params.email,
+                    // Include group and progress information
+                    userGroup: progressData.userGroup,
+                    currentTaskGroup: progressData.currentTaskGroup,
+                    groupProgress: progressData.groupProgress,
+                    overallProgress: progressData.overallProgress
                 });
             }
         }
