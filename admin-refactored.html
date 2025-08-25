@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - DFY CRM</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="src/styles/admin.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1>DFY CRM Admin</h1>
+            <nav class="admin-nav">
+                <a href="#" class="nav-link active" data-section="tasks">
+                    <i data-lucide="list-checks"></i>
+                    Tasks
+                </a>
+                <a href="analytics.html" class="nav-link" data-section="analytics">
+                    <i data-lucide="bar-chart-2"></i>
+                    Users
+                </a>
+                <a href="onboarding.html" class="nav-link" data-section="test" target="_blank">
+                    <i data-lucide="play-circle"></i>
+                    Test Flow
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Subheader -->
+    <div class="page-subheader">
+        <div class="subheader-content">
+            <h2 class="page-title">Task Management</h2>
+            <div class="subheader-controls">
+                <div class="filter-controls">
+                    <span class="filter-label">Filter:</span>
+                    <select id="taskFilter" class="filter-select">
+                        <option value="all">All Tasks</option>
+                        <option value="everyone">Everyone</option>
+                        <option value="groups">Groups</option>
+                        <option value="individuals">Individual Users</option>
+                    </select>
+                    
+                    <!-- Dynamic filter dropdowns -->
+                    <select id="taskGroupsFilter" class="filter-select" style="display: none;">
+                        <option value="">All task groups...</option>
+                    </select>
+                    
+                    <select id="usersFilter" class="filter-select" style="display: none;">
+                        <option value="">Select user...</option>
+                    </select>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="add-task-btn" id="addTaskBtn">
+                        <i data-lucide="plus"></i>
+                        Add New Task
+                    </button>
+                    <button class="webhook-settings-btn" id="taskGroupsBtn">
+                        <i data-lucide="folder"></i>
+                        Task Groups
+                    </button>
+                    <button class="webhook-settings-btn" id="webhooksBtn">
+                        <i data-lucide="webhook"></i>
+                        Webhooks
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container" id="container">
+        <!-- Tasks Panel -->
+        <div class="tasks-panel" id="tasksPanel">
+            <div class="panel-header">
+                <h2>Tasks</h2>
+            </div>
+            <div id="tasksList" class="task-list">
+                <div class="loading">Loading tasks...</div>
+            </div>
+        </div>
+
+        <!-- Task Groups Panel (Hidden by default) -->
+        <div class="tasks-panel" id="taskGroupsPanel" style="display: none;">
+            <div class="panel-header">
+                <h2>Task Groups</h2>
+                <button class="close-btn" id="closeTaskGroupsBtn">&times;</button>
+            </div>
+            <div id="taskGroupsContent">
+                <!-- Task groups content will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Edit Panel (Hidden by default) -->
+        <div class="edit-panel" id="editPanel" style="display: none;">
+            <!-- Edit form will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <!-- Modals will be inserted dynamically -->
+
+    <!-- Application Scripts -->
+    <script type="module">
+        // Import modules
+        import { supabaseClient } from './src/api/supabaseClient.js';
+        import { taskService } from './src/services/taskService.js';
+        import { groupService } from './src/services/groupService.js';
+        import { Modal } from './src/components/common/Modal.js';
+        
+        // Make services available globally for now (will refactor later)
+        window.supabaseClient = supabaseClient;
+        window.taskService = taskService;
+        window.groupService = groupService;
+        window.Modal = Modal;
+        
+        // Application state
+        const app = {
+            currentSection: 'tasks',
+            currentTask: null,
+            isEditing: false,
+            filters: {
+                targetType: 'all',
+                taskGroupId: null,
+                userId: null
+            }
+        };
+        
+        // Initialize application
+        async function init() {
+            try {
+                // Load initial data
+                await loadTasks();
+                
+                // Set up event listeners
+                setupEventListeners();
+                
+                // Initialize Lucide icons
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
+                
+                console.log('Admin panel initialized');
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showError('Failed to initialize admin panel');
+            }
+        }
+        
+        // Load tasks
+        async function loadTasks() {
+            try {
+                const tasks = await taskService.loadTasks();
+                renderTasks(tasks);
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+                showError('Failed to load tasks');
+            }
+        }
+        
+        // Render tasks
+        function renderTasks(tasks) {
+            const tasksList = document.getElementById('tasksList');
+            
+            if (tasks.length === 0) {
+                tasksList.innerHTML = '<div class="empty-state">No tasks found. Click "Add New Task" to create your first task.</div>';
+                return;
+            }
+            
+            tasksList.innerHTML = tasks.map(task => `
+                <div class="task-item ${app.currentTask?.id === task.id ? 'active' : ''}" 
+                     data-task-id="${task.id}">
+                    <div class="task-position">${task.position || 0}</div>
+                    <div class="task-content">
+                        <div class="task-title">
+                            ${task.title}
+                            ${getTaskIndicator(task.target_type || 'all')}
+                        </div>
+                        <div class="task-description">${task.description}</div>
+                    </div>
+                    <div class="task-actions">
+                        <div class="task-toggle ${task.is_active ? 'active' : ''}" 
+                             data-task-id="${task.id}"
+                             data-active="${task.is_active}"></div>
+                        <button class="delete-btn" data-task-id="${task.id}">&times;</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Re-create icons
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
+        
+        // Get task indicator HTML
+        function getTaskIndicator(targetType) {
+            const indicators = {
+                'all': { class: 'everyone', label: 'Everyone' },
+                'groups': { class: 'groups', label: 'Groups' },
+                'locations': { class: 'locations', label: 'Locations' },
+                'individuals': { class: 'individuals', label: 'Users' }
+            };
+            
+            const indicator = indicators[targetType] || indicators['all'];
+            return `<span class="task-indicator ${indicator.class}">${indicator.label}</span>`;
+        }
+        
+        // Set up event listeners
+        function setupEventListeners() {
+            // Add task button
+            document.getElementById('addTaskBtn').addEventListener('click', () => {
+                showAddTaskModal();
+            });
+            
+            // Task groups button
+            document.getElementById('taskGroupsBtn').addEventListener('click', () => {
+                showTaskGroups();
+            });
+            
+            // Webhooks button
+            document.getElementById('webhooksBtn').addEventListener('click', () => {
+                showWebhooks();
+            });
+            
+            // Filter change
+            document.getElementById('taskFilter').addEventListener('change', handleFilterChange);
+            
+            // Task list clicks (event delegation)
+            document.getElementById('tasksList').addEventListener('click', (e) => {
+                // Task item click
+                const taskItem = e.target.closest('.task-item');
+                if (taskItem && !e.target.closest('.task-actions')) {
+                    const taskId = taskItem.dataset.taskId;
+                    editTask(taskId);
+                }
+                
+                // Toggle active
+                if (e.target.classList.contains('task-toggle')) {
+                    const taskId = e.target.dataset.taskId;
+                    const isActive = e.target.dataset.active === 'true';
+                    toggleTaskActive(taskId, !isActive);
+                }
+                
+                // Delete task
+                if (e.target.classList.contains('delete-btn')) {
+                    const taskId = e.target.dataset.taskId;
+                    deleteTask(taskId);
+                }
+            });
+            
+            // Close task groups
+            const closeBtn = document.getElementById('closeTaskGroupsBtn');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    document.getElementById('taskGroupsPanel').style.display = 'none';
+                    document.getElementById('tasksPanel').style.display = 'block';
+                });
+            }
+        }
+        
+        // Show add task modal
+        async function showAddTaskModal() {
+            const modal = new Modal({
+                title: 'Add New Task',
+                size: 'xlarge',
+                content: await getTaskFormHTML(),
+                confirmText: 'Save Task',
+                onConfirm: async () => {
+                    const formData = getTaskFormData();
+                    try {
+                        await taskService.createTask(formData);
+                        await loadTasks();
+                        showSuccess('Task created successfully');
+                        return true;
+                    } catch (error) {
+                        showError(error.message);
+                        return false;
+                    }
+                }
+            });
+            modal.show();
+        }
+        
+        // Edit task
+        async function editTask(taskId) {
+            const task = taskService.tasks.find(t => t.id === taskId);
+            if (!task) return;
+            
+            app.currentTask = task;
+            
+            const modal = new Modal({
+                title: 'Edit Task',
+                size: 'xlarge',
+                content: await getTaskFormHTML(task),
+                confirmText: 'Save Changes',
+                onConfirm: async () => {
+                    const formData = getTaskFormData();
+                    try {
+                        await taskService.updateTask(taskId, formData);
+                        await loadTasks();
+                        showSuccess('Task updated successfully');
+                        return true;
+                    } catch (error) {
+                        showError(error.message);
+                        return false;
+                    }
+                }
+            });
+            modal.show();
+        }
+        
+        // Delete task
+        async function deleteTask(taskId) {
+            const confirmed = await Modal.confirm('Are you sure you want to delete this task?', {
+                title: 'Delete Task',
+                confirmText: 'Delete',
+                cancelText: 'Cancel'
+            });
+            
+            if (confirmed) {
+                try {
+                    await taskService.deleteTask(taskId);
+                    await loadTasks();
+                    showSuccess('Task deleted successfully');
+                } catch (error) {
+                    showError('Failed to delete task');
+                }
+            }
+        }
+        
+        // Toggle task active status
+        async function toggleTaskActive(taskId, isActive) {
+            try {
+                await taskService.toggleTaskActive(taskId, isActive);
+                await loadTasks();
+            } catch (error) {
+                showError('Failed to update task status');
+            }
+        }
+        
+        // Handle filter change
+        async function handleFilterChange() {
+            const filterValue = document.getElementById('taskFilter').value;
+            app.filters.targetType = filterValue;
+            
+            // Show/hide secondary filters
+            document.getElementById('taskGroupsFilter').style.display = 
+                filterValue === 'groups' ? 'inline-block' : 'none';
+            document.getElementById('usersFilter').style.display = 
+                filterValue === 'individuals' ? 'inline-block' : 'none';
+            
+            // Apply filters
+            const filtered = taskService.filterTasks(app.filters);
+            renderTasks(filtered);
+        }
+        
+        // Get task form HTML (simplified for now)
+        async function getTaskFormHTML(task = null) {
+            return `
+                <form id="taskForm">
+                    <div class="form-group">
+                        <label for="taskId">Task ID</label>
+                        <input type="text" id="taskId" value="${task?.task_id || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="title">Title</label>
+                        <input type="text" id="title" value="${task?.title || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" required>${task?.description || ''}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="instructionTitle">Instruction Title</label>
+                        <input type="text" id="instructionTitle" value="${task?.instruction_title || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="instructionContent">Instruction Content</label>
+                        <div id="quillEditor"></div>
+                        <input type="hidden" id="instructionContent" value="${task?.instruction_content || ''}">
+                    </div>
+                </form>
+            `;
+        }
+        
+        // Get form data
+        function getTaskFormData() {
+            return {
+                task_id: document.getElementById('taskId').value,
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                instruction_title: document.getElementById('instructionTitle').value,
+                instruction_content: document.getElementById('instructionContent').value
+            };
+        }
+        
+        // Show task groups
+        async function showTaskGroups() {
+            document.getElementById('tasksPanel').style.display = 'none';
+            document.getElementById('taskGroupsPanel').style.display = 'block';
+            
+            try {
+                await groupService.loadTaskGroups();
+                renderTaskGroups();
+            } catch (error) {
+                showError('Failed to load task groups');
+            }
+        }
+        
+        // Render task groups
+        function renderTaskGroups() {
+            const content = document.getElementById('taskGroupsContent');
+            const groups = groupService.taskGroups;
+            
+            content.innerHTML = `
+                <button class="btn btn-primary" style="margin-bottom: 20px;">+ Create Task Group</button>
+                <div class="task-list">
+                    ${groups.map(group => `
+                        <div class="group-card" style="background: ${group.card_color || '#f8fafc'};">
+                            <h3>${group.group_name}</h3>
+                            <p>${group.group_description || 'No description'}</p>
+                            <div class="group-actions">
+                                <button class="btn-small btn-edit">Edit</button>
+                                <button class="btn-small btn-danger">Delete</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        // Show webhooks
+        function showWebhooks() {
+            Modal.alert('Webhooks panel coming soon!', {
+                title: 'Webhooks'
+            });
+        }
+        
+        // Show success message
+        function showSuccess(message) {
+            // For now, use console
+            console.log('✅', message);
+        }
+        
+        // Show error message
+        function showError(message) {
+            // For now, use console
+            console.error('❌', message);
+        }
+        
+        // Initialize on DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,3092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFY CRM - User Management Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #F5F7FA;
+            min-height: 100vh;
+            color: #1F2937;
+        }
+
+        .header {
+            background: #1E3A8A;
+            color: #FFFFFF;
+            padding: 20px 0;
+            margin-bottom: 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .admin-nav {
+            display: flex;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 4px;
+            gap: 2px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            flex-wrap: nowrap;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .nav-link {
+            position: relative;
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: rgba(255, 255, 255, 0.85);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 34px;
+            box-sizing: border-box;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 6px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .nav-link:hover::before {
+            opacity: 1;
+        }
+
+        .nav-link:hover {
+            color: #FFFFFF;
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%);
+            color: #FFFFFF;
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            font-weight: 600;
+        }
+
+        .nav-link.active::before {
+            opacity: 0;
+        }
+
+        .nav-icon {
+            width: 14px;
+            height: 14px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            filter: brightness(0) invert(1);
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .nav-link:hover .nav-icon,
+        .nav-link.active .nav-icon {
+            opacity: 1;
+        }
+
+        .nav-icon.tasks {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' /%3E%3C/svg%3E");
+        }
+
+        .nav-icon.analytics {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' /%3E%3C/svg%3E");
+        }
+
+        .nav-icon.test {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' /%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z' /%3E%3C/svg%3E");
+        }
+
+        .nav-icon.preview {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z' /%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' /%3E%3C/svg%3E");
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #FFFFFF;
+        }
+
+        .btn-secondary:hover {
+            background: #FFFFFF;
+            color: #1E3A8A;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Metrics Dashboard */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .metric-card {
+            background: linear-gradient(180deg, #FFFFFF 0%, #F9FAFB 100%);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #E5E7EB;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1E3A8A;
+            margin-bottom: 4px;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: #6B7280;
+            font-weight: 500;
+        }
+
+        .metric-trend {
+            font-size: 12px;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .trend-up {
+            color: #10B981;
+        }
+
+        .trend-down {
+            color: #EF4444;
+        }
+
+        .trend-neutral {
+            color: #6B7280;
+        }
+
+        /* Progress Bar in Metric Card */
+        .metric-progress {
+            margin-top: 12px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #E5E7EB;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10B981 0%, #059669 100%);
+            transition: width 0.3s ease;
+        }
+
+        /* Search and Filter Panel */
+        .controls-panel {
+            background: #FFFFFF;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #E5E7EB;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto;
+            gap: 16px;
+            align-items: end;
+        }
+
+        .search-group {
+            position: relative;
+        }
+
+        .search-group label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3B82F6;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9CA3AF;
+            pointer-events: none;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+        }
+
+        .filter-select {
+            padding: 12px 16px;
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #FFFFFF;
+            min-width: 140px;
+            transition: border-color 0.2s ease;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #3B82F6;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%);
+            color: #FFFFFF;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Users Table */
+        .users-panel {
+            background: #FFFFFF;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #E5E7EB;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #E5E7EB;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1F2937;
+        }
+
+        .results-count {
+            color: #6B7280;
+            font-size: 14px;
+        }
+
+        .users-table-container {
+            overflow-x: auto;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .users-table th {
+            background: #F9FAFB;
+            padding: 16px 24px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+            white-space: nowrap;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .users-table td {
+            padding: 16px 24px;
+            border-bottom: 1px solid #F3F4F6;
+            vertical-align: middle;
+        }
+
+        .users-table tr:hover {
+            background: #F9FAFB;
+        }
+
+        .user-email {
+            font-weight: 500;
+            color: #1F2937;
+        }
+
+        .user-location {
+            color: #6B7280;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .progress-cell {
+            min-width: 200px;
+        }
+
+        .user-progress {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .progress-text {
+            font-weight: 600;
+            color: #1F2937;
+        }
+
+        .progress-text.completed {
+            color: #10B981;
+        }
+
+        .progress-bar-small {
+            width: 100%;
+            height: 6px;
+            background: #E5E7EB;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill-small {
+            height: 100%;
+            background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%);
+            transition: width 0.3s ease;
+        }
+
+        .progress-fill-small.completed {
+            background: linear-gradient(90deg, #10B981 0%, #059669 100%);
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-completed {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .status-in-progress {
+            background: #DBEAFE;
+            color: #1E40AF;
+        }
+
+        .status-not-started {
+            background: #F3F4F6;
+            color: #374151;
+        }
+
+        .date-cell {
+            color: #6B7280;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 60px;
+            color: #6B7280;
+            font-size: 16px;
+        }
+
+        .error {
+            background: #FEF2F2;
+            border: 1px solid #FECACA;
+            color: #DC2626;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .controls-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .filter-controls {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                gap: 16px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 16px;
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 16px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
+            }
+
+            .header-content {
+                gap: 20px;
+            }
+
+            .admin-nav {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 1px;
+                padding: 3px;
+            }
+
+            .nav-link {
+                font-size: 12px;
+                padding: 8px 12px;
+                min-height: 32px;
+            }
+
+            .nav-icon {
+                width: 14px;
+                height: 14px;
+            }
+
+            .users-table th,
+            .users-table td {
+                padding: 12px 16px;
+            }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6B7280;
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .page-subheader {
+            background: #F3F4F6;
+            border-bottom: 1px solid #E5E7EB;
+            padding: 0;
+        }
+
+        .subheader-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            height: 48px;
+        }
+
+        .page-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+            margin: 0;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .create-group-btn, .manage-groups-btn, .export-users-btn, .manage-users-btn, .export-groups-btn {
+            background: #FFFFFF;
+            border: 1px solid #D1D5DB;
+            color: #374151;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            line-height: 1;
+            margin: 0;
+        }
+
+        .create-group-btn:hover, .manage-groups-btn:hover, .export-users-btn:hover, .manage-users-btn:hover, .export-groups-btn:hover {
+            background: #1E3A8A;
+            border-color: #1E3A8A;
+            color: #FFFFFF;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 4px;
+            border: 1px solid;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: #1E3A8A;
+            border-color: #1E3A8A;
+            color: #FFFFFF;
+        }
+
+        .btn-primary:hover {
+            background: #1E40AF;
+            border-color: #1E40AF;
+        }
+
+        .btn-danger {
+            background: #DC2626;
+            border-color: #DC2626;
+            color: #FFFFFF;
+        }
+
+        .btn-danger:hover {
+            background: #B91C1C;
+            border-color: #B91C1C;
+        }
+
+        .actions-cell {
+            width: 120px;
+            text-align: center;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: 1px solid #D1D5DB;
+            background: #FFFFFF;
+            color: #374151;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .create-task-btn:hover {
+            background: #10B981;
+            border-color: #10B981;
+            color: #FFFFFF;
+            transform: translateY(-1px);
+        }
+
+        .crm-link-btn:hover {
+            background: #1E40AF;
+            border-color: #1E40AF;
+            color: #FFFFFF;
+            transform: translateY(-1px);
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+        
+        /* Create Group Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: #FFFFFF;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            max-width: 900px;
+            width: 95%;
+            max-height: 95vh;
+            overflow-y: auto;
+            position: relative;
+            margin: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid #E5E7EB;
+            position: sticky;
+            top: 0;
+            background: #FFFFFF;
+            z-index: 10;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1F2937;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #6B7280;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: #F3F4F6;
+            color: #1F2937;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            padding: 0 24px;
+        }
+
+        .form-section {
+            margin-bottom: 24px;
+            padding: 0 24px;
+            border-top: 1px solid #F3F4F6;
+            padding-top: 20px;
+        }
+
+        .form-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1F2937;
+            margin: 0 0 12px 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .form-group input[type="text"],
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+            resize: vertical;
+        }
+
+        .form-group input[type="text"]:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #1E3A8A;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-group input[type="email"],
+        .form-group input[type="tel"],
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input[type="email"]:focus,
+        .form-group input[type="tel"]:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #1E3A8A;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        }
+
+        .task-checklist {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #E5E7EB;
+            border-radius: 6px;
+            padding: 12px;
+            background: #F9FAFB;
+        }
+
+        .task-checklist label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 13px;
+            font-weight: normal;
+        }
+
+        .task-checklist input[type="checkbox"] {
+            width: auto;
+        }
+
+        .search-container {
+            margin-bottom: 16px;
+        }
+
+        .search-container input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #D1D5DB;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            transition: border-color 0.2s ease;
+            background: #FAFAFA;
+        }
+
+        .search-container input[type="text"]:focus {
+            outline: none;
+            border-color: #1E3A8A;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            background: #FFFFFF;
+        }
+
+        .iframe-container {
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            background: #FFFFFF;
+            margin-bottom: 20px;
+            min-height: 300px;
+            max-height: 400px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .iframe-header {
+            background: #F9FAFB;
+            border-bottom: 1px solid #E5E7EB;
+            padding: 12px 16px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        .iframe-content {
+            max-height: 350px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #D1D5DB #F9FAFB;
+        }
+
+        .iframe-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .iframe-content::-webkit-scrollbar-track {
+            background: #F9FAFB;
+        }
+
+        .iframe-content::-webkit-scrollbar-thumb {
+            background: #D1D5DB;
+            border-radius: 4px;
+        }
+
+        .iframe-content::-webkit-scrollbar-thumb:hover {
+            background: #9CA3AF;
+        }
+
+        .search-result-item {
+            padding: 14px 16px;
+            border-bottom: 1px solid #F3F4F6;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 0;
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-result-item:hover {
+            background: #F9FAFB;
+            border-left: 4px solid #1E3A8A;
+            padding-left: 12px;
+        }
+
+        .search-result-item.selected {
+            background: #EBF8FF;
+            color: #1E40AF;
+            border-left: 4px solid #1E40AF;
+            padding-left: 12px;
+        }
+
+        .search-result-item.filtered-out {
+            display: none;
+        }
+
+        .result-info {
+            flex: 1;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 4px;
+        }
+
+        .result-subtitle {
+            font-size: 12px;
+            color: #6B7280;
+        }
+
+        .add-button {
+            background: #1E3A8A;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .add-button:hover {
+            background: #1E40AF;
+            transform: translateY(-1px);
+        }
+
+        .selected-items {
+            margin-top: 16px;
+        }
+
+        .selected-items h4 {
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin: 0 0 8px 0;
+        }
+
+        .selected-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #EBF8FF;
+            color: #1E40AF;
+            padding: 4px 8px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-right: 8px;
+            margin-bottom: 4px;
+        }
+
+        .remove-item {
+            background: none;
+            border: none;
+            color: #1E40AF;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.2s ease;
+        }
+
+        .remove-item:hover {
+            background: #DBEAFE;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            padding: 20px 24px;
+            border-top: 1px solid #E5E7EB;
+            position: sticky;
+            bottom: 0;
+            background: #FFFFFF;
+        }
+
+        .btn-primary {
+            background: #1E3A8A;
+            color: #FFFFFF;
+            border: 1px solid #1E3A8A;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background: #1E40AF;
+            border-color: #1E40AF;
+        }
+
+        .btn-secondary {
+            background: #FFFFFF;
+            color: #374151;
+            border: 1px solid #D1D5DB;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: #F9FAFB;
+            border-color: #9CA3AF;
+        }
+
+        /* Enhanced responsive design for navigation */
+        @media (max-width: 768px) {
+            .header-content {
+                gap: 15px;
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .admin-nav {
+                max-width: none;
+                width: 100%;
+                order: 2;
+            }
+            
+            .nav-link {
+                padding: 10px 8px;
+                font-size: 11px;
+                gap: 4px;
+                min-height: 40px;
+            }
+            
+            .nav-icon {
+                width: 12px;
+                height: 12px;
+            }
+            
+            .header h1 {
+                font-size: 22px;
+                text-align: center;
+                order: 1;
+            }
+
+            .page-title {
+                text-align: center;
+                font-size: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-link {
+                padding: 8px 6px;
+                font-size: 10px;
+                gap: 3px;
+                flex-direction: column;
+                text-align: center;
+                line-height: 1.2;
+            }
+            
+            .nav-icon {
+                width: 14px;
+                height: 14px;
+                margin-bottom: 2px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .admin-nav {
+                max-width: 700px;
+            }
+            
+            .nav-link {
+                padding: 10px 16px;
+                font-size: 13px;
+                gap: 8px;
+            }
+            
+            .nav-icon {
+                width: 16px;
+                height: 16px;
+            }
+        }
+    </style>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>DFY CRM Admin Panel</h1>
+            <div class="admin-nav" id="adminNav">
+                <!-- Navigation links will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <div class="page-subheader">
+        <div class="subheader-content">
+            <span class="page-title">User Management</span>
+            <div class="action-buttons">
+                <button class="create-group-btn" onclick="openCreateGroupModal()">+ Create Group</button>
+                <button class="manage-groups-btn" onclick="openManageGroupsModal()">Manage Groups</button>
+                <button class="export-users-btn" onclick="exportUsers()">Export Users</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Key Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value" id="totalUsers">-</div>
+                <div class="metric-label">Total Users</div>
+                <div class="metric-trend trend-up" id="usersTrend">
+                    ↑ New this week
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-value" id="completionRate">-%</div>
+                <div class="metric-label">Overall Completion Rate</div>
+                <div class="metric-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="completionProgress"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-value" id="completedUsers">-</div>
+                <div class="metric-label">Users Completed All Tasks</div>
+                <div class="metric-trend trend-up" id="completedTrend">
+                    ↑ +12% this week
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-value" id="activeUsers">-</div>
+                <div class="metric-label">Active Users</div>
+                <div class="metric-trend trend-neutral" id="activeTrend">
+                    → This week
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filter Controls -->
+        <div class="controls-panel">
+            <div class="controls-grid">
+                <div class="search-group">
+                    <label for="searchInput">Search Users</label>
+                    <div style="position: relative;">
+                        <input type="text" id="searchInput" class="search-input" placeholder="Search by email, name, company, phone, or location...">
+                        <span class="search-icon">🔍</span>
+                    </div>
+                </div>
+
+                <div class="filter-controls" style="display: flex; gap: 16px;">
+                    <div class="filter-group">
+                        <label for="statusFilter">Status</label>
+                        <select id="statusFilter" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="completed">Completed</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="not-started">Not Started</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="sortBy">Sort By</label>
+                        <select id="sortBy" class="filter-select">
+                            <option value="created_desc">Newest First</option>
+                            <option value="created_asc">Oldest First</option>
+                            <option value="progress_desc">Most Progress</option>
+                            <option value="progress_asc">Least Progress</option>
+                            <option value="email_asc">Email A-Z</option>
+                            <option value="email_desc">Email Z-A</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-primary" onclick="refreshData()">Refresh</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="users-panel">
+            <div class="panel-header">
+                <h2>Users</h2>
+                <div class="results-count" id="resultsCount">Loading...</div>
+            </div>
+            
+            <div class="users-table-container">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Progress</th>
+                            <th>Status</th>
+                            <th>Last Activity</th>
+                            <th>Created</th>
+                            <th>Quick Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <tr>
+                            <td colspan="6">
+                                <div class="loading">Loading user data...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        const SUPABASE_URL = 'https://vvtzalcisnpibnlunqgn.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2dHphbGNpc25waWJubHVucWduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU5NTk4MzMsImV4cCI6MjA3MTUzNTgzM30.LJqY5AjAuwH5k65XY9cxfuqiuNNtjYo5k210IAg0PCk';
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let allUsers = [];
+        let allTasks = [];
+        let filteredUsers = [];
+
+        // Enhanced Global Admin Navigation System  
+        function initAdminNavigation() {
+            const currentPath = window.location.pathname;
+            const currentDir = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+            const baseUrl = window.location.origin + currentDir;
+            const currentFile = currentPath.split('/').pop().toLowerCase();
+            
+            const navItems = [
+                { 
+                    file: 'admin.html', 
+                    iconClass: 'tasks', 
+                    label: 'Task Manager',
+                    activePatterns: ['admin.html', 'admin', '']
+                },
+                { 
+                    file: 'analytics.html', 
+                    iconClass: 'analytics', 
+                    label: 'Users',
+                    activePatterns: ['analytics.html', 'analytics']
+                },
+                { 
+                    file: 'test.html', 
+                    iconClass: 'test', 
+                    label: 'System Test',
+                    activePatterns: ['test.html', 'test', 'diagnostic']
+                },
+                { 
+                    file: 'onboarding.html?email=admin@test.com&locationid=admin_preview', 
+                    iconClass: 'preview', 
+                    label: 'Preview',
+                    activePatterns: ['onboarding.html', 'onboarding'],
+                    isPreview: true
+                }
+            ];
+            
+            const navHtml = navItems.map(item => {
+                const isActive = item.activePatterns.some(pattern => 
+                    currentFile === pattern || 
+                    currentFile.includes(pattern) ||
+                    (pattern === '' && (currentFile === 'index.html' || currentFile === ''))
+                );
+                
+                const activeClass = isActive ? ' active' : '';
+                const href = baseUrl + item.file;
+                const target = item.isPreview ? ' target="_blank"' : '';
+                
+                return `<a href="${href}" class="nav-link${activeClass}"${target}>
+                    <div class="nav-icon ${item.iconClass}"></div>
+                    <span>${item.label}</span>
+                </a>`;
+            }).join('');
+            
+            const navContainer = document.getElementById('adminNav');
+            navContainer.style.opacity = '0';
+            navContainer.innerHTML = navHtml;
+            
+            setTimeout(() => {
+                navContainer.style.transition = 'opacity 0.3s ease';
+                navContainer.style.opacity = '1';
+            }, 50);
+        }
+
+        // Delete user function
+        async function deleteUser(userId, userEmail) {
+            // Show confirmation dialog
+            const confirmMessage = `Are you sure you want to delete user "${userEmail}"?\n\nThis will permanently delete:\n• User account\n• All completed task records\n• User profile information\n• Group assignments\n\nThis action cannot be undone.`;
+            
+            if (!confirm(confirmMessage)) {
+                return; // User cancelled
+            }
+            
+            try {
+                console.log('Deleting user:', userId, userEmail);
+                
+                // Delete the user from database
+                const { error } = await supabaseClient
+                    .from('onboarding_users')
+                    .delete()
+                    .eq('id', userId);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // Show success message
+                alert(`User "${userEmail}" has been successfully deleted.`);
+                
+                // Refresh the data
+                await loadAllData();
+                
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                alert('Failed to delete user: ' + error.message);
+            }
+        }
+        
+        // User Editing Functions
+        async function editUser(userId) {
+            console.log('editUser function called with userId:', userId);
+            
+            // Check if userId is valid (UUID string)
+            if (!userId || typeof userId !== 'string') {
+                console.error('Invalid userId:', userId);
+                alert('Error: Invalid user ID');
+                return;
+            }
+            
+            try {
+                // Load user data with all fields
+                const { data: user, error: userError } = await supabaseClient
+                    .from('onboarding_users')
+                    .select('*')
+                    .eq('id', userId)
+                    .single();
+
+                if (userError) throw userError;
+
+                // Load user groups for dropdown
+                const { data: userGroups, error: groupsError } = await supabaseClient
+                    .from('user_groups')
+                    .select('*')
+                    .order('group_name');
+
+                if (groupsError) throw groupsError;
+
+                // Load all tasks for checklist
+                const { data: allTasks, error: tasksError } = await supabaseClient
+                    .from('onboarding_tasks')
+                    .select('*')
+                    .eq('is_active', true)
+                    .order('position');
+
+                if (tasksError) throw tasksError;
+
+                // Populate form
+                document.getElementById('editUserId').value = user.id;
+                document.getElementById('editUserEmail').value = user.email || '';
+                document.getElementById('editUserLocationId').value = user.location_id || '';
+                document.getElementById('editUserFirstName').value = user.first_name || '';
+                document.getElementById('editUserLastName').value = user.last_name || '';
+                document.getElementById('editUserPhone').value = user.cell_phone || '';
+                document.getElementById('editUserCompany').value = user.company_name || '';
+                document.getElementById('editUserProfileCompleted').checked = user.profile_completed || false;
+                document.getElementById('editUserNotifications').checked = user.notifications_enabled !== false;
+
+                // Populate user groups dropdown
+                const groupSelect = document.getElementById('editUserGroup');
+                groupSelect.innerHTML = '<option value="">No Group</option>';
+                userGroups.forEach(group => {
+                    const selected = user.user_group_id === group.id ? 'selected' : '';
+                    groupSelect.innerHTML += `<option value="${group.id}" ${selected}>${group.group_name}</option>`;
+                });
+
+                // Populate tasks checklist
+                const completedTasks = user.completed_tasks || [];
+                const tasksContainer = document.getElementById('completedTasksList');
+                tasksContainer.innerHTML = allTasks.map(task => {
+                    const isCompleted = completedTasks.includes(task.id);
+                    return `
+                        <label>
+                            <input type="checkbox" value="${task.id}" ${isCompleted ? 'checked' : ''}>
+                            ${task.title}
+                        </label>
+                    `;
+                }).join('');
+
+                // Show modal
+                console.log('About to show modal. Modal element:', document.getElementById('userEditModal'));
+                document.getElementById('userEditModal').style.display = 'flex';
+                console.log('Modal should now be visible');
+
+            } catch (error) {
+                console.error('Error loading user for edit:', error);
+                alert('Failed to load user data: ' + error.message);
+            }
+        }
+
+        function closeUserEditModal() {
+            document.getElementById('userEditModal').style.display = 'none';
+        }
+
+        async function saveUserChanges(event) {
+            event.preventDefault();
+            
+            try {
+                const userId = document.getElementById('editUserId').value;
+                
+                // Get completed tasks from checkboxes
+                const completedTasksCheckboxes = document.querySelectorAll('#completedTasksList input[type="checkbox"]:checked');
+                const completedTasks = Array.from(completedTasksCheckboxes).map(cb => parseInt(cb.value));
+                
+                // Prepare user data
+                const userData = {
+                    email: document.getElementById('editUserEmail').value,
+                    location_id: document.getElementById('editUserLocationId').value,
+                    first_name: document.getElementById('editUserFirstName').value || null,
+                    last_name: document.getElementById('editUserLastName').value || null,
+                    cell_phone: document.getElementById('editUserPhone').value || null,
+                    company_name: document.getElementById('editUserCompany').value || null,
+                    user_group_id: document.getElementById('editUserGroup').value || null,
+                    completed_tasks: completedTasks,
+                    profile_completed: document.getElementById('editUserProfileCompleted').checked,
+                    notifications_enabled: document.getElementById('editUserNotifications').checked,
+                    updated_at: new Date().toISOString()
+                };
+
+                // Update user in database
+                const { error } = await supabaseClient
+                    .from('onboarding_users')
+                    .update(userData)
+                    .eq('id', userId);
+
+                if (error) throw error;
+
+                alert('User updated successfully!');
+                closeUserEditModal();
+                
+                // Refresh the page data
+                await loadData();
+
+            } catch (error) {
+                console.error('Error saving user changes:', error);
+                alert('Failed to save user changes: ' + error.message);
+            }
+        }
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Make functions globally accessible (only assign if they exist)
+            if (typeof editUser !== 'undefined') window.editUser = editUser;
+            if (typeof deleteUser !== 'undefined') window.deleteUser = deleteUser;
+            if (typeof copyUrlParameter !== 'undefined') window.copyUrlParameter = copyUrlParameter;
+            if (typeof closeUserEditModal !== 'undefined') window.closeUserEditModal = closeUserEditModal;
+            if (typeof saveUserChanges !== 'undefined') window.saveUserChanges = saveUserChanges;
+            if (typeof createUserTask !== 'undefined') window.createUserTask = createUserTask;
+            if (typeof openCRMAccount !== 'undefined') window.openCRMAccount = openCRMAccount;
+            if (typeof editGroup !== 'undefined') window.editGroup = editGroup;
+            if (typeof deleteGroup !== 'undefined') window.deleteGroup = deleteGroup;
+            if (typeof closeEditGroupModal !== 'undefined') window.closeEditGroupModal = closeEditGroupModal;
+            if (typeof updateGroup !== 'undefined') window.updateGroup = updateGroup;
+            if (typeof openCreateGroupModal !== 'undefined') window.openCreateGroupModal = openCreateGroupModal;
+            if (typeof openManageGroupsModal !== 'undefined') window.openManageGroupsModal = openManageGroupsModal;
+            if (typeof exportUsers !== 'undefined') window.exportUsers = exportUsers;
+            if (typeof refreshData !== 'undefined') window.refreshData = refreshData;
+            if (typeof addGroup !== 'undefined') window.addGroup = addGroup;
+            if (typeof addLocation !== 'undefined') window.addLocation = addLocation;
+            if (typeof removeGroup !== 'undefined') window.removeGroup = removeGroup;
+            
+            initAdminNavigation();
+            await loadAllData();
+            setupEventListeners();
+            lucide.createIcons();
+        });
+
+        // Setup event listeners
+        function setupEventListeners() {
+            document.getElementById('searchInput').addEventListener('input', debounce(filterAndDisplayUsers, 300));
+            document.getElementById('statusFilter').addEventListener('change', filterAndDisplayUsers);
+            document.getElementById('sortBy').addEventListener('change', filterAndDisplayUsers);
+            
+            // Add event delegation for action buttons
+            document.addEventListener('click', function(e) {
+                // Handle edit user button
+                if (e.target.closest('.edit-user-btn')) {
+                    const button = e.target.closest('.edit-user-btn');
+                    const userId = button.getAttribute('data-user-id');
+                    console.log('Edit button clicked, userId:', userId);
+                    if (userId) {
+                        editUser(userId); // Don't parse as int - IDs are UUIDs
+                    }
+                }
+                
+                // Handle create task button
+                if (e.target.closest('.create-task-btn')) {
+                    const button = e.target.closest('.create-task-btn');
+                    const email = button.getAttribute('data-email');
+                    const location = button.getAttribute('data-location');
+                    if (email && location) {
+                        createUserTask(email, location);
+                    }
+                }
+                
+                // Handle CRM link button
+                if (e.target.closest('.crm-link-btn')) {
+                    const button = e.target.closest('.crm-link-btn');
+                    const location = button.getAttribute('data-location');
+                    if (location) {
+                        openCRMAccount(location);
+                    }
+                }
+                
+                // Handle delete user button
+                if (e.target.closest('.delete-user-btn')) {
+                    const button = e.target.closest('.delete-user-btn');
+                    const userId = button.getAttribute('data-user-id');
+                    const userEmail = button.getAttribute('data-user-email');
+                    if (userId) {
+                        deleteUser(userId, userEmail);
+                    }
+                }
+            });
+        }
+
+        // Debounce function for search
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Load all data
+        async function loadAllData() {
+            try {
+                console.log('Loading analytics data...');
+                
+                // Load users, tasks, and groups in parallel
+                const [usersResult, tasksResult, groupsResult] = await Promise.all([
+                    supabaseClient.from('onboarding_users').select('*').order('created_at', { ascending: false }),
+                    supabaseClient.from('onboarding_tasks').select('*').eq('is_active', true).order('position'),
+                    supabaseClient.from('user_groups').select('*')
+                ]);
+
+                // Debug: Log raw data from database
+                console.log('Raw users data from database:', usersResult.data);
+                console.log('Raw tasks data from database:', tasksResult.data);
+
+                if (usersResult.error) throw usersResult.error;
+                if (tasksResult.error) throw tasksResult.error;
+                if (groupsResult.error) throw groupsResult.error;
+
+                allUsers = usersResult.data || [];
+                allTasks = tasksResult.data || [];
+                const userGroups = groupsResult.data || [];
+                
+                // Create a map for quick group name lookup
+                const groupMap = new Map();
+                userGroups.forEach(group => {
+                    groupMap.set(group.id, group.group_name);
+                });
+                
+                // Add group name to each user
+                allUsers = allUsers.map(user => ({
+                    ...user,
+                    user_group_name: user.user_group_id ? groupMap.get(user.user_group_id) : null
+                }));
+
+                console.log('Loaded users:', allUsers.length);
+                console.log('Loaded tasks:', allTasks.length);
+
+                // Process and display data
+                processUserData();
+                updateMetrics();
+                filterAndDisplayUsers();
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showError('Failed to load user data. Please check your database connection.');
+            }
+        }
+
+        // Process user data to add progress information
+        function processUserData() {
+            const totalTasks = allTasks.length;
+            
+            console.log('Processing user data...');
+            console.log('Total active tasks:', totalTasks);
+
+            allUsers = allUsers.map(user => {
+                console.log('Processing user:', user.email);
+                console.log('User completed_tasks raw:', user.completed_tasks);
+                console.log('User checklist raw:', user.checklist);
+                
+                // Handle different data sources - the onboarding system saves to 'checklist' column
+                let userTasks = [];
+                
+                // First try the checklist column (this is where onboarding.html saves data)
+                if (Array.isArray(user.checklist)) {
+                    userTasks = user.checklist;
+                } else if (typeof user.checklist === 'string') {
+                    try {
+                        userTasks = JSON.parse(user.checklist);
+                    } catch (e) {
+                        console.warn('Failed to parse checklist string:', user.checklist);
+                        userTasks = [];
+                    }
+                }
+                
+                // Fallback to completed_tasks column if checklist is empty
+                if (userTasks.length === 0) {
+                    if (Array.isArray(user.completed_tasks)) {
+                        userTasks = user.completed_tasks.map(taskId => ({ id: taskId, completed: true }));
+                    } else if (typeof user.completed_tasks === 'string') {
+                        try {
+                            const completedIds = JSON.parse(user.completed_tasks);
+                            userTasks = completedIds.map(taskId => ({ id: taskId, completed: true }));
+                        } catch (e) {
+                            console.warn('Failed to parse completed_tasks string:', user.completed_tasks);
+                        }
+                    }
+                }
+                
+                // Count completed tasks from the checklist
+                const completedTasks = userTasks.filter(task => task && task.completed === true);
+                
+                const completedCount = completedTasks.length;
+                const progressPercent = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
+
+                console.log(`User ${user.email}: ${completedCount}/${totalTasks} tasks (${progressPercent}%)`);
+
+                let status = 'not-started';
+                if (progressPercent === 100) {
+                    status = 'completed';
+                } else if (progressPercent > 0) {
+                    status = 'in-progress';
+                }
+
+                return {
+                    ...user,
+                    completedCount,
+                    totalTasks,
+                    progressPercent,
+                    status,
+                    completedTasksList: completedTasks
+                };
+            });
+        }
+
+        // Update metrics dashboard
+        function updateMetrics() {
+            const totalUsers = allUsers.length;
+            const completedUsers = allUsers.filter(user => user.status === 'completed').length;
+            const inProgressUsers = allUsers.filter(user => user.status === 'in-progress').length;
+            const activeUsers = completedUsers + inProgressUsers;
+
+            // Calculate overall completion rate
+            const totalPossibleCompletions = totalUsers * allTasks.length;
+            const totalActualCompletions = allUsers.reduce((sum, user) => sum + user.completedCount, 0);
+            const overallCompletionRate = totalPossibleCompletions > 0 ? Math.round((totalActualCompletions / totalPossibleCompletions) * 100) : 0;
+
+            // Update DOM
+            document.getElementById('totalUsers').textContent = totalUsers;
+            document.getElementById('completionRate').textContent = overallCompletionRate + '%';
+            document.getElementById('completedUsers').textContent = completedUsers;
+            document.getElementById('activeUsers').textContent = activeUsers;
+
+            // Update progress bar
+            document.getElementById('completionProgress').style.width = overallCompletionRate + '%';
+
+            // Update trends (placeholder - you could calculate these based on date ranges)
+            document.getElementById('usersTrend').innerHTML = `→ ${totalUsers} total users`;
+            document.getElementById('completedTrend').innerHTML = `✓ ${Math.round((completedUsers/totalUsers)*100) || 0}% completion rate`;
+            document.getElementById('activeTrend').innerHTML = `📈 ${activeUsers} active users`;
+        }
+
+        // Filter and display users
+        function filterAndDisplayUsers() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const sortBy = document.getElementById('sortBy').value;
+
+            // Apply filters
+            filteredUsers = allUsers.filter(user => {
+                const matchesSearch = !searchTerm || 
+                    user.email.toLowerCase().includes(searchTerm) ||
+                    user.location_id.toLowerCase().includes(searchTerm) ||
+                    (user.first_name && user.first_name.toLowerCase().includes(searchTerm)) ||
+                    (user.last_name && user.last_name.toLowerCase().includes(searchTerm)) ||
+                    (user.company_name && user.company_name.toLowerCase().includes(searchTerm)) ||
+                    (user.cell_phone && user.cell_phone.toLowerCase().includes(searchTerm));
+
+                const matchesStatus = !statusFilter || user.status === statusFilter;
+
+                return matchesSearch && matchesStatus;
+            });
+
+            // Apply sorting
+            filteredUsers.sort((a, b) => {
+                switch (sortBy) {
+                    case 'created_desc':
+                        return new Date(b.created_at) - new Date(a.created_at);
+                    case 'created_asc':
+                        return new Date(a.created_at) - new Date(b.created_at);
+                    case 'progress_desc':
+                        return b.progressPercent - a.progressPercent;
+                    case 'progress_asc':
+                        return a.progressPercent - b.progressPercent;
+                    case 'email_asc':
+                        return a.email.localeCompare(b.email);
+                    case 'email_desc':
+                        return b.email.localeCompare(a.email);
+                    default:
+                        return 0;
+                }
+            });
+
+            displayUsers();
+            updateResultsCount();
+        }
+
+        // Display users in table
+        function displayUsers() {
+            const tbody = document.getElementById('usersTableBody');
+
+            if (filteredUsers.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3>No users found</h3>
+                                <p>Try adjusting your search or filter criteria</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filteredUsers.map(user => {
+                // Ensure user has an ID
+                if (!user.id) {
+                    console.error('User missing ID:', user);
+                    return ''; // Skip this user
+                }
+                
+                const statusClass = `status-${user.status}`;
+                const statusText = user.status.replace('-', ' ').toUpperCase();
+                
+                const createdDate = new Date(user.created_at).toLocaleDateString();
+                const updatedDate = new Date(user.updated_at).toLocaleDateString();
+
+                const progressFillClass = user.status === 'completed' ? 'completed' : '';
+                
+                // Escape values for use in onclick handlers
+                const escapedEmail = (user.email || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                const escapedLocationId = (user.location_id || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="user-email">${user.email}</div>
+                            <div class="user-location">${user.location_id}</div>
+                            ${user.first_name || user.last_name ? `<div class="user-name" style="font-size: 12px; color: #6B7280; margin-top: 2px;">${[user.first_name, user.last_name].filter(n => n).join(' ')}</div>` : ''}
+                            ${user.company_name ? `<div class="user-company" style="font-size: 12px; color: #6B7280;">${user.company_name}</div>` : ''}
+                        </td>
+                        <td class="progress-cell">
+                            <div class="user-progress">
+                                <div class="progress-text ${user.status === 'completed' ? 'completed' : ''}">${user.completedCount}/${user.totalTasks} tasks</div>
+                                <div class="progress-bar-small">
+                                    <div class="progress-fill-small ${progressFillClass}" style="width: ${user.progressPercent}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </td>
+                        <td class="date-cell">${updatedDate}</td>
+                        <td class="date-cell">${createdDate}</td>
+                        <td class="actions-cell">
+                            <div class="quick-actions">
+                                <button class="action-btn edit-user-btn" data-user-id="${user.id}" title="Edit user details and assignments">
+                                    <i data-lucide="edit" style="width: 16px; height: 16px;"></i>
+                                </button>
+                                <button class="action-btn create-task-btn" data-email="${escapedEmail}" data-location="${escapedLocationId}" title="Create specific task for this user">
+                                    <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                                </button>
+                                <button class="action-btn crm-link-btn" data-location="${escapedLocationId}" title="Open user's CRM account">
+                                    <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
+                                </button>
+                                <button class="action-btn delete-user-btn" data-user-id="${user.id}" data-user-email="${escapedEmail}" title="Delete user" style="background: #FEE2E2; color: #DC2626;">
+                                    <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            // Initialize Lucide icons after setting innerHTML
+            setTimeout(() => lucide.createIcons(), 0);
+        }
+
+        // Update results count
+        function updateResultsCount() {
+            const count = filteredUsers.length;
+            const total = allUsers.length;
+            document.getElementById('resultsCount').textContent = `Showing ${count} of ${total} users`;
+        }
+
+        // Refresh data
+        async function refreshData() {
+            document.getElementById('resultsCount').textContent = 'Loading...';
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5">
+                        <div class="loading">Refreshing data...</div>
+                    </td>
+                </tr>
+            `;
+
+            await loadAllData();
+        }
+
+        // Show error
+        function showError(message) {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5">
+                        <div class="error">${message}</div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // Create Group Modal Functions
+        let selectedGroups = new Set();
+        let selectedLocations = new Set();
+        let allGroups = [];
+        let allLocations = [];
+
+        function openCreateGroupModal() {
+            loadExistingGroups().then(() => {
+                displayAllGroups();
+            });
+            loadExistingLocations().then(() => {
+                displayAllLocations();
+            });
+            document.getElementById('createGroupModal').style.display = 'flex';
+        }
+
+        function closeCreateGroupModal() {
+            document.getElementById('createGroupModal').style.display = 'none';
+            resetModal();
+        }
+
+        function resetModal() {
+            document.getElementById('createGroupForm').reset();
+            selectedGroups.clear();
+            selectedLocations.clear();
+            updateSelectedDisplay();
+        }
+
+        async function loadExistingGroups() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('user_groups')
+                    .select('*')
+                    .order('group_name');
+
+                if (error) throw error;
+                allGroups = data || [];
+            } catch (error) {
+                console.error('Error loading groups:', error);
+                allGroups = [];
+            }
+        }
+
+        async function loadExistingLocations() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('onboarding_users')
+                    .select('location_id, email')
+                    .order('location_id');
+
+                if (error) throw error;
+                
+                // Group by location and get unique locations
+                const locationMap = new Map();
+                (data || []).forEach(user => {
+                    if (!locationMap.has(user.location_id)) {
+                        locationMap.set(user.location_id, {
+                            location_id: user.location_id,
+                            sample_email: user.email
+                        });
+                    }
+                });
+                
+                allLocations = Array.from(locationMap.values());
+            } catch (error) {
+                console.error('Error loading locations:', error);
+                allLocations = [];
+            }
+        }
+
+        function displayAllGroups() {
+            const results = document.getElementById('groupResults');
+            
+            if (!allGroups || allGroups.length === 0) {
+                results.innerHTML = '<div class="search-result-item">No groups available</div>';
+                return;
+            }
+
+            results.innerHTML = allGroups.map(group => `
+                <div class="search-result-item" data-group-id="${group.id}" onclick="addGroup(${group.id}, '${group.group_name}')">
+                    <div class="result-info">
+                        <div class="result-title">${group.group_name}</div>
+                        <div class="result-subtitle">${group.group_description || 'No description'}</div>
+                    </div>
+                    <button type="button" class="add-button">Add</button>
+                </div>
+            `).join('');
+        }
+
+        function filterGroups() {
+            const searchTerm = document.getElementById('groupSearch').value.toLowerCase();
+            const results = document.getElementById('groupResults');
+            const items = results.querySelectorAll('.search-result-item');
+            
+            items.forEach(item => {
+                const groupId = parseInt(item.dataset.groupId);
+                const group = allGroups.find(g => g.id === groupId);
+                
+                if (!group) {
+                    item.classList.add('filtered-out');
+                    return;
+                }
+                
+                const matchesSearch = !searchTerm || 
+                    group.group_name.toLowerCase().includes(searchTerm) || 
+                    (group.group_description && group.group_description.toLowerCase().includes(searchTerm));
+                
+                const isSelected = selectedGroups.has(groupId);
+                
+                if (matchesSearch && !isSelected) {
+                    item.classList.remove('filtered-out');
+                } else {
+                    item.classList.add('filtered-out');
+                }
+            });
+        }
+
+        function displayAllLocations() {
+            const results = document.getElementById('locationResults');
+            
+            if (!allLocations || allLocations.length === 0) {
+                results.innerHTML = '<div class="search-result-item">No locations available</div>';
+                return;
+            }
+
+            results.innerHTML = allLocations.map(location => `
+                <div class="search-result-item" data-location-id="${location.location_id}" onclick="addLocation('${location.location_id}', '${location.sample_email}')">
+                    <div class="result-info">
+                        <div class="result-title">${location.location_id}</div>
+                        <div class="result-subtitle">Example: ${location.sample_email}</div>
+                    </div>
+                    <button type="button" class="add-button">Add</button>
+                </div>
+            `).join('');
+        }
+
+        function filterLocations() {
+            const searchTerm = document.getElementById('locationSearch').value.toLowerCase();
+            const results = document.getElementById('locationResults');
+            const items = results.querySelectorAll('.search-result-item');
+            
+            items.forEach(item => {
+                const locationId = item.dataset.locationId;
+                const location = allLocations.find(l => l.location_id === locationId);
+                
+                if (!location) {
+                    item.classList.add('filtered-out');
+                    return;
+                }
+                
+                const matchesSearch = !searchTerm || 
+                    location.location_id.toLowerCase().includes(searchTerm) || 
+                    (location.sample_email && location.sample_email.toLowerCase().includes(searchTerm));
+                
+                const isSelected = selectedLocations.has(locationId);
+                
+                if (matchesSearch && !isSelected) {
+                    item.classList.remove('filtered-out');
+                } else {
+                    item.classList.add('filtered-out');
+                }
+            });
+        }
+
+        function addGroup(groupId, groupName) {
+            selectedGroups.add(groupId);
+            updateSelectedDisplay();
+            filterGroups(); // Refresh filtered results
+        }
+
+        function addLocation(locationId, sampleEmail) {
+            selectedLocations.add(locationId);
+            updateSelectedDisplay();
+            filterLocations(); // Refresh filtered results
+        }
+
+        function removeGroup(groupId) {
+            selectedGroups.delete(groupId);
+            updateSelectedDisplay();
+            filterGroups(); // Refresh filtered results to show removed item
+        }
+
+        function removeLocation(locationId) {
+            selectedLocations.delete(locationId);
+            updateSelectedDisplay();
+            filterLocations(); // Refresh filtered results to show removed item
+        }
+
+        function updateSelectedDisplay() {
+            // Update selected groups display
+            const selectedGroupsList = document.getElementById('selectedGroupsList');
+            if (selectedGroups.size === 0) {
+                selectedGroupsList.innerHTML = '<div style="color: #6B7280; font-style: italic;">No groups selected</div>';
+            } else {
+                const selectedGroupsArray = Array.from(selectedGroups).map(id => {
+                    const group = allGroups.find(g => g.id === id);
+                    return group ? `
+                        <span class="selected-item">
+                            ${group.group_name}
+                            <button type="button" class="remove-item" onclick="removeGroup(${id})">&times;</button>
+                        </span>
+                    ` : '';
+                });
+                selectedGroupsList.innerHTML = selectedGroupsArray.join('');
+            }
+
+            // Update selected locations display
+            const selectedLocationsList = document.getElementById('selectedLocationsList');
+            if (selectedLocations.size === 0) {
+                selectedLocationsList.innerHTML = '<div style="color: #6B7280; font-style: italic;">No locations selected</div>';
+            } else {
+                const selectedLocationsArray = Array.from(selectedLocations).map(locationId => `
+                    <span class="selected-item">
+                        ${locationId}
+                        <button type="button" class="remove-item" onclick="removeLocation('${locationId}')">&times;</button>
+                    </span>
+                `);
+                selectedLocationsList.innerHTML = selectedLocationsArray.join('');
+            }
+        }
+
+        async function createGroup(event) {
+            event.preventDefault();
+            
+            const groupName = document.getElementById('groupName').value.trim();
+            const groupDescription = document.getElementById('groupDescription').value.trim();
+            
+            if (!groupName) {
+                alert('Please enter a group name');
+                return;
+            }
+
+            try {
+                // Create the new group
+                const { data: newGroup, error: groupError } = await supabaseClient
+                    .from('user_groups')
+                    .insert([{
+                        group_name: groupName,
+                        group_description: groupDescription || null
+                    }])
+                    .select()
+                    .single();
+
+                if (groupError) throw groupError;
+
+                alert(`Group "${groupName}" created successfully!`);
+                closeCreateGroupModal();
+                
+                // Refresh the page to show the new group
+                window.location.reload();
+
+            } catch (error) {
+                console.error('Error creating group:', error);
+                alert('Failed to create group: ' + error.message);
+            }
+        }
+
+        // Initialize search results on modal open
+        function initializeSearchResults() {
+            displayAllGroups();
+            displayAllLocations();
+            updateSelectedDisplay();
+        }
+
+        // Page state management
+        let currentPage = 'users'; // 'users' or 'groups'
+        let originalUserPageContent = null;
+
+        // Group management functions for Users page
+        function openManageGroupsModal() {
+            switchToGroupsPage();
+        }
+
+        function switchToGroupsPage() {
+            if (currentPage === 'groups') return;
+            
+            // Store the original content
+            const container = document.querySelector('.container');
+            originalUserPageContent = container.innerHTML;
+            
+            // Update page title and action buttons
+            document.querySelector('.page-title').textContent = 'Group Management';
+            document.querySelector('.action-buttons').innerHTML = `
+                <button class="create-group-btn" onclick="openCreateGroupModal()">+ Create Group</button>
+                <button class="manage-users-btn" onclick="switchToUsersPage()">Manage Users</button>
+                <button class="export-groups-btn" onclick="exportGroups()">Export Groups</button>
+            `;
+            
+            // Replace main content with groups management
+            container.innerHTML = `
+                <!-- Groups Overview Metrics -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="totalGroups">-</div>
+                        <div class="metric-label">Total Groups</div>
+                        <div class="metric-trend trend-up" id="groupsTrend">
+                            → Groups created
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="groupsWithUsers">-</div>
+                        <div class="metric-label">Groups with Users</div>
+                        <div class="metric-trend trend-up" id="activeGroupsTrend">
+                            → Active groups
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="avgUsersPerGroup">-</div>
+                        <div class="metric-label">Avg Users per Group</div>
+                        <div class="metric-trend trend-neutral" id="avgUsersTrend">
+                            → Average
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="ungroupedUsers">-</div>
+                        <div class="metric-label">Users Not in Groups</div>
+                        <div class="metric-trend trend-down" id="ungroupedTrend">
+                            → Ungrouped
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search and Filter Controls for Groups -->
+                <div class="controls-panel">
+                    <div class="controls-grid">
+                        <div class="search-group">
+                            <label for="groupSearchInput">Search Groups</label>
+                            <div style="position: relative;">
+                                <input type="text" id="groupSearchInput" class="search-input" placeholder="Search by group name or description...">
+                                <span class="search-icon">🔍</span>
+                            </div>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label for="groupStatusFilter">Status</label>
+                            <select id="groupStatusFilter" class="filter-select">
+                                <option value="all">All Groups</option>
+                                <option value="active">With Users</option>
+                                <option value="empty">Empty Groups</option>
+                            </select>
+                        </div>
+                        
+                        <div class="sort-group">
+                            <label for="groupSortBy">Sort By</label>
+                            <select id="groupSortBy" class="sort-select">
+                                <option value="name">Group Name</option>
+                                <option value="users">User Count</option>
+                                <option value="date">Created Date</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Groups Table -->
+                <div class="users-panel">
+                    <div class="panel-header">
+                        <h2>Groups Overview</h2>
+                        <div class="results-count" id="groupsResultsCount">Loading...</div>
+                    </div>
+                    
+                    <div class="users-table-container">
+                        <table class="users-table">
+                            <thead>
+                                <tr>
+                                    <th>Group Name</th>
+                                    <th>Description</th>
+                                    <th>Users Count</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="groupsTableBody">
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="loading">Loading groups data...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            
+            currentPage = 'groups';
+            
+            // Load and display groups data
+            loadGroupsData();
+        }
+
+        function switchToUsersPage() {
+            if (currentPage === 'users') return;
+            
+            // Restore original content
+            if (originalUserPageContent) {
+                const container = document.querySelector('.container');
+                container.innerHTML = originalUserPageContent;
+            }
+            
+            // Restore page title and action buttons
+            document.querySelector('.page-title').textContent = 'User Management';
+            document.querySelector('.action-buttons').innerHTML = `
+                <button class="create-group-btn" onclick="openCreateGroupModal()">+ Create Group</button>
+                <button class="manage-groups-btn" onclick="openManageGroupsModal()">Manage Groups</button>
+                <button class="export-users-btn" onclick="exportUsers()">Export Users</button>
+            `;
+            
+            currentPage = 'users';
+            
+            // Reload users data
+            loadAllData();
+        }
+
+        async function loadGroupsData() {
+            try {
+                console.log('Loading groups data...');
+                // Load groups with user counts
+                const { data: groups, error: groupsError } = await supabaseClient
+                    .from('user_groups')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (groupsError) {
+                    console.error('Groups query error:', groupsError);
+                    throw groupsError;
+                }
+                console.log('Groups loaded:', groups);
+                
+                // Load user groups data to count users per group
+                const { data: users, error: usersError } = await supabaseClient
+                    .from('onboarding_users')
+                    .select('id, user_group_id');
+                
+                if (usersError) {
+                    console.error('Users query error:', usersError);
+                    throw usersError;
+                }
+                console.log('Users loaded for groups:', users);
+                
+                displayGroupsData(groups, users);
+                
+            } catch (error) {
+                console.error('Error loading groups data:', error);
+                console.error('Error details:', error.message, error.details, error.hint);
+                document.getElementById('groupsTableBody').innerHTML = 
+                    `<tr><td colspan="5">Error loading groups data: ${error.message}</td></tr>`;
+            }
+        }
+
+        // Convert group name to URL-friendly slug
+        function createUrlSlug(groupName) {
+            return groupName.toLowerCase()
+                .replace(/\s+/g, '_')  // Replace spaces with underscores
+                .replace(/[^a-z0-9_]/g, '');  // Remove special characters
+        }
+        
+        // Copy URL parameter to clipboard
+        function copyUrlParameter(urlParam, evt) {
+            evt = evt || window.event;
+            
+            // Try modern clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(urlParam).then(() => {
+                    showCopySuccess(evt);
+                }).catch(err => {
+                    console.error('Clipboard API failed:', err);
+                    fallbackCopy(urlParam, evt);
+                });
+            } else {
+                // Fallback for older browsers
+                fallbackCopy(urlParam, evt);
+            }
+            
+            function showCopySuccess(event) {
+                const button = event.target.closest('button') || event.currentTarget;
+                if (!button) return;
+                
+                const originalHTML = button.innerHTML;
+                const originalBg = button.style.background;
+                const originalColor = button.style.color;
+                
+                button.innerHTML = '<i data-lucide="check" style="width: 12px; height: 12px;"></i>';
+                button.style.background = '#86EFAC';
+                button.style.color = '#166534';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.style.background = originalBg;
+                    button.style.color = originalColor;
+                    lucide.createIcons();
+                }, 2000);
+            }
+            
+            function fallbackCopy(text, event) {
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                try {
+                    const successful = document.execCommand('copy');
+                    if (successful) {
+                        showCopySuccess(event);
+                    } else {
+                        console.error('Copy command returned false');
+                        promptManualCopy(text);
+                    }
+                } catch (err) {
+                    console.error('Fallback copy failed:', err);
+                    promptManualCopy(text);
+                }
+                
+                document.body.removeChild(textArea);
+            }
+            
+            function promptManualCopy(text) {
+                // Create a better manual copy experience
+                const userConfirm = prompt('Copy this URL parameter:', text);
+                if (userConfirm !== null) {
+                    console.log('User manually copied the text');
+                }
+            }
+        }
+        
+        
+        function displayGroupsData(groups, users) {
+            // Calculate metrics
+            const totalGroups = groups.length;
+            
+            // Count users in each group
+            const groupUserCounts = new Map();
+            users.forEach(user => {
+                if (user.user_group_id) {
+                    groupUserCounts.set(user.user_group_id, (groupUserCounts.get(user.user_group_id) || 0) + 1);
+                }
+            });
+            
+            const groupsWithUsers = Array.from(groupUserCounts.keys()).length;
+            const totalUsersInGroups = Array.from(groupUserCounts.values()).reduce((sum, count) => sum + count, 0);
+            const avgUsersPerGroup = groupsWithUsers > 0 ? Math.round(totalUsersInGroups / groupsWithUsers) : 0;
+            const ungroupedUsers = users.filter(user => !user.user_group_id).length;
+            
+            // Update metrics
+            document.getElementById('totalGroups').textContent = totalGroups;
+            document.getElementById('groupsWithUsers').textContent = groupsWithUsers;
+            document.getElementById('avgUsersPerGroup').textContent = avgUsersPerGroup;
+            document.getElementById('ungroupedUsers').textContent = ungroupedUsers;
+            
+            // Display groups table
+            const tbody = document.getElementById('groupsTableBody');
+            if (groups.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">No groups found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = groups.map(group => {
+                const userCount = groupUserCounts.get(group.id) || 0;
+                const urlSlug = createUrlSlug(group.group_name);
+                const urlParam = `?group=${urlSlug}`;
+                const escapedParam = urlParam.replace(/'/g, "\\'");
+                return `
+                    <tr>
+                        <td>
+                            <div style="font-weight: 500;">
+                                ${group.group_name}
+                                ${group.group_name.toLowerCase() === 'all users' 
+                                    ? '<span style="margin-left: 8px; padding: 2px 8px; background: #3B82F6; color: white; border-radius: 4px; font-size: 11px; font-weight: normal;">DEFAULT</span>' 
+                                    : ''
+                                }
+                            </div>
+                            <div style="font-size: 11px; color: #9CA3AF; margin-top: 4px; display: flex; align-items: center; gap: 8px;">
+                                <span>URL: ${urlParam}</span>
+                                <button onclick="copyUrlParameter('${escapedParam}', event)" style="padding: 2px 6px; font-size: 10px; background: #E5E7EB; border: none; border-radius: 4px; cursor: pointer; color: #4B5563;" title="Copy URL parameter">
+                                    <i data-lucide="copy" style="width: 12px; height: 12px;"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="color: #6B7280; font-size: 13px;">
+                                ${group.group_description || 'No description'}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-badge ${userCount > 0 ? 'status-completed' : 'status-not-started'}">
+                                ${userCount} users
+                            </span>
+                        </td>
+                        <td>
+                            <div style="font-size: 13px; color: #6B7280;">
+                                ${new Date(group.created_at).toLocaleDateString()}
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn-sm btn-primary" onclick="editGroup(${group.id})" title="Edit Group">Edit</button>
+                                ${group.group_name.toLowerCase() === 'all users' 
+                                    ? '<button class="btn-sm" style="background: #E5E7EB; color: #9CA3AF; cursor: not-allowed;" disabled title="Default group cannot be deleted">Protected</button>'
+                                    : `<button class="btn-sm btn-danger" onclick="deleteGroup(${group.id}, '${group.group_name}')" title="Delete Group">Delete</button>`
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            // Initialize Lucide icons after rendering
+            setTimeout(() => lucide.createIcons(), 0);
+            
+            // Update results count
+            document.getElementById('groupsResultsCount').textContent = `${groups.length} groups`;
+        }
+
+        function exportGroups() {
+            // Export groups functionality
+            console.log('Exporting groups...');
+            alert('Export Groups functionality will be implemented soon!');
+        }
+        
+        async function editGroup(groupId) {
+            try {
+                // Fetch the group data
+                const { data: group, error } = await supabaseClient
+                    .from('user_groups')
+                    .select('*')
+                    .eq('id', groupId)
+                    .single();
+                
+                if (error) throw error;
+                
+                // Populate the edit form
+                document.getElementById('editGroupId').value = group.id;
+                document.getElementById('editGroupName').value = group.group_name;
+                document.getElementById('editGroupDescription').value = group.group_description || '';
+                
+                // Show the modal
+                document.getElementById('editGroupModal').style.display = 'flex';
+            } catch (error) {
+                console.error('Error fetching group:', error);
+                alert('Failed to load group data: ' + error.message);
+            }
+        }
+        
+        function closeEditGroupModal() {
+            document.getElementById('editGroupModal').style.display = 'none';
+            document.getElementById('editGroupForm').reset();
+        }
+        
+        async function updateGroup(event) {
+            event.preventDefault();
+            
+            const groupId = document.getElementById('editGroupId').value;
+            const groupName = document.getElementById('editGroupName').value.trim();
+            const groupDescription = document.getElementById('editGroupDescription').value.trim();
+            
+            if (!groupName) {
+                alert('Please enter a group name');
+                return;
+            }
+            
+            try {
+                // Update the group in database
+                const { data, error } = await supabaseClient
+                    .from('user_groups')
+                    .update({
+                        group_name: groupName,
+                        group_description: groupDescription || null,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', groupId)
+                    .select();
+                
+                if (error) throw error;
+                
+                alert(`Group "${groupName}" updated successfully!`);
+                closeEditGroupModal();
+                
+                // Reload the groups data if on groups page
+                if (currentPage === 'groups') {
+                    loadGroupsData();
+                }
+                
+            } catch (error) {
+                console.error('Error updating group:', error);
+                alert('Failed to update group: ' + error.message);
+            }
+        }
+        
+        async function deleteGroup(groupId, groupName) {
+            // Prevent deletion of "All Users" group
+            if (groupName && groupName.toLowerCase() === 'all users') {
+                alert('The "All Users" group cannot be deleted as it is the default group for all users.');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete the group "${groupName}"? This action cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                // First, remove this group from all users who have it
+                const { data: users, error: fetchError } = await supabaseClient
+                    .from('onboarding_users')
+                    .select('id, user_group_id')
+                    .eq('user_group_id', groupId);
+                
+                if (fetchError) throw fetchError;
+                
+                // Update each user to remove this group
+                if (users && users.length > 0) {
+                    for (const user of users) {
+                        const { error: updateError } = await supabaseClient
+                            .from('onboarding_users')
+                            .update({ user_group_id: null })
+                            .eq('id', user.id);
+                        
+                        if (updateError) {
+                            console.error('Error updating user groups:', updateError);
+                        }
+                    }
+                }
+                
+                // Delete the group
+                const { error: deleteError } = await supabaseClient
+                    .from('user_groups')
+                    .delete()
+                    .eq('id', groupId);
+                
+                if (deleteError) throw deleteError;
+                
+                alert(`Group "${groupName}" has been deleted successfully!`);
+                
+                // Reload the groups data if on groups page
+                if (currentPage === 'groups') {
+                    loadGroupsData();
+                }
+                
+            } catch (error) {
+                console.error('Error deleting group:', error);
+                alert('Failed to delete group: ' + error.message);
+            }
+        }
+        
+        // Quick Actions Functions
+        function createUserTask(userEmail, locationId) {
+            // Create a modal for creating user-specific tasks
+            const modal = document.createElement('div');
+            modal.id = 'createUserTaskModal';
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h2>Create Task for ${userEmail}</h2>
+                        <button class="modal-close" onclick="closeUserTaskModal()">&times;</button>
+                    </div>
+                    
+                    <form id="userTaskForm" onsubmit="submitUserTask(event, '${userEmail}', '${locationId}')">
+                        <div class="form-group">
+                            <label for="userTaskTitle">Task Title</label>
+                            <input type="text" id="userTaskTitle" placeholder="Enter task title..." required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="userTaskDescription">Task Description</label>
+                            <textarea id="userTaskDescription" placeholder="Describe the task..."></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="userTaskInstructions">Instructions Title</label>
+                            <input type="text" id="userTaskInstructions" placeholder="Instructions title..." required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="userTaskContent">Instructions Content</label>
+                            <textarea id="userTaskContent" placeholder="Detailed instructions for the user..." rows="4"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="userTaskVideo">Video URL (Optional)</label>
+                            <input type="url" id="userTaskVideo" placeholder="https://...">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="userTaskEmbed">Form Embed Code (Optional)</label>
+                            <textarea id="userTaskEmbed" placeholder="<iframe>...</iframe>" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="form-group" style="background: #F9FAFB; padding: 12px; border-radius: 6px; border: 1px solid #E5E7EB;">
+                            <div style="font-weight: 500; color: #374151; margin-bottom: 4px;">Target User:</div>
+                            <div style="color: #6B7280; font-size: 14px;">${userEmail} (${locationId})</div>
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button type="button" class="btn-secondary" onclick="closeUserTaskModal()">Cancel</button>
+                            <button type="submit" class="btn-primary">Create Task</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.style.display = 'flex';
+        }
+        
+        function closeUserTaskModal() {
+            const modal = document.getElementById('createUserTaskModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        async function submitUserTask(event, userEmail, locationId) {
+            event.preventDefault();
+            
+            const formData = {
+                taskTitle: document.getElementById('userTaskTitle').value.trim(),
+                taskDescription: document.getElementById('userTaskDescription').value.trim(),
+                instructionsTitle: document.getElementById('userTaskInstructions').value.trim(),
+                instructionsContent: document.getElementById('userTaskContent').value.trim(),
+                videoUrl: document.getElementById('userTaskVideo').value.trim(),
+                formEmbedCode: document.getElementById('userTaskEmbed').value.trim()
+            };
+            
+            if (!formData.taskTitle || !formData.instructionsTitle) {
+                alert('Please fill in the required fields');
+                return;
+            }
+            
+            try {
+                // Generate unique task ID
+                const taskId = `user-task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                
+                // Create the task with individual user targeting
+                const { data, error } = await supabaseClient
+                    .from('onboarding_tasks')
+                    .insert([{
+                        task_id: taskId,
+                        title: formData.taskTitle,
+                        description: formData.taskDescription || null,
+                        instruction_title: formData.instructionsTitle,
+                        instruction_content: formData.instructionsContent || null,
+                        video_url: formData.videoUrl || null,
+                        form_embed_code: formData.formEmbedCode || null,
+                        position: 999, // Put user-specific tasks at the end
+                        is_active: true,
+                        target_type: 'individuals',
+                        target_users: JSON.stringify([userEmail]), // Target specific user
+                        notify_users: true
+                    }])
+                    .select();
+                
+                if (error) throw error;
+                
+                alert(`Task "${formData.taskTitle}" created successfully for ${userEmail}!`);
+                closeUserTaskModal();
+                
+                // Refresh the current page data
+                if (currentPage === 'users') {
+                    loadAllData();
+                } else {
+                    loadGroupsData();
+                }
+                
+            } catch (error) {
+                console.error('Error creating user task:', error);
+                alert('Failed to create task: ' + error.message);
+            }
+        }
+        
+        function openCRMAccount(locationId) {
+            const crmUrl = `https://app.dfycrm.com/v2/location/${locationId}/dashboard`;
+            window.open(crmUrl, '_blank');
+        }
+        
+        function exportUsers() {
+            // Get current filtered users
+            const filteredUsers = getFilteredUsers();
+            
+            if (filteredUsers.length === 0) {
+                alert('No users to export');
+                return;
+            }
+            
+            // Create CSV content
+            const csvContent = [
+                ['Email', 'Location ID', 'First Name', 'Last Name', 'Company Name', 'Cell Phone', 'Groups', 'Completed Tasks', 'Total Tasks', 'Progress %', 'Status', 'Created Date'].join(','),
+                ...filteredUsers.map(user => [
+                    user.email,
+                    user.location_id,
+                    user.first_name || '',
+                    user.last_name || '',
+                    user.company_name || '',
+                    user.cell_phone || '',
+                    user.user_group_name || '',
+                    user.completedCount || 0,
+                    user.totalTasks || 0,
+                    user.progressPercent || 0,
+                    user.status || 'not-started',
+                    new Date(user.created_at).toLocaleDateString()
+                ].join(','))
+            ].join('\n');
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `users-export-${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log(`Exported ${filteredUsers.length} users to CSV`);
+        }
+        
+        function getFilteredUsers() {
+            // Get the currently filtered/displayed users
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const sortBy = document.getElementById('sortBy').value;
+            
+            let filtered = allUsers.filter(user => {
+                const matchesSearch = !searchTerm || 
+                    user.email.toLowerCase().includes(searchTerm) || 
+                    user.location_id.toLowerCase().includes(searchTerm) ||
+                    (user.first_name && user.first_name.toLowerCase().includes(searchTerm)) ||
+                    (user.last_name && user.last_name.toLowerCase().includes(searchTerm)) ||
+                    (user.company_name && user.company_name.toLowerCase().includes(searchTerm)) ||
+                    (user.cell_phone && user.cell_phone.toLowerCase().includes(searchTerm));
+                
+                const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+                
+                return matchesSearch && matchesStatus;
+            });
+            
+            // Apply sorting
+            if (sortBy === 'email') {
+                filtered.sort((a, b) => a.email.localeCompare(b.email));
+            } else if (sortBy === 'progress') {
+                filtered.sort((a, b) => b.progressPercent - a.progressPercent);
+            } else if (sortBy === 'date') {
+                filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            }
+            
+            return filtered;
+        }
+
+        // Close modals when clicking outside
+        document.addEventListener('click', function(event) {
+            const createGroupModal = document.getElementById('createGroupModal');
+            const createUserTaskModal = document.getElementById('createUserTaskModal');
+            
+            if (event.target === createGroupModal) {
+                closeCreateGroupModal();
+            }
+            
+            if (event.target === createUserTaskModal) {
+                closeUserTaskModal();
+            }
+            
+            const editGroupModal = document.getElementById('editGroupModal');
+            if (event.target === editGroupModal) {
+                closeEditGroupModal();
+            }
+        });
+    </script>
+
+    <!-- Create Group Modal -->
+    <div id="createGroupModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Group</h2>
+                <button class="modal-close" onclick="closeCreateGroupModal()">&times;</button>
+            </div>
+            
+            <form id="createGroupForm" onsubmit="createGroup(event)">
+                <div class="form-group">
+                    <label for="groupName">Group Name</label>
+                    <input type="text" id="groupName" placeholder="Enter group name..." required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="groupDescription">Description (Optional)</label>
+                    <textarea id="groupDescription" placeholder="Describe this group's purpose..."></textarea>
+                </div>
+
+                <div class="form-section">
+                    <h3>Add Existing Groups to this Group</h3>
+                    <div class="search-container">
+                        <input type="text" id="groupSearch" placeholder="Search and filter existing groups..." onkeyup="filterGroups()">
+                    </div>
+                    <div class="iframe-container">
+                        <div class="iframe-header">Available Groups</div>
+                        <div class="iframe-content" id="groupResults"></div>
+                    </div>
+                    <div id="selectedGroups" class="selected-items">
+                        <h4>Selected Groups:</h4>
+                        <div id="selectedGroupsList"></div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Add Locations to this Group</h3>
+                    <div class="search-container">
+                        <input type="text" id="locationSearch" placeholder="Search and filter locations..." onkeyup="filterLocations()">
+                    </div>
+                    <div class="iframe-container">
+                        <div class="iframe-header">Available Locations</div>
+                        <div class="iframe-content" id="locationResults"></div>
+                    </div>
+                    <div id="selectedLocations" class="selected-items">
+                        <h4>Selected Locations:</h4>
+                        <div id="selectedLocationsList"></div>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeCreateGroupModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Create Group</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Group Modal -->
+    <div id="editGroupModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>Edit Group</h2>
+                <button class="modal-close" onclick="closeEditGroupModal()">&times;</button>
+            </div>
+            
+            <form id="editGroupForm" onsubmit="updateGroup(event)">
+                <input type="hidden" id="editGroupId" />
+                
+                <div class="form-group">
+                    <label for="editGroupName">Group Name</label>
+                    <input type="text" id="editGroupName" placeholder="Enter group name..." required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editGroupDescription">Description (Optional)</label>
+                    <textarea id="editGroupDescription" placeholder="Describe this group's purpose..."></textarea>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeEditGroupModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Update Group</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Edit Modal -->
+    <div id="userEditModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2>Edit User</h2>
+                <button class="modal-close" onclick="closeUserEditModal()">&times;</button>
+            </div>
+            <form onsubmit="saveUserChanges(event)">
+                <input type="hidden" id="editUserId" />
+                
+                <!-- Personal Information -->
+                <div class="form-section">
+                    <h3>Personal Information</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editUserEmail">Email *</label>
+                            <input type="email" id="editUserEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserLocationId">Location ID *</label>
+                            <input type="text" id="editUserLocationId" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editUserFirstName">First Name</label>
+                            <input type="text" id="editUserFirstName">
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserLastName">Last Name</label>
+                            <input type="text" id="editUserLastName">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editUserPhone">Cell Phone</label>
+                            <input type="tel" id="editUserPhone">
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserCompany">Company Name</label>
+                            <input type="text" id="editUserCompany">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group Assignment -->
+                <div class="form-section">
+                    <h3>Group Assignment</h3>
+                    <div class="form-group">
+                        <label for="editUserGroup">User Group</label>
+                        <select id="editUserGroup">
+                            <option value="">No Group</option>
+                        </select>
+                        <small>Assign user to a group for targeted task sequences</small>
+                    </div>
+                </div>
+
+                <!-- Progress Management -->
+                <div class="form-section">
+                    <h3>Progress Management</h3>
+                    <div class="form-group">
+                        <label>Completed Tasks</label>
+                        <div id="completedTasksList" class="task-checklist">
+                            <!-- Will be populated with tasks -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings -->
+                <div class="form-section">
+                    <h3>Settings</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="editUserProfileCompleted">
+                                Profile Completed
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="editUserNotifications">
+                                Notifications Enabled
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeUserEditModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

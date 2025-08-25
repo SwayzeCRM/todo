@@ -1,0 +1,424 @@
+/**
+ * Responsive Design Styles
+ * Mobile-first responsive layout system
+ */
+
+/* ============ Mobile First Base (< 640px) ============ */
+@media (max-width: 639px) {
+  /* Navigation */
+  .header-content {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  
+  .admin-nav {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .nav-link {
+    font-size: var(--text-xs);
+    padding: var(--space-2);
+  }
+  
+  /* Page Layout */
+  .container {
+    padding: 0 var(--space-3);
+    flex-direction: column;
+  }
+  
+  .subheader-content {
+    flex-direction: column;
+    height: auto;
+    padding: var(--space-3);
+    gap: var(--space-3);
+  }
+  
+  .filter-controls {
+    width: 100%;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .filter-select {
+    width: 100%;
+  }
+  
+  .action-buttons {
+    width: 100%;
+    justify-content: stretch;
+  }
+  
+  .action-buttons button {
+    flex: 1;
+  }
+  
+  /* Panels */
+  .tasks-panel,
+  .edit-panel {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+    padding: var(--space-3);
+  }
+  
+  .container.editing .tasks-panel {
+    display: none;
+  }
+  
+  .container.editing .edit-panel {
+    flex: 1;
+  }
+  
+  /* Cards */
+  .card {
+    padding: var(--space-4);
+  }
+  
+  .task-card {
+    padding: var(--space-3);
+  }
+  
+  .task-card-header {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .task-card-actions {
+    opacity: 1;
+    justify-content: flex-end;
+    width: 100%;
+  }
+  
+  .task-card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+  
+  /* Forms */
+  .form-group {
+    margin-bottom: var(--space-3);
+  }
+  
+  .btn-group {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .btn-group .btn {
+    width: 100%;
+  }
+  
+  /* Modals */
+  .modal-content {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+  
+  /* Tables - Convert to cards on mobile */
+  table {
+    display: block;
+  }
+  
+  thead {
+    display: none;
+  }
+  
+  tbody {
+    display: block;
+  }
+  
+  tr {
+    display: block;
+    margin-bottom: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+  }
+  
+  td {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-2) 0;
+    border: none;
+  }
+  
+  td:before {
+    content: attr(data-label);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-secondary);
+  }
+  
+  /* Search & Filters */
+  .search-filter-container {
+    padding: var(--space-3);
+  }
+  
+  .search-bar {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .search-input-wrapper {
+    width: 100%;
+  }
+  
+  .quick-filters {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-2);
+  }
+  
+  .advanced-filters {
+    flex-direction: column;
+    padding: var(--space-3);
+  }
+  
+  /* Hide non-essential elements */
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+/* ============ Small Tablets (640px - 767px) ============ */
+@media (min-width: 640px) and (max-width: 767px) {
+  .container {
+    max-width: 100%;
+    padding: 0 var(--space-4);
+  }
+  
+  .admin-nav {
+    max-width: 100%;
+  }
+  
+  .tasks-panel,
+  .edit-panel {
+    border-radius: var(--radius-lg);
+  }
+  
+  .container.editing {
+    flex-direction: column;
+  }
+  
+  .container.editing .tasks-panel,
+  .container.editing .edit-panel {
+    flex: 1;
+    width: 100%;
+  }
+}
+
+/* ============ Tablets (768px - 1023px) ============ */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .container {
+    max-width: 100%;
+    padding: 0 var(--space-6);
+  }
+  
+  .header-content {
+    flex-direction: row;
+  }
+  
+  .admin-nav {
+    max-width: 450px;
+  }
+  
+  .container.editing {
+    gap: var(--space-4);
+  }
+  
+  .container.editing .tasks-panel {
+    flex: 0.5;
+  }
+  
+  .container.editing .edit-panel {
+    flex: 0.5;
+  }
+  
+  /* Two column grid for cards */
+  .task-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+  
+  .modal-content {
+    width: 90%;
+    max-width: 600px;
+  }
+}
+
+/* ============ Desktop (1024px - 1279px) ============ */
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1024px;
+  }
+  
+  .show-mobile {
+    display: none !important;
+  }
+  
+  /* Three column grid option */
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+  }
+}
+
+/* ============ Large Desktop (1280px+) ============ */
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1280px;
+  }
+  
+  /* Four column grid option */
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+  }
+}
+
+/* ============ Extra Large Desktop (1536px+) ============ */
+@media (min-width: 1536px) {
+  .container {
+    max-width: 1536px;
+  }
+  
+  .header-content,
+  .subheader-content {
+    max-width: 1536px;
+  }
+}
+
+/* ============ Print Styles ============ */
+@media print {
+  /* Hide navigation and controls */
+  .header,
+  .page-subheader,
+  .admin-nav,
+  .action-buttons,
+  .task-card-actions,
+  .btn,
+  button {
+    display: none !important;
+  }
+  
+  /* Optimize for printing */
+  body {
+    background: white;
+    color: black;
+    font-size: 12pt;
+  }
+  
+  .container {
+    max-width: 100%;
+    padding: 0;
+  }
+  
+  .task-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #000;
+    margin-bottom: 10pt;
+  }
+  
+  /* Show URLs for links */
+  a[href]:after {
+    content: " (" attr(href) ")";
+  }
+}
+
+/* ============ Accessibility - Reduced Motion ============ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============ High Contrast Mode ============ */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border: #000;
+    --shadow-sm: 0 0 0 1px #000;
+    --shadow-md: 0 0 0 2px #000;
+  }
+  
+  .btn-primary {
+    background: #000;
+    color: #fff;
+    border: 2px solid #000;
+  }
+  
+  .btn-secondary {
+    background: #fff;
+    color: #000;
+    border: 2px solid #000;
+  }
+  
+  .task-card {
+    border: 2px solid #000;
+  }
+}
+
+/* ============ Touch Device Optimizations ============ */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase touch targets */
+  .btn,
+  .nav-link,
+  .task-card {
+    min-height: 44px;
+  }
+  
+  .btn-icon {
+    width: 44px;
+    height: 44px;
+  }
+  
+  /* Remove hover effects on touch devices */
+  .task-card:hover {
+    transform: none;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .btn:hover {
+    transform: none;
+  }
+  
+  /* Always show actions on touch devices */
+  .task-card-actions {
+    opacity: 1;
+  }
+}
+
+/* ============ Landscape Mobile ============ */
+@media (max-width: 812px) and (orientation: landscape) {
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+  }
+  
+  .container {
+    padding-top: var(--space-3);
+  }
+  
+  /* Reduce vertical spacing in landscape */
+  .task-card {
+    padding: var(--space-2);
+  }
+  
+  .form-group {
+    margin-bottom: var(--space-2);
+  }
+}

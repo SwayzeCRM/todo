@@ -1,0 +1,27 @@
+# Clean URLs Configuration for HighLevel/Apache
+# This file removes .html extensions from URLs
+
+# Enable rewrite engine
+RewriteEngine On
+
+# Remove .html extension from URLs
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^([^\.]+)$ $1.html [NC,L]
+
+# Redirect .html URLs to clean URLs
+RewriteCond %{THE_REQUEST} \s/+(.+?)\.html[\s?] [NC]
+RewriteRule ^ /%1 [R=301,L]
+
+# Set default document
+DirectoryIndex admin.html
+
+# Custom error pages (optional)
+ErrorDocument 404 /404.html
+
+# Security headers (optional but recommended)
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>

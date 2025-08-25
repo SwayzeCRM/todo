@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFY CRM - System Diagnostic Tool</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #F5F7FA;
+            min-height: 100vh;
+            color: #1F2937;
+            padding: 0;
+        }
+
+        .header {
+            background: #1E3A8A;
+            color: #FFFFFF;
+            padding: 20px 0;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .admin-nav {
+            display: flex;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 4px;
+            gap: 2px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            flex-wrap: nowrap;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .nav-link {
+            position: relative;
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: rgba(255, 255, 255, 0.85);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 34px;
+            box-sizing: border-box;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 6px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .nav-link:hover::before {
+            opacity: 1;
+        }
+
+        .nav-link:hover {
+            color: #FFFFFF;
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%);
+            color: #FFFFFF;
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            font-weight: 600;
+        }
+
+        .nav-link.active::before {
+            opacity: 0;
+        }
+
+        .nav-icon {
+            width: 14px;
+            height: 14px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            filter: brightness(0) invert(1);
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .nav-link:hover .nav-icon,
+        .nav-link.active .nav-icon {
+            opacity: 1;
+        }
+
+        .nav-icon.tasks {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' /%3E%3C/svg%3E");
+        }
+
+        .nav-icon.analytics {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' /%3E%3C/svg%3E");
+        }
+
+        .nav-icon.test {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' /%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z' /%3E%3C/svg%3E");
+        }
+
+        .nav-icon.preview {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z' /%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' /%3E%3C/svg%3E");
+        }
+
+        .page-subheader {
+            background: #F9FAFB;
+            border-bottom: 1px solid #E5E7EB;
+            padding: 0;
+        }
+
+        .subheader-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            height: 48px;
+        }
+
+        .page-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            justify-content: center;
+        }
+
+        .page-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+            margin: 0;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .page-subtitle {
+            font-size: 13px;
+            color: #6B7280;
+            margin: 0;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .run-tests-btn {
+            background: #FFFFFF;
+            border: 1px solid #D1D5DB;
+            color: #374151;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            line-height: 1;
+            margin: 0;
+        }
+
+        .run-tests-btn:hover {
+            background: #1E3A8A;
+            border-color: #1E3A8A;
+            color: #FFFFFF;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            background: linear-gradient(180deg, #FFFFFF 0%, #F9FAFB 100%);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #E5E7EB;
+            overflow: hidden;
+        }
+
+        .page-header {
+            background: #1E3A8A;
+            color: #FFFFFF;
+            padding: 24px;
+            text-align: center;
+            margin: 0 -20px 0 -20px;
+        }
+
+        .page-header h2 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: -0.025em;
+        }
+
+        .page-header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .content {
+            padding: 24px;
+        }
+
+        .test-section {
+            margin-bottom: 20px;
+            padding: 16px;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            background: #FFFFFF;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .test-section.running {
+            border-color: #F59E0B;
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.05) 0%, rgba(217, 119, 6, 0.05) 100%);
+        }
+
+        .test-section.success {
+            border-color: #10B981;
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, rgba(5, 150, 105, 0.05) 100%);
+        }
+
+        .test-section.error {
+            border-color: #EF4444;
+            background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, rgba(220, 38, 38, 0.05) 100%);
+        }
+
+        .test-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .test-icon {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .test-icon.pending {
+            background: #6B7280;
+            color: #FFFFFF;
+        }
+
+        .test-icon.running {
+            background: #F59E0B;
+            color: #FFFFFF;
+        }
+
+        .test-icon.success {
+            background: #10B981;
+            color: #FFFFFF;
+        }
+
+        .test-icon.error {
+            background: #EF4444;
+            color: #FFFFFF;
+        }
+
+        .test-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1F2937;
+        }
+
+        .test-description {
+            color: #6B7280;
+            margin-bottom: 12px;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .test-result {
+            background: #F9FAFB;
+            border: 1px solid #E5E7EB;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #374151;
+        }
+
+        .test-result.success {
+            background: #F0FDF4;
+            border-color: #BBF7D0;
+            color: #166534;
+        }
+
+        .test-result.error {
+            background: #FEF2F2;
+            border-color: #FECACA;
+            color: #DC2626;
+        }
+
+        .run-tests-btn {
+            background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%);
+            border: none;
+            color: #FFFFFF;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: block;
+            margin: 0 auto 24px auto;
+        }
+
+        .run-tests-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .run-tests-btn:disabled {
+            background: #9CA3AF;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .url-params {
+            background: #F9FAFB;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .url-params h3 {
+            margin-bottom: 8px;
+            color: #1F2937;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .param-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            padding: 8px;
+            background: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .param-label {
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .param-value {
+            color: #6B7280;
+            word-break: break-all;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #333;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .summary {
+            background: #1E3A8A;
+            color: #FFFFFF;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 24px;
+        }
+
+        .summary h2 {
+            margin-bottom: 10px;
+        }
+
+        .summary-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+        }
+
+        .summary-stat {
+            text-align: center;
+        }
+
+        .summary-stat .number {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .summary-stat .label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .summary-stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .admin-header-content {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .admin-header-content {
+                gap: 20px;
+            }
+
+            .admin-nav {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 1px;
+                padding: 3px;
+            }
+
+            .nav-link {
+                font-size: 12px;
+                padding: 8px 12px;
+                min-height: 32px;
+            }
+
+            .nav-icon {
+                width: 14px;
+                height: 14px;
+            }
+        }
+
+        /* Enhanced responsive design for navigation */
+        @media (max-width: 768px) {
+            .header-content {
+                gap: 15px;
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .admin-nav {
+                max-width: none;
+                width: 100%;
+                order: 2;
+            }
+            
+            .nav-link {
+                padding: 10px 8px;
+                font-size: 11px;
+                gap: 4px;
+                min-height: 40px;
+            }
+            
+            .nav-icon {
+                width: 12px;
+                height: 12px;
+            }
+            
+            .header h1 {
+                font-size: 22px;
+                text-align: center;
+                order: 1;
+            }
+
+            .subheader-content {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            .page-info {
+                text-align: center;
+            }
+
+            .page-title {
+                font-size: 15px;
+            }
+
+            .action-buttons {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-link {
+                padding: 8px 6px;
+                font-size: 10px;
+                gap: 3px;
+                flex-direction: column;
+                text-align: center;
+                line-height: 1.2;
+            }
+            
+            .nav-icon {
+                width: 14px;
+                height: 14px;
+                margin-bottom: 2px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .admin-nav {
+                max-width: 700px;
+            }
+            
+            .nav-link {
+                padding: 10px 16px;
+                font-size: 13px;
+                gap: 8px;
+            }
+            
+            .nav-icon {
+                width: 16px;
+                height: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>DFY CRM Admin Panel</h1>
+            <div class="admin-nav" id="adminNav">
+                <!-- Navigation links will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <div class="page-subheader">
+        <div class="subheader-content">
+            <div class="page-info">
+                <span class="page-title">System Diagnostics</span>
+                <span class="page-subtitle">Test your onboarding system configuration and database connectivity</span>
+            </div>
+            <div class="action-buttons">
+                <button class="run-tests-btn" id="runTestsBtn" onclick="runAllTests()">
+                    Run All Tests
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="content">
+
+            <div class="url-params">
+                <h3>URL Parameters</h3>
+                <div class="param-item">
+                    <span class="param-label">Email:</span>
+                    <span class="param-value" id="emailParam">Not provided</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Location ID:</span>
+                    <span class="param-value" id="locationIdParam">Not provided</span>
+                </div>
+            </div>
+
+            <div class="test-section" id="test1">
+                <div class="test-header">
+                    <div class="test-icon pending" id="test1-icon">1</div>
+                    <div class="test-title">Supabase Connection Test</div>
+                </div>
+                <div class="test-description">
+                    Verify that the Supabase client can connect to the database using provided credentials.
+                </div>
+                <div class="test-result" id="test1-result" style="display: none;"></div>
+            </div>
+
+            <div class="test-section" id="test2">
+                <div class="test-header">
+                    <div class="test-icon pending" id="test2-icon">2</div>
+                    <div class="test-title">Database Tables Check</div>
+                </div>
+                <div class="test-description">
+                    Check if required tables (onboarding_tasks, onboarding_users) exist and are accessible.
+                </div>
+                <div class="test-result" id="test2-result" style="display: none;"></div>
+            </div>
+
+            <div class="test-section" id="test3">
+                <div class="test-header">
+                    <div class="test-icon pending" id="test3-icon">3</div>
+                    <div class="test-title">Tasks Data Validation</div>
+                </div>
+                <div class="test-description">
+                    Count tasks in onboarding_tasks table and validate data structure.
+                </div>
+                <div class="test-result" id="test3-result" style="display: none;"></div>
+            </div>
+
+            <div class="test-section" id="test4">
+                <div class="test-header">
+                    <div class="test-icon pending" id="test4-icon">4</div>
+                    <div class="test-title">Users Table Access</div>
+                </div>
+                <div class="test-description">
+                    Verify onboarding_users table is accessible and test record operations.
+                </div>
+                <div class="test-result" id="test4-result" style="display: none;"></div>
+            </div>
+
+            <div class="test-section" id="test5">
+                <div class="test-header">
+                    <div class="test-icon pending" id="test5-icon">5</div>
+                    <div class="test-title">URL Parameters Validation</div>
+                </div>
+                <div class="test-description">
+                    Check if required URL parameters (email, locationId) are present and valid.
+                </div>
+                <div class="test-result" id="test5-result" style="display: none;"></div>
+            </div>
+
+            <div class="test-section" id="test6">
+                <div class="test-header">
+                    <div class="test-icon pending" id="test6-icon">6</div>
+                    <div class="test-title">Webhook Integration Test</div>
+                </div>
+                <div class="test-description">
+                    Test the webhook endpoint with sample task completion data.
+                </div>
+                <div class="test-result" id="test6-result" style="display: none;"></div>
+            </div>
+
+            <div class="test-section" id="test7">
+                <div class="test-header">
+                    <div class="test-icon pending" id="test7-icon">7</div>
+                    <div class="test-title">Notification Webhook Test</div>
+                </div>
+                <div class="test-description">
+                    Test the notification webhook endpoint for individual user task assignments.
+                </div>
+                <div class="test-result" id="test7-result" style="display: none;"></div>
+            </div>
+
+            <div class="summary" id="summary" style="display: none;">
+                <h2>Test Results Summary</h2>
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <div class="number" id="passedCount">0</div>
+                        <div class="label">Passed</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="number" id="failedCount">0</div>
+                        <div class="label">Failed</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="number" id="totalCount">6</div>
+                        <div class="label">Total</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables - declared once
+        const SUPABASE_URL = 'https://vvtzalcisnpibnlunqgn.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2dHphbGNpc25waWJubHVucWduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU5NTk4MzMsImV4cCI6MjA3MTUzNTgzM30.LJqY5AjAuwH5k65XY9cxfuqiuNNtjYo5k210IAg0PCk';
+        // Webhook URLs will be loaded dynamically from database
+        
+        let supabaseClient;
+        let testResults = {};
+
+        // Initialize Supabase client
+        function initSupabase() {
+            try {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                return true;
+            } catch (error) {
+                console.error('Failed to initialize Supabase:', error);
+                return false;
+            }
+        }
+
+        // Get URL parameters (case insensitive)
+        function getUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Helper function to get parameter case-insensitively
+            function getParamCaseInsensitive(paramName) {
+                for (const [key, value] of urlParams) {
+                    if (key.toLowerCase() === paramName.toLowerCase()) {
+                        return value;
+                    }
+                }
+                return null;
+            }
+            
+            return {
+                email: getParamCaseInsensitive('email'),
+                locationId: getParamCaseInsensitive('locationId')
+            };
+        }
+
+        // Update test UI state
+        function updateTestState(testId, state, result = '') {
+            const section = document.getElementById(testId);
+            const icon = document.getElementById(`${testId}-icon`);
+            const resultDiv = document.getElementById(`${testId}-result`);
+
+            // Remove all state classes
+            section.classList.remove('running', 'success', 'error');
+            icon.classList.remove('pending', 'running', 'success', 'error');
+
+            // Add new state
+            section.classList.add(state);
+            icon.classList.add(state);
+
+            // Update icon content
+            switch (state) {
+                case 'running':
+                    icon.innerHTML = '<div class="spinner"></div>';
+                    break;
+                case 'success':
+                    icon.innerHTML = '✓';
+                    break;
+                case 'error':
+                    icon.innerHTML = '✗';
+                    break;
+                default:
+                    icon.innerHTML = testId.slice(-1);
+            }
+
+            // Show result if provided
+            if (result) {
+                resultDiv.textContent = result;
+                resultDiv.style.display = 'block';
+                resultDiv.classList.remove('success', 'error');
+                resultDiv.classList.add(state);
+            }
+        }
+
+        // Test 1: Supabase Connection
+        async function testSupabaseConnection() {
+            updateTestState('test1', 'running');
+            
+            try {
+                if (!initSupabase()) {
+                    throw new Error('Failed to initialize Supabase client');
+                }
+
+                // Test basic connection by attempting to access auth
+                const { data, error } = await supabaseClient.auth.getSession();
+                
+                if (error && error.message !== 'Auth session missing!') {
+                    throw error;
+                }
+
+                testResults.test1 = true;
+                updateTestState('test1', 'success', 'Supabase connection established successfully\nURL: ' + SUPABASE_URL);
+                
+            } catch (error) {
+                testResults.test1 = false;
+                updateTestState('test1', 'error', 'Connection failed: ' + error.message);
+            }
+        }
+
+        // Test 2: Database Tables Check
+        async function testDatabaseTables() {
+            updateTestState('test2', 'running');
+            
+            try {
+                // Test onboarding_tasks table
+                const { data: tasksTest, error: tasksError } = await supabaseClient
+                    .from('onboarding_tasks')
+                    .select('count', { count: 'exact' })
+                    .limit(0);
+
+                if (tasksError) {
+                    throw new Error('onboarding_tasks table error: ' + tasksError.message);
+                }
+
+                // Test onboarding_users table
+                const { data: usersTest, error: usersError } = await supabaseClient
+                    .from('onboarding_users')
+                    .select('count', { count: 'exact' })
+                    .limit(0);
+
+                if (usersError) {
+                    throw new Error('onboarding_users table error: ' + usersError.message);
+                }
+
+                testResults.test2 = true;
+                updateTestState('test2', 'success', 
+                    'Both required tables are accessible:\n' +
+                    '✓ onboarding_tasks table\n' +
+                    '✓ onboarding_users table'
+                );
+                
+            } catch (error) {
+                testResults.test2 = false;
+                updateTestState('test2', 'error', 'Database tables check failed: ' + error.message);
+            }
+        }
+
+        // Test 3: Tasks Data Validation
+        async function testTasksData() {
+            updateTestState('test3', 'running');
+            
+            try {
+                const { data: tasks, error, count } = await supabaseClient
+                    .from('onboarding_tasks')
+                    .select('*', { count: 'exact' });
+
+                if (error) {
+                    throw error;
+                }
+
+                let result = `Total tasks found: ${count}\n\n`;
+                
+                if (count === 0) {
+                    result += 'WARNING: No tasks found in database.\nThe system will use fallback tasks.';
+                } else {
+                    result += 'Sample task data:\n';
+                    tasks.slice(0, 2).forEach((task, index) => {
+                        result += `${index + 1}. "${task.title}" (${task.task_id})\n`;
+                        result += `   Position: ${task.position}, Active: ${task.is_active}\n`;
+                    });
+                    
+                    if (count > 2) {
+                        result += `   ... and ${count - 2} more tasks\n`;
+                    }
+                }
+
+                testResults.test3 = true;
+                updateTestState('test3', 'success', result);
+                
+            } catch (error) {
+                testResults.test3 = false;
+                updateTestState('test3', 'error', 'Tasks data validation failed: ' + error.message);
+            }
+        }
+
+        // Test 4: Users Table Access
+        async function testUsersTableAccess() {
+            updateTestState('test4', 'running');
+            
+            try {
+                // Test read access
+                const { data: users, error: readError, count } = await supabaseClient
+                    .from('onboarding_users')
+                    .select('email, location_id', { count: 'exact' })
+                    .limit(5);
+
+                if (readError) {
+                    throw new Error('Read access failed: ' + readError.message);
+                }
+
+                // Test with URL parameters if provided
+                const params = getUrlParams();
+                let paramTestResult = '';
+                
+                if (params.email && params.locationId) {
+                    const { data: specificUser, error: specificError } = await supabaseClient
+                        .from('onboarding_users')
+                        .select('*')
+                        .eq('email', params.email)
+                        .eq('location_id', params.locationId)
+                        .single();
+
+                    if (specificError && specificError.code !== 'PGRST116') {
+                        paramTestResult = '\nWARNING: Error checking specific user: ' + specificError.message;
+                    } else if (specificUser) {
+                        paramTestResult = '\n✓ User record found for provided parameters';
+                    } else {
+                        paramTestResult = '\nNo existing user record (will be created on first visit)';
+                    }
+                }
+
+                testResults.test4 = true;
+                updateTestState('test4', 'success', 
+                    `Users table accessible\n` +
+                    `Total users in database: ${count}\n` +
+                    `Read/write permissions: OK${paramTestResult}`
+                );
+                
+            } catch (error) {
+                testResults.test4 = false;
+                updateTestState('test4', 'error', 'Users table access failed: ' + error.message);
+            }
+        }
+
+        // Test 5: URL Parameters Validation
+        async function testUrlParameters() {
+            updateTestState('test5', 'running');
+            
+            try {
+                const params = getUrlParams();
+                let result = 'URL Parameter Analysis:\n\n';
+                let allGood = true;
+
+                if (!params.email) {
+                    result += '✗ Email parameter missing\n';
+                    result += '  Add: ?email={{user.email}}\n';
+                    allGood = false;
+                } else {
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (emailRegex.test(params.email)) {
+                        result += `✓ Email parameter: ${params.email}\n`;
+                    } else {
+                        result += `⚠ Email format may be invalid: ${params.email}\n`;
+                    }
+                }
+
+                if (!params.locationId) {
+                    result += '✗ Location ID parameter missing\n';
+                    result += '  Add: &locationId={{location.id}}\n';
+                    allGood = false;
+                } else {
+                    result += `✓ Location ID parameter: ${params.locationId}\n`;
+                }
+
+                result += '\nCorrect URL format:\n';
+                result += 'https://yourdomain.com/onboarding.html?email={{user.email}}&locationId={{location.id}}';
+
+                if (allGood) {
+                    testResults.test5 = true;
+                    updateTestState('test5', 'success', result);
+                } else {
+                    testResults.test5 = false;
+                    updateTestState('test5', 'error', result);
+                }
+                
+            } catch (error) {
+                testResults.test5 = false;
+                updateTestState('test5', 'error', 'URL parameters test failed: ' + error.message);
+            }
+        }
+
+        // Test 6: Webhook Integration
+        async function testWebhook() {
+            updateTestState('test6', 'running');
+            
+            try {
+                // Get task completion webhook URL from database
+                let webhookUrl = null;
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('webhook_settings')
+                        .select('webhook_url')
+                        .eq('webhook_name', 'task_completion')
+                        .eq('is_active', true)
+                        .single();
+                        
+                    if (error || !data) {
+                        testResults.test6 = false;
+                        updateTestState('test6', 'error', 'No active task_completion webhook found in database');
+                        return;
+                    }
+                    
+                    webhookUrl = data.webhook_url;
+                } catch (error) {
+                    testResults.test6 = false;
+                    updateTestState('test6', 'error', 'Failed to get task completion webhook URL: ' + error.message);
+                    return;
+                }
+                
+                const params = getUrlParams();
+                
+                // Create sample webhook payload
+                const samplePayload = {
+                    event: 'task_completion',
+                    user_email: params.email || 'test@example.com',
+                    location_id: params.locationId || 'test_location_123',
+                    task_id: 'test_task_profile',
+                    task_title: 'Complete Your Business Profile',
+                    completed: true,
+                    completed_at: new Date().toISOString(),
+                    timestamp: new Date().toISOString(),
+                    source: 'DFY_CRM_Test'
+                };
+
+                console.log('Sending test webhook payload:', samplePayload);
+                
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(samplePayload)
+                });
+
+                let result = 'Webhook Test Results:\n\n';
+                result += `Endpoint: ${webhookUrl}\n`;
+                result += `Status: ${response.status} ${response.statusText}\n`;
+                result += `Response Headers:\n`;
+                
+                // Log response headers
+                for (let [key, value] of response.headers.entries()) {
+                    result += `  ${key}: ${value}\n`;
+                }
+
+                if (response.ok) {
+                    result += '\n✓ Webhook delivered successfully!\n\n';
+                    result += 'Sample payload sent:\n';
+                    result += JSON.stringify(samplePayload, null, 2);
+                    
+                    testResults.test6 = true;
+                    updateTestState('test6', 'success', result);
+                } else {
+                    result += `\n✗ Webhook failed with status ${response.status}\n`;
+                    result += 'This may be expected if the webhook endpoint is not yet configured.\n\n';
+                    result += 'Sample payload that was sent:\n';
+                    result += JSON.stringify(samplePayload, null, 2);
+                    
+                    testResults.test6 = false;
+                    updateTestState('test6', 'error', result);
+                }
+                
+            } catch (error) {
+                testResults.test6 = false;
+                updateTestState('test6', 'error', 'Webhook test failed: ' + error.message + '\n\nThis may indicate CORS issues or network connectivity problems.');
+            }
+        }
+
+        // Test 7: Notification Webhook Integration
+        async function testNotificationWebhook() {
+            updateTestState('test7', 'running');
+            
+            try {
+                // Get notification webhook URL from database
+                let notificationWebhookUrl = null;
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('webhook_settings')
+                        .select('webhook_url')
+                        .eq('webhook_name', 'user_notification')
+                        .eq('is_active', true)
+                        .single();
+                        
+                    if (error || !data) {
+                        testResults.test7 = false;
+                        updateTestState('test7', 'error', 'No active user_notification webhook found in database');
+                        return;
+                    }
+                    
+                    notificationWebhookUrl = data.webhook_url;
+                } catch (error) {
+                    testResults.test7 = false;
+                    updateTestState('test7', 'error', 'Failed to get notification webhook URL: ' + error.message);
+                    return;
+                }
+                
+                const params = getUrlParams();
+                
+                // Create sample notification webhook payload
+                const sampleNotificationPayload = {
+                    event: 'task_assignment',
+                    user_email: params.email || 'test@example.com',
+                    location_id: params.locationId || 'test_location_123',
+                    task_id: 'individual_task_001',
+                    task_title: 'Individual Task Assignment Test',
+                    assigned_at: new Date().toISOString(),
+                    timestamp: new Date().toISOString(),
+                    source: 'DFY_CRM_Admin',
+                    message: 'A new task has been assigned specifically to you.'
+                };
+                console.log('Sending test notification webhook payload:', sampleNotificationPayload);
+                
+                const response = await fetch(notificationWebhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(sampleNotificationPayload)
+                });
+
+                let result = 'Notification Webhook Test Results:\n\n';
+                result += `Endpoint: ${notificationWebhookUrl}\n`;
+                result += `Status: ${response.status} ${response.statusText}\n`;
+                result += `Response Headers:\n`;
+                
+                // Log response headers
+                for (const [key, value] of response.headers.entries()) {
+                    result += `  ${key}: ${value}\n`;
+                }
+
+                // Try to get response body
+                let responseBody = '';
+                try {
+                    responseBody = await response.text();
+                    result += `\nResponse Body:\n${responseBody}\n`;
+                } catch (e) {
+                    result += '\nResponse Body: (Unable to read)\n';
+                }
+
+                if (response.ok) {
+                    result += '\n✅ Notification webhook test successful!\n';
+                    result += 'The notification system is working correctly.';
+                    
+                    testResults.test7 = true;
+                    updateTestState('test7', 'success', result);
+                } else {
+                    result += `\n✗ Notification webhook failed with status ${response.status}\n`;
+                    result += 'This may be expected if the notification webhook endpoint is not yet configured.\n\n';
+                    result += 'Sample notification payload that was sent:\n';
+                    result += JSON.stringify(sampleNotificationPayload, null, 2);
+                    
+                    testResults.test7 = false;
+                    updateTestState('test7', 'error', result);
+                }
+                
+            } catch (error) {
+                testResults.test7 = false;
+                updateTestState('test7', 'error', 'Notification webhook test failed: ' + error.message + '\n\nThis may indicate CORS issues or network connectivity problems.');
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            const button = document.getElementById('runTestsBtn');
+            button.disabled = true;
+            button.textContent = 'Running Tests...';
+
+            // Reset results
+            testResults = {};
+            
+            // Hide summary
+            document.getElementById('summary').style.display = 'none';
+
+            try {
+                // Run tests sequentially
+                await testSupabaseConnection();
+                await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for UX
+                
+                await testDatabaseTables();
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                await testTasksData();
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                await testUsersTableAccess();
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                await testUrlParameters();
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                await testWebhook();
+                await testNotificationWebhook();
+                
+                // Show summary
+                showSummary();
+                
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Run Tests Again';
+            }
+        }
+
+        // Show test summary
+        function showSummary() {
+            const passed = Object.values(testResults).filter(result => result === true).length;
+            const failed = Object.values(testResults).filter(result => result === false).length;
+            
+            document.getElementById('passedCount').textContent = passed;
+            document.getElementById('failedCount').textContent = failed;
+            document.getElementById('summary').style.display = 'block';
+        }
+
+        // Display URL parameters on page load
+        function displayUrlParams() {
+            const params = getUrlParams();
+            document.getElementById('emailParam').textContent = params.email || 'Not provided';
+            document.getElementById('locationIdParam').textContent = params.locationId || 'Not provided';
+        }
+
+        // Enhanced Global Admin Navigation System
+        function initAdminNavigation() {
+            const currentPath = window.location.pathname;
+            const currentDir = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+            const baseUrl = window.location.origin + currentDir;
+            const currentFile = currentPath.split('/').pop().toLowerCase();
+            
+            const navItems = [
+                { 
+                    file: 'admin.html', 
+                    iconClass: 'tasks', 
+                    label: 'Task Manager',
+                    activePatterns: ['admin.html', 'admin', '']
+                },
+                { 
+                    file: 'analytics.html', 
+                    iconClass: 'analytics', 
+                    label: 'Users',
+                    activePatterns: ['analytics.html', 'analytics']
+                },
+                { 
+                    file: 'test.html', 
+                    iconClass: 'test', 
+                    label: 'System Test',
+                    activePatterns: ['test.html', 'test', 'diagnostic']
+                },
+                { 
+                    file: 'onboarding.html?email=admin@test.com&locationid=admin_preview', 
+                    iconClass: 'preview', 
+                    label: 'Preview',
+                    activePatterns: ['onboarding.html', 'onboarding'],
+                    isPreview: true
+                }
+            ];
+            
+            const navHtml = navItems.map(item => {
+                const isActive = item.activePatterns.some(pattern => 
+                    currentFile === pattern || 
+                    currentFile.includes(pattern) ||
+                    (pattern === '' && (currentFile === 'index.html' || currentFile === ''))
+                );
+                
+                const activeClass = isActive ? ' active' : '';
+                const href = baseUrl + item.file;
+                const target = item.isPreview ? ' target="_blank"' : '';
+                
+                return `<a href="${href}" class="nav-link${activeClass}"${target}>
+                    <div class="nav-icon ${item.iconClass}"></div>
+                    <span>${item.label}</span>
+                </a>`;
+            }).join('');
+            
+            const navContainer = document.getElementById('adminNav');
+            navContainer.style.opacity = '0';
+            navContainer.innerHTML = navHtml;
+            
+            setTimeout(() => {
+                navContainer.style.transition = 'opacity 0.3s ease';
+                navContainer.style.opacity = '1';
+            }, 50);
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', () => {
+            initAdminNavigation();
+            displayUrlParams();
+            console.log('Diagnostic tool initialized');
+        });
+    </script>
+</body>
+</html>

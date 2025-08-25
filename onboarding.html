@@ -1,0 +1,2487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFY CRM - Welcome Setup</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #F5F7FA;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1F2937;
+            padding: 20px;
+        }
+
+        .container {
+            background: linear-gradient(180deg, #FFFFFF 0%, #F9FAFB 100%);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            max-width: 1200px;
+            width: 100%;
+            min-height: 700px;
+            display: flex;
+            transition: all 0.3s ease-out;
+            border: 1px solid #E5E7EB;
+        }
+
+        .onboarding-panel {
+            flex: 1;
+            padding: 24px;
+            background: #FFFFFF;
+            transition: flex 0.3s ease-out;
+        }
+
+        .container.instructions-open .onboarding-panel {
+            flex: 0.5;
+        }
+
+        .instructions-panel {
+            flex: 0;
+            background: #FFFFFF;
+            color: #1F2937;
+            padding: 0;
+            transition: all 0.3s ease-out;
+            overflow: hidden;
+            border-left: 1px solid #E5E7EB;
+        }
+
+        .container.instructions-open .instructions-panel {
+            flex: 0.5;
+            padding: 24px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding: 0 20px;
+        }
+
+        .header h1 {
+            color: #1F2937;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: -0.025em;
+        }
+
+        .header p {
+            color: #6B7280;
+            font-size: 16px;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+
+        .progress-bar {
+            background: #E5E7EB;
+            border-radius: 8px;
+            height: 8px;
+            margin: 0 20px 24px 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%);
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.4s ease-out;
+            width: 0%;
+        }
+
+        .task-list {
+            space-y: 16px;
+        }
+
+        .task-item {
+            background: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.2s ease-out;
+            cursor: pointer;
+            position: relative;
+            margin: 0 20px 16px 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-item:hover {
+            border-color: #3B82F6;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .task-item.completed {
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, rgba(37, 99, 235, 0.05) 100%);
+            border-color: #3B82F6;
+        }
+
+        .task-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #E5E7EB;
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+            margin-top: 2px;
+            transition: all 0.2s ease-out;
+            background: #FFFFFF;
+        }
+
+        .task-checkbox.checked {
+            background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%);
+            border-color: #3B82F6;
+        }
+
+        .task-checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            color: #FFFFFF;
+            font-size: 11px;
+            font-weight: bold;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .task-details {
+            flex: 1;
+            pointer-events: none;
+        }
+
+        .task-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 4px;
+            line-height: 1.5;
+        }
+
+        .task-description {
+            color: #6B7280;
+            font-size: 14px;
+            line-height: 1.5;
+            font-weight: 400;
+        }
+
+        .instructions-content {
+            opacity: 0;
+            transform: translateX(20px);
+            transition: all 0.3s ease-out;
+        }
+
+        .container.instructions-open .instructions-content {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .instructions-header {
+            margin-bottom: 20px;
+        }
+
+        .instructions-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #1F2937;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: #F3F4F6;
+            border: none;
+            color: #4B5563;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: background 0.2s ease;
+        }
+
+        .close-btn:hover {
+            background: #E5E7EB;
+        }
+
+        .instructions-body {
+            line-height: 1.6;
+            color: #1F2937;
+        }
+
+        .instructions-body h2 {
+            margin: 16px 0 8px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #FFFFFF;
+        }
+
+        .instructions-body p {
+            margin-bottom: 12px;
+            opacity: 0.9;
+        }
+
+        .instructions-body ul {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .instructions-body li {
+            margin-bottom: 6px;
+            opacity: 0.9;
+        }
+
+        .video-container {
+            margin: 20px 0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .video-container iframe {
+            width: 100%;
+            height: 250px;
+            border: none;
+        }
+
+        /* Form Styles for Instructions Panel */
+        .instruction-form {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 16px 0;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #1F2937;
+            font-size: 14px;
+            margin-bottom: 12px;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3B82F6;
+            background: #FFFFFF;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .form-input::placeholder {
+            color: #6B7280;
+        }
+
+        textarea.form-input {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        select.form-input {
+            cursor: pointer;
+        }
+
+        .form-button {
+            background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%);
+            color: #FFFFFF;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+        }
+
+        .form-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-success-message {
+            background: #10B981;
+            color: #FFFFFF;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-top: 12px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Form Labels */
+        .instructions-body label {
+            display: block;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        /* Form Groups */
+        .instructions-body .form-group {
+            margin-bottom: 16px;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: #6B7280;
+            font-weight: 500;
+        }
+
+        .error {
+            background: #FEF2F2;
+            border: 1px solid #FECACA;
+            color: #DC2626;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 95%;
+                min-height: auto;
+                flex-direction: column;
+            }
+
+            .container.instructions-open .onboarding-panel {
+                flex: 1;
+            }
+
+            .container.instructions-open .instructions-panel {
+                flex: 1;
+                width: 90%;
+                padding: 30px;
+            }
+
+            .onboarding-panel {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .task-content {
+                gap: 12px;
+            }
+
+            .task-item {
+                padding: 16px;
+            }
+        }
+
+        /* Profile Popup Styles */
+        .profile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+        }
+
+        .profile-modal {
+            background: #FFFFFF;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+            width: 90%;
+            max-width: 500px;
+            padding: 32px;
+            position: relative;
+        }
+
+        .profile-modal h2 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .profile-modal .subtitle {
+            color: #6B7280;
+            text-align: center;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .profile-form-group {
+            margin-bottom: 20px;
+        }
+
+        .profile-form-group label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .profile-form-group .required {
+            color: #EF4444;
+        }
+
+        .profile-form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #D1D5DB;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            background: #FFFFFF;
+        }
+
+        .profile-form-group input:focus {
+            outline: none;
+            border-color: #1E40AF;
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+        }
+
+        .profile-form-row {
+            display: flex;
+            gap: 16px;
+        }
+
+        .profile-form-row .profile-form-group {
+            flex: 1;
+        }
+
+        .profile-submit-btn {
+            width: 100%;
+            background: #1E40AF;
+            color: #FFFFFF;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+        }
+
+        .profile-submit-btn:hover {
+            background: #1E3A8A;
+            transform: translateY(-1px);
+        }
+
+        .profile-submit-btn:disabled {
+            background: #9CA3AF;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        @media (max-width: 640px) {
+            .profile-modal {
+                margin: 20px;
+                padding: 24px;
+            }
+            
+            .profile-form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+        }
+
+        /* User Welcome Info Styles */
+        .user-welcome {
+            background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%);
+            color: white;
+            padding: 20px 24px;
+            margin: -24px -24px 24px -24px;
+            border-radius: 12px 12px 0 0;
+            display: none;
+            position: relative;
+        }
+
+        .user-welcome h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            line-height: 1.2;
+        }
+
+        .user-info {
+            opacity: 0.9;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .user-info-row {
+            margin: 2px 0;
+        }
+
+        .default-header {
+            margin-bottom: 24px;
+        }
+
+        .default-header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1F2937;
+            margin: 0 0 8px 0;
+        }
+
+        .default-header p {
+            color: #6B7280;
+            font-size: 16px;
+            margin: 0;
+        }
+
+        /* Edit Profile Button */
+        .edit-profile-btn {
+            position: absolute;
+            top: 20px;
+            right: 24px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .edit-profile-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .edit-profile-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Edit Profile Modal Styles */
+        .edit-profile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+        }
+
+        .edit-profile-modal {
+            background: #FFFFFF;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+            width: 90%;
+            max-width: 500px;
+            padding: 32px;
+            position: relative;
+        }
+
+        .edit-profile-modal h2 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .edit-profile-modal .subtitle {
+            color: #6B7280;
+            text-align: center;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .readonly-field {
+            background: #F9FAFB !important;
+            color: #6B7280 !important;
+            cursor: not-allowed;
+        }
+
+        .readonly-label {
+            color: #9CA3AF;
+        }
+
+        /* Toggle Switch Styles */
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 0;
+            border-top: 1px solid #E5E7EB;
+        }
+
+        .toggle-info {
+            flex: 1;
+        }
+
+        .toggle-info label {
+            font-weight: 500;
+            color: #374151;
+            margin: 0;
+        }
+
+        .toggle-info .toggle-subtitle {
+            font-size: 13px;
+            color: #6B7280;
+            margin-top: 4px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 56px;
+            height: 28px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #D1D5DB;
+            transition: 0.3s;
+            border-radius: 28px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #10B981;
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(28px);
+        }
+
+        /* Confirmation Popup Styles */
+        .confirm-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(8px);
+        }
+
+        .confirm-modal {
+            background: #FFFFFF;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 400px;
+            padding: 32px;
+            text-align: center;
+        }
+
+        .confirm-modal .icon {
+            width: 48px;
+            height: 48px;
+            background: #FEF3C7;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .confirm-modal .icon svg {
+            width: 24px;
+            height: 24px;
+            color: #D97706;
+        }
+
+        .confirm-modal h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 12px;
+        }
+
+        .confirm-modal p {
+            color: #6B7280;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+
+        .confirm-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .confirm-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid;
+            flex: 1;
+        }
+
+        .confirm-btn.cancel {
+            background: #F9FAFB;
+            border-color: #D1D5DB;
+            color: #374151;
+        }
+
+        .confirm-btn.cancel:hover {
+            background: #F3F4F6;
+        }
+
+        .confirm-btn.confirm {
+            background: #DC2626;
+            border-color: #DC2626;
+            color: white;
+        }
+
+        .confirm-btn.confirm:hover {
+            background: #B91C1C;
+        }
+
+        /* Task Group Header Styles */
+        .task-group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(90deg, #F9FAFB 0%, #F3F4F6 100%);
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 0 20px 12px 20px;
+            font-weight: 600;
+            color: #374151;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .task-group-header.completed {
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%);
+            border-color: #10B981;
+            color: #065F46;
+        }
+
+        .task-group-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+        }
+
+        .group-icon {
+            font-size: 18px;
+        }
+
+        .task-group-progress {
+            font-size: 13px;
+            color: #6B7280;
+            font-weight: 500;
+        }
+
+        .task-group-header.completed .task-group-progress {
+            color: #047857;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="container">
+        <div class="onboarding-panel">
+            <!-- Personalized Welcome (shown after profile completion) -->
+            <div id="userWelcome" class="user-welcome">
+                <button class="edit-profile-btn" onclick="openEditProfileModal()" title="Edit profile information">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                    </svg>
+                </button>
+                <h1 id="welcomeMessage">Welcome!</h1>
+                <div class="user-info">
+                    <div class="user-info-row" id="companyInfo"></div>
+                    <div class="user-info-row" id="emailInfo"></div>
+                    <div class="user-info-row" id="locationInfo"></div>
+                </div>
+            </div>
+            
+            <!-- Default Header (shown before profile completion) -->
+            <div id="defaultHeader" class="header default-header">
+                <h1>Welcome to DFY CRM</h1>
+                <p>Let's get your account set up and ready to go</p>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+
+            <div id="taskList" class="task-list">
+                <div class="loading">Loading your onboarding tasks...</div>
+            </div>
+        </div>
+
+        <div class="instructions-panel">
+            <button class="close-btn" onclick="closeInstructions()">&times;</button>
+            <div class="instructions-content" id="instructionsContent">
+                <!-- Instructions will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Completion Popup -->
+    <div id="profileOverlay" class="profile-overlay" style="display: none;">
+        <div class="profile-modal">
+            <h2>Complete Your Profile</h2>
+            <p class="subtitle">Before accessing your onboarding tasks, we need to collect some additional information to personalize your experience.</p>
+            
+            <form id="profileForm">
+                <div class="profile-form-row">
+                    <div class="profile-form-group">
+                        <label for="firstName">First Name <span class="required">*</span></label>
+                        <input type="text" id="firstName" name="firstName" required>
+                    </div>
+                    <div class="profile-form-group">
+                        <label for="lastName">Last Name <span class="required">*</span></label>
+                        <input type="text" id="lastName" name="lastName" required>
+                    </div>
+                </div>
+                
+                <div class="profile-form-group">
+                    <label for="cellPhone">Cell Phone <span class="required">*</span></label>
+                    <input type="tel" id="cellPhone" name="cellPhone" placeholder="(555) 123-4567" required>
+                </div>
+                
+                <div class="profile-form-group">
+                    <label for="companyName">Company Name <span class="required">*</span></label>
+                    <input type="text" id="companyName" name="companyName" required>
+                </div>
+                
+                <button type="submit" class="profile-submit-btn">
+                    Complete Profile & Continue
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div id="editProfileOverlay" class="edit-profile-overlay" style="display: none;">
+        <div class="edit-profile-modal">
+            <h2>Edit Profile</h2>
+            <p class="subtitle">Update your profile information below.</p>
+            
+            <form id="editProfileForm">
+                <div class="profile-form-row">
+                    <div class="profile-form-group">
+                        <label for="editFirstName">First Name <span class="required">*</span></label>
+                        <input type="text" id="editFirstName" name="firstName" required>
+                    </div>
+                    <div class="profile-form-group">
+                        <label for="editLastName">Last Name <span class="required">*</span></label>
+                        <input type="text" id="editLastName" name="lastName" required>
+                    </div>
+                </div>
+                
+                <div class="profile-form-group">
+                    <label for="editCellPhone">Cell Phone <span class="required">*</span></label>
+                    <input type="tel" id="editCellPhone" name="cellPhone" placeholder="(555) 123-4567" required>
+                </div>
+                
+                <div class="profile-form-group">
+                    <label for="editCompanyName">Company Name <span class="required">*</span></label>
+                    <input type="text" id="editCompanyName" name="companyName" required>
+                </div>
+                
+                <div class="profile-form-group">
+                    <label for="editEmail" class="readonly-label">Email Address (cannot be changed)</label>
+                    <input type="email" id="editEmail" name="email" class="readonly-field" readonly>
+                </div>
+                
+                <div class="profile-form-group">
+                    <label for="editLocationId" class="readonly-label">Location ID (cannot be changed)</label>
+                    <input type="text" id="editLocationId" name="locationId" class="readonly-field" readonly>
+                </div>
+                
+                <div class="toggle-group">
+                    <div class="toggle-info">
+                        <label>Task Notifications</label>
+                        <div class="toggle-subtitle">Receive notifications for new tasks and reminders</div>
+                    </div>
+                    <div class="toggle-switch" onclick="handleNotificationToggleClick(event)">
+                        <input type="checkbox" id="notificationsToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 12px; margin-top: 8px;">
+                    <button type="button" class="profile-submit-btn" onclick="closeEditProfileModal()" style="background: #6B7280;">
+                        Cancel
+                    </button>
+                    <button type="submit" class="profile-submit-btn">
+                        Update Profile
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification Opt-out Confirmation Modal -->
+    <div id="confirmOptOutOverlay" class="confirm-overlay" style="display: none;">
+        <div class="confirm-modal">
+            <div class="icon">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+            </div>
+            <h3>Turn Off Task Notifications?</h3>
+            <p>You'll no longer receive notifications about new tasks, reminders, or updates. You can turn this back on anytime in your profile settings.</p>
+            <div class="confirm-buttons">
+                <button class="confirm-btn cancel" onclick="cancelOptOut()">Keep Notifications</button>
+                <button class="confirm-btn confirm" onclick="confirmOptOut()">Turn Off</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables - declared once
+        const SUPABASE_URL = 'https://vvtzalcisnpibnlunqgn.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2dHphbGNpc25waWJubHVucWduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU5NTk4MzMsImV4cCI6MjA3MTUzNTgzM30.LJqY5AjAuwH5k65XY9cxfuqiuNNtjYo5k210IAg0PCk';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let currentUser = null;
+        let currentChecklist = [];
+        let taskInstructions = {};
+
+        // Fallback tasks in case database is empty
+        const fallbackTasks = [
+            {
+                task_id: 'profile',
+                title: 'Complete Your Business Profile',
+                description: 'Set up your company information and branding',
+                instruction_title: 'Complete Your Business Profile',
+                instruction_content: '<h2>Set Up Your Business Profile</h2><p>Your profile is the foundation of your DFY CRM experience. Complete these essential steps:</p><ul><li>Add your business name and description</li><li>Upload your company logo and branding</li><li>Set your contact information and address</li><li>Configure your business hours and timezone</li><li>Add your team members and roles</li></ul>',
+                video_url: null,
+                position: 1
+            },
+            {
+                task_id: 'integration',
+                title: 'Connect Your Essential Tools',
+                description: 'Integrate your existing business systems',
+                instruction_title: 'Connect Your Essential Tools',
+                instruction_content: '<h2>Connect Your Tools</h2><p>Streamline your workflow by connecting your existing business tools:</p><ul><li>Connect your email marketing platform</li><li>Integrate your calendar and scheduling system</li><li>Set up payment processing and invoicing</li><li>Import your existing contacts and leads</li><li>Connect your phone system for call tracking</li></ul>',
+                video_url: null,
+                position: 2
+            },
+            {
+                task_id: 'campaign',
+                title: 'Launch Your First Automation',
+                description: 'Create your initial lead nurture sequence',
+                instruction_title: 'Launch Your First Automation',
+                instruction_content: '<h2>Launch Your First Automation</h2><p>Get started with powerful marketing automation to grow your business:</p><ul><li>Choose your automation template</li><li>Define your target audience and triggers</li><li>Customize your messaging and content</li><li>Set up follow-up sequences and workflows</li><li>Test and activate your automation</li></ul>',
+                video_url: null,
+                position: 3
+            }
+        ];
+
+        // Filter tasks based on user targeting
+        function filterTasksForUser(tasks, user) {
+            console.log('Filtering tasks for user:', user.email, user.location_id);
+            
+            return tasks.filter(task => {
+                const targetType = task.target_type || 'all';
+                
+                console.log(`Task "${task.title}" - Target type: ${targetType}`);
+                
+                // Show to all users
+                if (targetType === 'all') {
+                    return true;
+                }
+                
+                // Group-based targeting
+                if (targetType === 'groups') {
+                    const taskGroups = Array.isArray(task.target_groups) ? task.target_groups : [];
+                    const userGroups = Array.isArray(user.user_groups) ? user.user_groups : [];
+                    
+                    console.log(`Task groups: ${taskGroups}, User groups: ${userGroups}`);
+                    
+                    // Check if user belongs to any of the target groups
+                    const hasMatchingGroup = taskGroups.some(groupId => userGroups.includes(groupId));
+                    console.log(`Has matching group: ${hasMatchingGroup}`);
+                    
+                    return hasMatchingGroup;
+                }
+                
+                // Location-based targeting
+                if (targetType === 'locations') {
+                    const taskLocations = Array.isArray(task.target_locations) ? task.target_locations : [];
+                    
+                    console.log(`Task locations: ${taskLocations}, User location: ${user.location_id}`);
+                    
+                    // Check if user's location matches any target locations
+                    const hasMatchingLocation = taskLocations.includes(user.location_id);
+                    console.log(`Has matching location: ${hasMatchingLocation}`);
+                    
+                    return hasMatchingLocation;
+                }
+                
+                // Individual user targeting
+                if (targetType === 'individuals') {
+                    const targetUsers = Array.isArray(task.target_users) ? task.target_users : [];
+                    
+                    console.log(`Task target users: ${targetUsers}, Current user ID: ${user.id}`);
+                    
+                    // Check if user's ID matches any target users
+                    const hasMatchingUser = targetUsers.includes(user.id);
+                    console.log(`Has matching user: ${hasMatchingUser}`);
+                    
+                    return hasMatchingUser;
+                }
+                
+                // Default fallback - show task
+                return true;
+            });
+        }
+
+        // Get URL parameters (case insensitive)
+        function getUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Helper function to get parameter case-insensitively
+            function getParamCaseInsensitive(paramName) {
+                for (const [key, value] of urlParams) {
+                    if (key.toLowerCase() === paramName.toLowerCase()) {
+                        return value;
+                    }
+                }
+                return null;
+            }
+            
+            return {
+                email: getParamCaseInsensitive('email'),
+                locationId: getParamCaseInsensitive('locationId'),
+                group: getParamCaseInsensitive('group')
+            };
+        }
+
+        // Send webhook notification for task completion
+        async function sendWebhook(taskData) {
+            try {
+                // Get task completion webhook URL from database
+                let webhookUrl = null;
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('webhook_settings')
+                        .select('webhook_url')
+                        .eq('webhook_name', 'task_completion')
+                        .eq('is_active', true)
+                        .single();
+                        
+                    if (error || !data) {
+                        console.warn('No active task_completion webhook found in database');
+                        return;
+                    }
+                    
+                    webhookUrl = data.webhook_url;
+                } catch (error) {
+                    console.error('Failed to get task completion webhook URL:', error);
+                    return;
+                }
+                
+                console.log('Sending webhook for task completion:', taskData);
+                
+                const webhookPayload = {
+                    event: 'task_completion',
+                    user_email: taskData.userEmail,
+                    location_id: taskData.locationId,
+                    task_id: taskData.taskId,
+                    task_title: taskData.taskTitle,
+                    completed: taskData.completed,
+                    completed_at: taskData.completedAt,
+                    timestamp: new Date().toISOString()
+                };
+
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(webhookPayload)
+                });
+
+                if (response.ok) {
+                    console.log('Webhook sent successfully');
+                } else {
+                    console.error('Webhook failed with status:', response.status);
+                }
+            } catch (error) {
+                console.error('Error sending webhook:', error);
+                // Don't throw error - webhook failures shouldn't break the user experience
+            }
+        }
+
+        // Load tasks from database with group-based sequencing
+        async function loadTasks() {
+            try {
+                console.log('Loading tasks and task groups from database...');
+                
+                // Load all active tasks with their task groups
+                const { data: tasks, error: tasksError } = await supabaseClient
+                    .from('onboarding_tasks')
+                    .select(`
+                        *,
+                        task_groups!task_group_id (
+                            id,
+                            group_name,
+                            display_order,
+                            is_active
+                        )
+                    `)
+                    .eq('is_active', true)
+                    .order('position');
+
+                if (tasksError) {
+                    console.error('Tasks database error:', tasksError);
+                    throw tasksError;
+                }
+
+                // Load task group sequences
+                const { data: sequences, error: sequencesError } = await supabaseClient
+                    .from('task_group_sequences')
+                    .select('*')
+                    .eq('is_active', true);
+
+                if (sequencesError) {
+                    console.error('Sequences database error:', sequencesError);
+                    // Don't throw - sequences are optional
+                }
+
+                console.log('Tasks loaded:', tasks);
+                console.log('Sequences loaded:', sequences);
+
+                // Use fallback if no tasks in database
+                let activeTasks = (tasks && tasks.length > 0) ? tasks : fallbackTasks;
+                
+                // Filter tasks based on targeting
+                activeTasks = filterTasksForUser(activeTasks, currentUser);
+                
+                // Apply group-based sequencing
+                activeTasks = await applyGroupSequencing(activeTasks, sequences || []);
+                
+                // Build task instructions object
+                taskInstructions = {};
+                activeTasks.forEach(task => {
+                    taskInstructions[task.task_id] = {
+                        title: task.instruction_title,
+                        content: task.instruction_content,
+                        video_url: task.video_url,
+                        form_embed_code: task.form_embed_code,
+                        groupInfo: task.task_groups ? {
+                            id: task.task_groups.id,
+                            name: task.task_groups.group_name,
+                            display_order: task.task_groups.display_order
+                        } : null
+                    };
+                });
+
+                return activeTasks;
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+                return fallbackTasks;
+            }
+        }
+
+        // Apply group-based sequencing logic
+        async function applyGroupSequencing(tasks, sequences) {
+            if (!sequences || sequences.length === 0) {
+                console.log('No sequences configured, showing all tasks');
+                return tasks;
+            }
+            
+            console.log('Applying group sequencing...');
+            
+            // Group tasks by task_group_id
+            const tasksByGroup = {};
+            const unassignedTasks = [];
+            
+            tasks.forEach(task => {
+                if (task.task_group_id && task.task_groups) {
+                    const groupId = task.task_group_id;
+                    if (!tasksByGroup[groupId]) {
+                        tasksByGroup[groupId] = [];
+                    }
+                    tasksByGroup[groupId].push(task);
+                } else {
+                    // Tasks without groups are always visible
+                    unassignedTasks.push(task);
+                }
+            });
+            
+            // Determine which groups should be visible
+            const visibleGroups = new Set();
+            const lockedGroups = new Set();
+            
+            // Check sequences to determine which groups should be locked/unlocked
+            for (const sequence of sequences) {
+                // Check if sequence applies to this user
+                if (!sequenceAppliesToUser(sequence, currentUser)) {
+                    continue;
+                }
+                
+                const prerequisiteGroupId = sequence.prerequisite_group_id;
+                const unlockGroupId = sequence.unlock_group_id;
+                
+                // Check if prerequisite group is completed
+                const prerequisiteGroupCompleted = await isGroupCompleted(prerequisiteGroupId, tasksByGroup);
+                
+                if (prerequisiteGroupCompleted) {
+                    console.log(`Prerequisite group ${prerequisiteGroupId} completed, unlocking group ${unlockGroupId}`);
+                    visibleGroups.add(unlockGroupId);
+                } else {
+                    console.log(`Prerequisite group ${prerequisiteGroupId} not completed, locking group ${unlockGroupId}`);
+                    lockedGroups.add(unlockGroupId);
+                }
+                
+                // Always show prerequisite group
+                visibleGroups.add(prerequisiteGroupId);
+            }
+            
+            // Remove locked groups from visible groups
+            lockedGroups.forEach(groupId => {
+                visibleGroups.delete(groupId);
+            });
+            
+            // Collect visible tasks
+            let visibleTasks = [...unassignedTasks]; // Always include unassigned tasks
+            
+            // Add tasks from visible groups
+            visibleGroups.forEach(groupId => {
+                if (tasksByGroup[groupId]) {
+                    visibleTasks = visibleTasks.concat(tasksByGroup[groupId]);
+                }
+            });
+            
+            // Sort tasks by group display order, then by position
+            visibleTasks.sort((a, b) => {
+                const aGroupOrder = a.task_groups?.display_order || 0;
+                const bGroupOrder = b.task_groups?.display_order || 0;
+                
+                if (aGroupOrder !== bGroupOrder) {
+                    return aGroupOrder - bGroupOrder;
+                }
+                
+                return (a.position || 0) - (b.position || 0);
+            });
+            
+            console.log(`Showing ${visibleTasks.length} tasks after sequencing`);
+            return visibleTasks;
+        }
+        
+        // Check if sequence applies to current user
+        function sequenceAppliesToUser(sequence, user) {
+            const appliesTo = sequence.applies_to || 'all';
+            
+            if (appliesTo === 'all') {
+                return true;
+            }
+            
+            if (appliesTo === 'groups') {
+                const sequenceGroups = Array.isArray(sequence.target_groups) ? sequence.target_groups : [];
+                const userGroups = Array.isArray(user.user_groups) ? user.user_groups : [];
+                return sequenceGroups.some(groupId => userGroups.includes(groupId));
+            }
+            
+            if (appliesTo === 'locations') {
+                const sequenceLocations = Array.isArray(sequence.target_locations) ? sequence.target_locations : [];
+                return sequenceLocations.includes(user.location_id);
+            }
+            
+            if (appliesTo === 'individuals') {
+                const targetUsers = Array.isArray(sequence.target_users) ? sequence.target_users : [];
+                return targetUsers.includes(user.id);
+            }
+            
+            return true;
+        }
+        
+        // Check if all tasks in a group are completed
+        async function isGroupCompleted(groupId, tasksByGroup) {
+            const groupTasks = tasksByGroup[groupId];
+            if (!groupTasks || groupTasks.length === 0) {
+                return true; // Empty group is considered completed
+            }
+            
+            // Check user's current checklist for completion status
+            const allCompleted = groupTasks.every(task => {
+                const userTask = currentChecklist.find(ut => ut.id === task.task_id);
+                return userTask && userTask.completed;
+            });
+            
+            console.log(`Group ${groupId} completion status: ${allCompleted} (${groupTasks.length} tasks)`);
+            return allCompleted;
+        }
+
+        // Convert group name to URL-friendly slug
+        function createUrlSlug(groupName) {
+            return groupName.toLowerCase()
+                .replace(/\s+/g, '_')  // Replace spaces with underscores
+                .replace(/[^a-z0-9_]/g, '');  // Remove special characters
+        }
+        
+        // Find group by slug or name
+        async function findGroupBySlug(groupSlug) {
+            if (!groupSlug) return null;
+            
+            try {
+                // First try to find by exact slug match
+                const { data: groups, error } = await supabaseClient
+                    .from('user_groups')
+                    .select('*');
+                    
+                if (error) {
+                    console.error('Error fetching groups:', error);
+                    return null;
+                }
+                
+                // Look for matching group by slug
+                const matchingGroup = groups.find(group => 
+                    createUrlSlug(group.group_name) === groupSlug.toLowerCase()
+                );
+                
+                if (matchingGroup) {
+                    console.log('Found matching group:', matchingGroup);
+                    return matchingGroup;
+                }
+                
+                // If no slug match, check for "All Users" group
+                const allUsersGroup = groups.find(group => 
+                    group.group_name.toLowerCase() === 'all users'
+                );
+                
+                return allUsersGroup || null;
+            } catch (error) {
+                console.error('Error finding group:', error);
+                return null;
+            }
+        }
+        
+        // Load or create user
+        async function loadUser(email, locationId, groupSlug = null) {
+            try {
+                console.log('Loading user:', email, locationId);
+                
+                // Check if user exists
+                const { data: existingUser, error: fetchError } = await supabaseClient
+                    .from('onboarding_users')
+                    .select('*')
+                    .eq('email', email)
+                    .eq('location_id', locationId)
+                    .single();
+
+                if (fetchError && fetchError.code !== 'PGRST116') {
+                    console.error('Error fetching user:', fetchError);
+                    throw fetchError;
+                }
+
+                if (existingUser) {
+                    console.log('Existing user found:', existingUser);
+                    
+                    // URL parameter group assignment is ONLY for initial creation
+                    // If user already exists, respect their current group assignment
+                    // (they may have graduated or been manually reassigned)
+                    
+                    // Check if profile is completed
+                    if (!existingUser.profile_completed) {
+                        console.log('Profile not completed, showing profile popup');
+                        showProfilePopup(existingUser);
+                        return existingUser;
+                    }
+                    
+                    return existingUser;
+                }
+
+                // Create new user
+                console.log('Creating new user...');
+                
+                // Find the group to assign
+                let groupToAssign = null;
+                if (groupSlug) {
+                    groupToAssign = await findGroupBySlug(groupSlug);
+                    console.log('Group to assign:', groupToAssign);
+                } else {
+                    // Default to "All Users" group if no group parameter
+                    groupToAssign = await findGroupBySlug('all_users');
+                    console.log('Defaulting to All Users group:', groupToAssign);
+                }
+                
+                const tasks = await loadTasks();
+                const initialChecklist = tasks.map(task => ({
+                    id: task.task_id,
+                    title: task.title,
+                    description: task.description,
+                    completed: false
+                }));
+
+                const { data: newUser, error: createError } = await supabaseClient
+                    .from('onboarding_users')
+                    .insert([{
+                        email: email,
+                        location_id: locationId,
+                        checklist: initialChecklist,
+                        profile_completed: false,
+                        user_group_id: groupToAssign ? groupToAssign.id : null
+                    }])
+                    .select()
+                    .single();
+
+                if (createError) {
+                    console.error('Error creating user:', createError);
+                    throw createError;
+                }
+
+                console.log('New user created:', newUser);
+                
+                // New users always need to complete profile
+                console.log('New user needs to complete profile');
+                showProfilePopup(newUser);
+                
+                return newUser;
+            } catch (error) {
+                console.error('Error in loadUser:', error);
+                throw error;
+            }
+        }
+
+        // Update user checklist
+        async function updateUserChecklist(checklist) {
+            try {
+                console.log('Updating user checklist...');
+                const { error } = await supabaseClient
+                    .from('onboarding_users')
+                    .update({ 
+                        checklist: checklist,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('email', currentUser.email)
+                    .eq('location_id', currentUser.location_id);
+
+                if (error) {
+                    console.error('Error updating checklist:', error);
+                    throw error;
+                }
+
+                console.log('Checklist updated successfully');
+                currentChecklist = checklist;
+                updateProgress();
+            } catch (error) {
+                console.error('Error updating user checklist:', error);
+                showError('Failed to save progress. Please try again.');
+            }
+        }
+
+        // Toggle task completion
+        async function toggleTask(taskId, completed) {
+            console.log('Toggling task:', taskId, completed);
+            
+            // Find the task being toggled
+            const task = currentChecklist.find(t => t.id === taskId);
+            if (!task) {
+                console.error('Task not found:', taskId);
+                return;
+            }
+            
+            const updatedChecklist = currentChecklist.map(task => {
+                if (task.id === taskId) {
+                    return { ...task, completed: completed };
+                }
+                return task;
+            });
+
+            await updateUserChecklist(updatedChecklist);
+            renderTasks();
+
+            // Send webhook notification
+            const params = getUrlParams();
+            if (params.email && params.locationId) {
+                await sendWebhook({
+                    userEmail: params.email,
+                    locationId: params.locationId,
+                    taskId: taskId,
+                    taskTitle: task.title,
+                    completed: completed,
+                    completedAt: new Date().toISOString()
+                });
+            }
+        }
+
+        // Render tasks with group headers
+        function renderTasks() {
+            const taskList = document.getElementById('taskList');
+            
+            if (currentChecklist.length === 0) {
+                taskList.innerHTML = '<div class="error">No tasks found. Please contact support.</div>';
+                return;
+            }
+
+            // Group tasks by their task group
+            const taskGroups = {};
+            const ungroupedTasks = [];
+            
+            currentChecklist.forEach(task => {
+                const groupInfo = getTaskGroupInfo(task.id);
+                if (groupInfo) {
+                    const groupKey = `${groupInfo.id}_${groupInfo.name}`;
+                    if (!taskGroups[groupKey]) {
+                        taskGroups[groupKey] = {
+                            info: groupInfo,
+                            tasks: []
+                        };
+                    }
+                    taskGroups[groupKey].tasks.push(task);
+                } else {
+                    ungroupedTasks.push(task);
+                }
+            });
+
+            let html = '';
+            
+            // Render ungrouped tasks first
+            if (ungroupedTasks.length > 0) {
+                html += ungroupedTasks.map(task => renderTaskItem(task)).join('');
+            }
+            
+            // Render grouped tasks with headers
+            Object.values(taskGroups)
+                .sort((a, b) => (a.info.display_order || 0) - (b.info.display_order || 0))
+                .forEach(group => {
+                    const completedCount = group.tasks.filter(t => t.completed).length;
+                    const totalCount = group.tasks.length;
+                    const isCompleted = completedCount === totalCount;
+                    
+                    html += `
+                        <div class="task-group-header ${isCompleted ? 'completed' : ''}">
+                            <div class="task-group-title">
+                                <span class="group-icon">${isCompleted ? '✅' : '📋'}</span>
+                                ${group.info.name}
+                            </div>
+                            <div class="task-group-progress">
+                                ${completedCount}/${totalCount} completed
+                            </div>
+                        </div>
+                    `;
+                    
+                    html += group.tasks.map(task => renderTaskItem(task)).join('');
+                });
+
+            taskList.innerHTML = html;
+            updateProgress();
+        }
+        
+        // Render individual task item
+        function renderTaskItem(task) {
+            return `
+                <div class="task-item ${task.completed ? 'completed' : ''}" onclick="showInstructions('${task.id}')">
+                    <div class="task-content">
+                        <div class="task-checkbox ${task.completed ? 'checked' : ''}" 
+                             onclick="event.stopPropagation(); toggleTask('${task.id}', ${!task.completed})"></div>
+                        <div class="task-details">
+                            <div class="task-title">${task.title}</div>
+                            <div class="task-description">${task.description}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Get task group information for a task
+        function getTaskGroupInfo(taskId) {
+            // Find the task in taskInstructions to get its group info
+            for (const [id, instruction] of Object.entries(taskInstructions)) {
+                if (id === taskId && instruction.groupInfo) {
+                    return instruction.groupInfo;
+                }
+            }
+            return null;
+        }
+
+        // Update progress bar
+        function updateProgress() {
+            const completed = currentChecklist.filter(task => task.completed).length;
+            const total = currentChecklist.length;
+            const percentage = total > 0 ? (completed / total) * 100 : 0;
+            
+            document.getElementById('progressFill').style.width = percentage + '%';
+        }
+
+        // Track currently open task to manage state
+        let currentOpenTaskId = null;
+
+        // Show instructions
+        function showInstructions(taskId) {
+            console.log('Showing instructions for task:', taskId);
+            
+            const instructions = taskInstructions[taskId];
+            if (!instructions) {
+                console.error('No instructions found for task:', taskId);
+                return;
+            }
+
+            // If this is the same task that's already open, do nothing
+            if (currentOpenTaskId === taskId) {
+                return;
+            }
+
+            // If a different task is open, close it first
+            if (currentOpenTaskId && currentOpenTaskId !== taskId) {
+                closeInstructions();
+                // Small delay to ensure smooth transition
+                setTimeout(() => {
+                    showInstructionsContent(taskId, instructions);
+                }, 100);
+                return;
+            }
+
+            // Set the current open task
+            currentOpenTaskId = taskId;
+            showInstructionsContent(taskId, instructions);
+        }
+
+        // Clean Quill editor artifacts from content
+        function cleanQuillContent(content) {
+            if (!content) return '';
+            
+            let cleanedContent = content;
+            
+            // Remove Quill toolbar elements
+            cleanedContent = cleanedContent.replace(/<div class="ql-toolbar[^>]*>[\s\S]*?<\/div>/gi, '');
+            
+            // Remove any toolbar-related elements
+            cleanedContent = cleanedContent.replace(/<span class="ql-[^"]*"[^>]*>[\s\S]*?<\/span>/gi, '');
+            
+            // Remove Quill editor containers but keep content
+            cleanedContent = cleanedContent.replace(/<div class="ql-editor[^>]*>([\s\S]*?)<\/div>/gi, '$1');
+            
+            // Remove any other Quill-specific classes and elements
+            cleanedContent = cleanedContent.replace(/class="ql-[^"]*"/gi, '');
+            
+            // Remove any empty div elements that might be left behind
+            cleanedContent = cleanedContent.replace(/<div[^>]*>\s*<\/div>/gi, '');
+            
+            // Remove any script tags that might have been included accidentally
+            cleanedContent = cleanedContent.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, (match) => {
+                // Keep external scripts but remove inline Quill scripts
+                if (match.includes('quill') || match.includes('ql-')) {
+                    return '';
+                }
+                return match;
+            });
+            
+            return cleanedContent.trim();
+        }
+
+        // Show instructions content (separated for reuse)
+        function showInstructionsContent(taskId, instructions) {
+            // Set the current open task
+            currentOpenTaskId = taskId;
+
+            // Get the instructions content container
+            const instructionsContent = document.getElementById('instructionsContent');
+            
+            // Completely clear any existing content and event listeners
+            instructionsContent.innerHTML = '';
+            
+            // Remove any existing classes that might affect styling
+            instructionsContent.className = 'instructions-content';
+
+            let videoHtml = '';
+            if (instructions.video_url) {
+                // Convert YouTube/Vimeo URLs to embeddable format
+                let embedUrl = instructions.video_url;
+                if (embedUrl.includes('youtube.com/watch')) {
+                    embedUrl = embedUrl.replace('watch?v=', 'embed/');
+                } else if (embedUrl.includes('youtu.be/')) {
+                    embedUrl = embedUrl.replace('youtu.be/', 'youtube.com/embed/');
+                } else if (embedUrl.includes('vimeo.com/')) {
+                    embedUrl = embedUrl.replace('vimeo.com/', 'player.vimeo.com/video/');
+                }
+                
+                videoHtml = `
+                    <div class="video-container">
+                        <iframe src="${embedUrl}" allowfullscreen></iframe>
+                    </div>
+                `;
+            }
+
+            // Clean the instruction content from any Quill editor artifacts
+            const cleanContent = cleanQuillContent(instructions.content);
+            
+            // Add form embed if present
+            let formEmbedHtml = '';
+            if (instructions.form_embed_code) {
+                formEmbedHtml = `<div style="margin: 20px 0;">${instructions.form_embed_code}</div>`;
+            }
+            
+            // Create fresh HTML content - Order: Title, Content, Video, then Form
+            const instructionsHtml = `
+                <div class="instructions-header">
+                    <h2 class="instructions-title">${instructions.title}</h2>
+                </div>
+                <div class="instructions-body">
+                    ${cleanContent}
+                    ${videoHtml}
+                    ${formEmbedHtml}
+                </div>
+            `;
+            
+            // Set the new content
+            instructionsContent.innerHTML = instructionsHtml;
+            
+            // Enable form functionality for any forms in the content
+            enableInstructionForms();
+
+            // Show the instructions panel
+            document.getElementById('container').classList.add('instructions-open');
+        }
+
+        // Enable form functionality in instruction panels
+        function enableInstructionForms() {
+            const instructionsPanel = document.getElementById('instructionsContent');
+            
+            // Execute any scripts that were embedded in the content
+            executeEmbeddedScripts(instructionsPanel);
+            
+            // Monitor for form submissions
+            monitorFormSubmissions(instructionsPanel);
+            
+            // Find all forms in the instructions content
+            const forms = instructionsPanel.querySelectorAll('form');
+            
+            forms.forEach(form => {
+                // Prevent default form submission if no action is specified
+                if (!form.action) {
+                    form.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        console.log('Form submitted:', new FormData(form));
+                        
+                        // You can add custom form handling here
+                        const formData = new FormData(form);
+                        const formObject = {};
+                        
+                        for (let [key, value] of formData.entries()) {
+                            formObject[key] = value;
+                        }
+                        
+                        // Log form data and optionally send to webhook
+                        console.log('Form data collected:', formObject);
+                        
+                        // Show success message
+                        showFormSuccess(form);
+                    });
+                }
+                
+                // Add form styling classes
+                form.classList.add('instruction-form');
+            });
+
+            // Find all input elements and style them
+            const inputs = instructionsPanel.querySelectorAll('input, textarea, select');
+            inputs.forEach(input => {
+                input.classList.add('form-input');
+            });
+
+            // Find all buttons and style them
+            const buttons = instructionsPanel.querySelectorAll('button');
+            buttons.forEach(button => {
+                if (button.type === 'submit' || !button.type) {
+                    button.classList.add('form-button');
+                }
+            });
+
+            // Ensure iframes are properly sized
+            const iframes = instructionsPanel.querySelectorAll('iframe');
+            iframes.forEach(iframe => {
+                if (!iframe.style.width) iframe.style.width = '100%';
+                if (!iframe.style.minHeight) iframe.style.minHeight = '400px';
+                if (!iframe.style.border) iframe.style.border = 'none';
+                if (!iframe.style.borderRadius) iframe.style.borderRadius = '6px';
+            });
+        }
+
+        // Execute embedded scripts in instruction content
+        function executeEmbeddedScripts(container) {
+            // Find script tags in the content
+            const scriptElements = container.querySelectorAll('script');
+            
+            scriptElements.forEach(scriptEl => {
+                try {
+                    // Create a new script element
+                    const newScript = document.createElement('script');
+                    
+                    // Copy attributes
+                    Array.from(scriptEl.attributes).forEach(attr => {
+                        newScript.setAttribute(attr.name, attr.value);
+                    });
+                    
+                    // Copy script content or src
+                    if (scriptEl.src) {
+                        newScript.src = scriptEl.src;
+                    } else {
+                        newScript.textContent = scriptEl.textContent;
+                    }
+                    
+                    // Replace the old script with the new one to execute it
+                    scriptEl.parentNode.replaceChild(newScript, scriptEl);
+                    
+                    console.log('Executed embedded script:', newScript.src || 'inline script');
+                } catch (error) {
+                    console.error('Error executing embedded script:', error);
+                }
+            });
+        }
+
+        // Show form success message
+        function showFormSuccess(form) {
+            const existingMessage = form.querySelector('.form-success-message');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+
+            const successDiv = document.createElement('div');
+            successDiv.className = 'form-success-message';
+            successDiv.innerHTML = '✓ Form submitted successfully!';
+            form.appendChild(successDiv);
+
+            // Remove success message after 3 seconds
+            setTimeout(() => {
+                successDiv.remove();
+            }, 3000);
+        }
+
+        // Monitor for form submissions 
+        function monitorFormSubmissions(container) {
+            // Method 1: Monitor for direct form submissions
+            const forms = container.querySelectorAll('form');
+            forms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    console.log('Form submitted directly');
+                    setTimeout(() => handleFormSubmission(), 1000); // Delay to allow form processing
+                });
+            });
+
+            // Method 2: Monitor for iframe changes (common with embedded forms)
+            const iframes = container.querySelectorAll('iframe');
+            iframes.forEach(iframe => {
+                // Monitor for thank you messages appearing
+                const checkForThankYou = () => {
+                    try {
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        if (iframeDoc) {
+                            const textContent = iframeDoc.body.textContent.toLowerCase();
+                            if (textContent.includes('thank you') || 
+                                textContent.includes('success') || 
+                                textContent.includes('submitted') ||
+                                textContent.includes('confirmation') ||
+                                textContent.includes('message sent')) {
+                                console.log('Form submission detected via content change');
+                                handleFormSubmission();
+                                return true;
+                            }
+                        }
+                    } catch (e) {
+                        // Cross-origin restrictions - can't access iframe content
+                        // Use alternative detection methods
+                    }
+                    return false;
+                };
+
+                // Check periodically for thank you messages
+                const thankYouChecker = setInterval(() => {
+                    if (checkForThankYou()) {
+                        clearInterval(thankYouChecker);
+                    }
+                }, 2000);
+
+                // Set up mutation observer for iframe load
+                iframe.addEventListener('load', function() {
+                    setTimeout(checkForThankYou, 1000); // Check 1 second after iframe loads
+                });
+
+                // Clean up interval when task is closed
+                iframe.dataset.intervalId = thankYouChecker;
+            });
+
+            // Method 3: Listen for postMessage events (some forms send these)
+            const messageListener = function(event) {
+                if (event.data && typeof event.data === 'object') {
+                    if (event.data.type === 'form_submitted' || 
+                        event.data.action === 'submit' ||
+                        event.data.status === 'success' ||
+                        event.data.message === 'form_success') {
+                        console.log('Form submission detected via postMessage:', event.data);
+                        handleFormSubmission();
+                    }
+                }
+            };
+            
+            window.addEventListener('message', messageListener);
+            
+            // Store the listener for cleanup
+            container.dataset.messageListener = messageListener;
+        }
+
+        // Handle form submission
+        function handleFormSubmission() {
+            console.log('Form submission detected! Auto-completing task...');
+            
+            // Auto-complete the current task
+            if (currentOpenTaskId) {
+                const taskToComplete = currentChecklist.find(task => task.id === currentOpenTaskId);
+                if (taskToComplete && !taskToComplete.completed) {
+                    toggleTask(currentOpenTaskId, true);
+                    
+                    // Show success message
+                    showFormSubmissionSuccess();
+                }
+            }
+        }
+
+        // Show form submission success message
+        function showFormSubmissionSuccess() {
+            // Create success notification
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(90deg, #10B981 0%, #059669 100%);
+                color: white;
+                padding: 16px 24px;
+                border-radius: 8px;
+                font-weight: 600;
+                z-index: 10000;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                animation: slideInFromRight 0.3s ease-out;
+            `;
+            notification.innerHTML = '✓ Form submitted successfully! Task auto-completed.';
+            
+            // Add animation styles
+            if (!document.getElementById('notification-styles')) {
+                const style = document.createElement('style');
+                style.id = 'notification-styles';
+                style.textContent = `
+                    @keyframes slideInFromRight {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOutToRight {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(notification);
+            
+            // Remove notification after 4 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOutToRight 0.3s ease-out';
+                setTimeout(() => notification.remove(), 300);
+            }, 4000);
+        }
+
+        // Close instructions
+        function closeInstructions() {
+            // Remove the instructions-open class
+            document.getElementById('container').classList.remove('instructions-open');
+            
+            // Clear the current open task
+            currentOpenTaskId = null;
+            
+            // Clear the instructions content completely
+            const instructionsContent = document.getElementById('instructionsContent');
+            instructionsContent.innerHTML = '';
+            
+            // Reset the content class
+            instructionsContent.className = 'instructions-content';
+            
+            console.log('Instructions panel closed and reset');
+        }
+
+        // Show error
+        function showError(message) {
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        // Initialize application
+        async function init() {
+            try {
+                const params = getUrlParams();
+                console.log('URL parameters:', params);
+
+                if (!params.email || !params.locationId) {
+                    showError('Missing required parameters. Please access this page through your DFY CRM dashboard.');
+                    return;
+                }
+
+                // Load user and tasks
+                currentUser = await loadUser(params.email, params.locationId, params.group);
+                
+                // Load fresh tasks and merge with user's checklist
+                const dbTasks = await loadTasks();
+                
+                // Merge database tasks with user's existing checklist
+                const userTaskMap = new Map(currentUser.checklist.map(t => [t.id, t]));
+                const dbTaskIds = new Set(dbTasks.map(t => t.task_id));
+                
+                // Build new checklist by syncing with database
+                const mergedChecklist = dbTasks
+                    .map(dbTask => {
+                        const existingUserTask = userTaskMap.get(dbTask.task_id);
+                        
+                        if (existingUserTask) {
+                            // Update existing task with latest database info, keep completion status
+                            return {
+                                id: dbTask.task_id,
+                                title: dbTask.title,  // Always use latest from database
+                                description: dbTask.description,  // Always use latest from database
+                                completed: existingUserTask.completed  // Preserve user's completion status
+                            };
+                        } else {
+                            // New task from database
+                            return {
+                                id: dbTask.task_id,
+                                title: dbTask.title,
+                                description: dbTask.description,
+                                completed: false
+                            };
+                        }
+                    })
+                    .sort((a, b) => {
+                        const aPos = dbTasks.find(t => t.task_id === a.id)?.position || 999;
+                        const bPos = dbTasks.find(t => t.task_id === b.id)?.position || 999;
+                        return aPos - bPos;
+                    });
+
+                // Check if checklist needs updating (length changed, new tasks, or content changed)
+                const needsUpdate = mergedChecklist.length !== currentUser.checklist.length ||
+                    mergedChecklist.some((newTask, index) => {
+                        const oldTask = currentUser.checklist[index];
+                        return !oldTask || 
+                               newTask.title !== oldTask.title || 
+                               newTask.description !== oldTask.description ||
+                               newTask.id !== oldTask.id;
+                    });
+
+                if (needsUpdate) {
+                    console.log('Updating user checklist with database changes');
+                    await updateUserChecklist(mergedChecklist);
+                } else {
+                    currentChecklist = currentUser.checklist;
+                    updateProgress();
+                }
+
+                renderTasks();
+                
+                // Show personalized welcome if profile is completed
+                checkExistingUserWelcome();
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showError('Failed to load onboarding tasks. Please refresh the page or contact support.');
+            }
+        }
+
+        // Profile completion functions
+        function showProfilePopup(user) {
+            console.log('Showing profile popup for user:', user.email);
+            const overlay = document.getElementById('profileOverlay');
+            overlay.style.display = 'flex';
+            
+            // Setup form submission
+            const form = document.getElementById('profileForm');
+            form.onsubmit = async function(e) {
+                e.preventDefault();
+                await submitProfile(user);
+            };
+            
+            // Block access to tasks
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #6B7280;">
+                    <h3>Profile Completion Required</h3>
+                    <p>Please complete your profile information to access your onboarding tasks.</p>
+                </div>
+            `;
+        }
+        
+        async function submitProfile(user) {
+            const submitBtn = document.querySelector('.profile-submit-btn');
+            
+            // Get form data
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const cellPhone = document.getElementById('cellPhone').value.trim();
+            const companyName = document.getElementById('companyName').value.trim();
+            
+            // Validate required fields
+            if (!firstName || !lastName || !cellPhone || !companyName) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Saving...';
+                
+                // Update user profile in database
+                const { data, error } = await supabaseClient
+                    .from('onboarding_users')
+                    .update({
+                        first_name: firstName,
+                        last_name: lastName,
+                        cell_phone: cellPhone,
+                        company_name: companyName,
+                        profile_completed: true,
+                        notifications_enabled: true,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', user.id)
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                
+                console.log('Profile updated successfully:', data);
+                
+                // Update current user object
+                currentUser = { ...currentUser, ...data };
+                
+                // Hide popup
+                document.getElementById('profileOverlay').style.display = 'none';
+                
+                // Show personalized welcome
+                showPersonalizedWelcome(currentUser);
+                
+                // Reload and render tasks
+                await loadAndRenderTasks();
+                
+            } catch (error) {
+                console.error('Error saving profile:', error);
+                alert('Failed to save profile. Please try again.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Complete Profile & Continue';
+            }
+        }
+        
+        async function loadAndRenderTasks() {
+            try {
+                // Load fresh tasks and merge with user's checklist
+                const dbTasks = await loadTasks();
+                
+                // Merge database tasks with user's existing checklist
+                const userTaskMap = new Map(currentUser.checklist.map(t => [t.id, t]));
+                
+                // Build new checklist by syncing with database
+                const mergedChecklist = dbTasks
+                    .map(dbTask => {
+                        const existingUserTask = userTaskMap.get(dbTask.task_id);
+                        
+                        if (existingUserTask) {
+                            // Update existing task with latest database info, keep completion status
+                            return {
+                                id: dbTask.task_id,
+                                title: dbTask.title,
+                                description: dbTask.description,
+                                completed: existingUserTask.completed
+                            };
+                        } else {
+                            // New task from database
+                            return {
+                                id: dbTask.task_id,
+                                title: dbTask.title,
+                                description: dbTask.description,
+                                completed: false
+                            };
+                        }
+                    })
+                    // All tasks are visible in the onboarding interface
+                    ;
+                
+                // Update current checklist
+                currentChecklist = mergedChecklist;
+                currentUser.checklist = mergedChecklist;
+                
+                // Store task instructions
+                dbTasks.forEach(task => {
+                    taskInstructions[task.task_id] = {
+                        title: task.instruction_title,
+                        content: task.instruction_content,
+                        videoUrl: task.video_url,
+                        formEmbedCode: task.form_embed_code
+                    };
+                });
+                
+                // Render the tasks
+                renderTasks();
+                
+            } catch (error) {
+                console.error('Error loading tasks after profile completion:', error);
+                showError('Failed to load tasks after profile completion.');
+            }
+        }
+        
+        // Edit Profile Functions
+        function openEditProfileModal() {
+            if (!currentUser || !currentUser.profile_completed) {
+                return;
+            }
+            
+            // Pre-fill the form with current user data
+            document.getElementById('editFirstName').value = currentUser.first_name || '';
+            document.getElementById('editLastName').value = currentUser.last_name || '';
+            document.getElementById('editCellPhone').value = currentUser.cell_phone || '';
+            document.getElementById('editCompanyName').value = currentUser.company_name || '';
+            document.getElementById('editEmail').value = currentUser.email || '';
+            document.getElementById('editLocationId').value = currentUser.location_id || '';
+            
+            // Set notification toggle (default to true if not set)
+            const notificationsEnabled = currentUser.notifications_enabled !== false;
+            document.getElementById('notificationsToggle').checked = notificationsEnabled;
+            
+            // Setup form submission
+            const form = document.getElementById('editProfileForm');
+            form.onsubmit = async function(e) {
+                e.preventDefault();
+                await updateProfile();
+            };
+            
+            // Show the modal
+            document.getElementById('editProfileOverlay').style.display = 'flex';
+        }
+        
+        function closeEditProfileModal() {
+            document.getElementById('editProfileOverlay').style.display = 'none';
+        }
+        
+        // Notification toggle handling
+        let pendingNotificationChange = null;
+        
+        function handleNotificationToggleClick(event) {
+            // Prevent default behavior
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const toggle = document.getElementById('notificationsToggle');
+            const currentlyChecked = toggle.checked;
+            
+            // If currently ON and trying to turn OFF, show confirmation
+            if (currentlyChecked) {
+                showOptOutConfirmation();
+            } else {
+                // If currently OFF, just turn it ON (no confirmation needed)
+                toggle.checked = true;
+            }
+        }
+        
+        function handleNotificationToggle(event) {
+            const toggle = event.target;
+            const isNowChecked = toggle.checked;
+            
+            // If trying to turn OFF notifications, show confirmation
+            if (!isNowChecked) {
+                // Prevent the toggle from changing immediately
+                event.preventDefault();
+                toggle.checked = true; // Reset to checked state
+                showOptOutConfirmation();
+            }
+        }
+        
+        function showOptOutConfirmation() {
+            document.getElementById('confirmOptOutOverlay').style.display = 'flex';
+        }
+        
+        function cancelOptOut() {
+            // Reset toggle to ON position
+            document.getElementById('notificationsToggle').checked = true;
+            document.getElementById('confirmOptOutOverlay').style.display = 'none';
+        }
+        
+        function confirmOptOut() {
+            // Turn off notifications
+            document.getElementById('notificationsToggle').checked = false;
+            document.getElementById('confirmOptOutOverlay').style.display = 'none';
+        }
+        
+        async function updateProfile() {
+            const submitBtn = document.querySelector('#editProfileForm button[type="submit"]');
+            
+            // Get form data
+            const firstName = document.getElementById('editFirstName').value.trim();
+            const lastName = document.getElementById('editLastName').value.trim();
+            const cellPhone = document.getElementById('editCellPhone').value.trim();
+            const companyName = document.getElementById('editCompanyName').value.trim();
+            const notificationsEnabled = document.getElementById('notificationsToggle').checked;
+            
+            // Validate required fields
+            if (!firstName || !lastName || !cellPhone || !companyName) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Updating...';
+                
+                // Update user profile in database
+                const { data, error } = await supabaseClient
+                    .from('onboarding_users')
+                    .update({
+                        first_name: firstName,
+                        last_name: lastName,
+                        cell_phone: cellPhone,
+                        company_name: companyName,
+                        notifications_enabled: notificationsEnabled,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', currentUser.id)
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                
+                console.log('Profile updated successfully:', data);
+                
+                // Update current user object
+                currentUser = { ...currentUser, ...data };
+                
+                // Update the welcome display with new information
+                showPersonalizedWelcome(currentUser);
+                
+                // Close modal
+                closeEditProfileModal();
+                
+                // Show success message
+                alert('Profile updated successfully!');
+                
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                alert('Failed to update profile. Please try again.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Update Profile';
+            }
+        }
+        
+        // Show personalized welcome message
+        function showPersonalizedWelcome(user) {
+            if (!user.profile_completed || !user.first_name) {
+                return; // Don't show if profile isn't completed
+            }
+            
+            // Build welcome message
+            const fullName = [user.first_name, user.last_name].filter(n => n).join(' ');
+            const welcomeMessage = `Welcome ${fullName}!`;
+            
+            // Update welcome elements
+            document.getElementById('welcomeMessage').textContent = welcomeMessage;
+            
+            // Update company info
+            if (user.company_name) {
+                document.getElementById('companyInfo').textContent = user.company_name;
+            }
+            
+            // Update email info  
+            document.getElementById('emailInfo').textContent = user.email;
+            
+            // Update location info
+            document.getElementById('locationInfo').textContent = `Location: ${user.location_id}`;
+            
+            // Show personalized welcome and hide default header
+            document.getElementById('userWelcome').style.display = 'block';
+            document.getElementById('defaultHeader').style.display = 'none';
+        }
+        
+        // Check and show welcome for existing users
+        function checkExistingUserWelcome() {
+            if (currentUser && currentUser.profile_completed) {
+                showPersonalizedWelcome(currentUser);
+            }
+        }
+
+        // Modal click handlers
+        document.addEventListener('click', function(event) {
+            // Close edit profile modal when clicking outside
+            const editProfileOverlay = document.getElementById('editProfileOverlay');
+            if (event.target === editProfileOverlay) {
+                closeEditProfileModal();
+            }
+        });
+
+        // Start the application
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
