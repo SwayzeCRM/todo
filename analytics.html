@@ -1289,6 +1289,7 @@
                     <thead>
                         <tr>
                             <th>User</th>
+                            <th>Group</th>
                             <th>Progress</th>
                             <th>Status</th>
                             <th>Last Activity</th>
@@ -1380,6 +1381,52 @@
             }, 50);
         }
 
+        // Update user group assignment
+        async function updateUserGroup(userId, groupId) {
+            try {
+                // Convert empty string to null for database
+                const groupValue = groupId === '' ? null : parseInt(groupId);
+                
+                // Update user's group in database
+                const { data, error } = await supabaseClient
+                    .from('onboarding_users')
+                    .update({ 
+                        user_group_id: groupValue,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', userId)
+                    .select();
+                
+                if (error) throw error;
+                
+                // Update local data
+                const userIndex = allUsers.findIndex(u => u.id === userId);
+                if (userIndex !== -1) {
+                    allUsers[userIndex].user_group_id = groupValue;
+                    // Update group name for display
+                    const group = allGroups.find(g => g.id === groupValue);
+                    allUsers[userIndex].user_group_name = group ? group.group_name : null;
+                }
+                
+                // Show success feedback (subtle)
+                const dropdown = document.querySelector(`select[data-user-id="${userId}"]`);
+                if (dropdown) {
+                    dropdown.style.background = '#dcfce7';
+                    setTimeout(() => {
+                        dropdown.style.background = 'white';
+                    }, 1000);
+                }
+                
+                console.log('User group updated successfully');
+            } catch (error) {
+                console.error('Error updating user group:', error);
+                alert('Failed to update user group: ' + error.message);
+                // Reload to restore correct state
+                await loadAllData();
+                filterAndDisplayUsers();
+            }
+        }
+        
         // Delete user function
         async function deleteUser(userId, userEmail) {
             // Show confirmation dialog
@@ -1548,6 +1595,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             // Make functions globally accessible (only assign if they exist)
             if (typeof editUser !== 'undefined') window.editUser = editUser;
+            if (typeof updateUserGroup !== 'undefined') window.updateUserGroup = updateUserGroup;
             if (typeof deleteUser !== 'undefined') window.deleteUser = deleteUser;
             if (typeof copyUrlParameter !== 'undefined') window.copyUrlParameter = copyUrlParameter;
             if (typeof closeUserEditModal !== 'undefined') window.closeUserEditModal = closeUserEditModal;
@@ -1657,6 +1705,7 @@
                 allUsers = usersResult.data || [];
                 allTasks = tasksResult.data || [];
                 const userGroups = groupsResult.data || [];
+                allGroups = userGroups; // Store groups for dropdown
                 
                 // Create a map for quick group name lookup
                 const groupMap = new Map();
@@ -1830,7 +1879,7 @@
             if (filteredUsers.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="6">
+                        <td colspan="7">
                             <div class="empty-state">
                                 <h3>No users found</h3>
                                 <p>Try adjusting your search or filter criteria</p>
@@ -1859,6 +1908,11 @@
                 // Escape values for use in onclick handlers
                 const escapedEmail = (user.email || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
                 const escapedLocationId = (user.location_id || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                
+                // Create group dropdown options
+                const groupOptions = allGroups.map(group => 
+                    `<option value="${group.id}" ${user.user_group_id === group.id ? 'selected' : ''}>${group.group_name}</option>`
+                ).join('');
 
                 return `
                     <tr>
@@ -1867,6 +1921,12 @@
                             <div class="user-location">${user.location_id}</div>
                             ${user.first_name || user.last_name ? `<div class="user-name" style="font-size: 12px; color: #6B7280; margin-top: 2px;">${[user.first_name, user.last_name].filter(n => n).join(' ')}</div>` : ''}
                             ${user.company_name ? `<div class="user-company" style="font-size: 12px; color: #6B7280;">${user.company_name}</div>` : ''}
+                        </td>
+                        <td class="group-cell">
+                            <select class="group-dropdown" data-user-id="${user.id}" onchange="updateUserGroup('${user.id}', this.value)" style="padding: 4px 8px; border: 1px solid #E5E7EB; border-radius: 4px; font-size: 13px; background: white; cursor: pointer;">
+                                <option value="">No Group</option>
+                                ${groupOptions}
+                            </select>
                         </td>
                         <td class="progress-cell">
                             <div class="user-progress">
@@ -1947,12 +2007,13 @@
         let allLocations = [];
 
         function openCreateGroupModal() {
-            loadExistingGroups().then(() => {
-                displayAllGroups();
-            });
-            loadExistingLocations().then(() => {
-                displayAllLocations();
-            });
+            // Removed - groups cannot contain other groups
+            // loadExistingGroups().then(() => {
+            //     displayAllGroups();
+            // });
+            // loadExistingLocations().then(() => {
+            //     displayAllLocations();
+            // });
             document.getElementById('createGroupModal').style.display = 'flex';
         }
 
@@ -1963,9 +2024,10 @@
 
         function resetModal() {
             document.getElementById('createGroupForm').reset();
-            selectedGroups.clear();
-            selectedLocations.clear();
-            updateSelectedDisplay();
+            // Removed - groups cannot contain other groups
+            // selectedGroups.clear();
+            // selectedLocations.clear();
+            // updateSelectedDisplay();
         }
 
         async function loadExistingGroups() {
@@ -2010,6 +2072,8 @@
             }
         }
 
+        // Removed - groups cannot contain other groups
+        /*
         function displayAllGroups() {
             const results = document.getElementById('groupResults');
             
@@ -2028,6 +2092,7 @@
                 </div>
             `).join('');
         }
+        */
 
         // Removed - groups cannot contain other groups
         /*
@@ -2212,9 +2277,10 @@
 
         // Initialize search results on modal open
         function initializeSearchResults() {
-            displayAllGroups();
-            displayAllLocations();
-            updateSelectedDisplay();
+            // Removed - groups cannot contain other groups
+            // displayAllGroups();
+            // displayAllLocations();
+            // updateSelectedDisplay();
         }
 
         // Page state management
