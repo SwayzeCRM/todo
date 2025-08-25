@@ -5,7 +5,9 @@
       "Bash(open /Users/timjames/Documents/Projects/todo/onboarding.html)",
       "Bash(open /Users/timjames/Documents/Projects/todo/analytics.html)",
       "Bash(grep:*)",
-      "Bash(./push-to-github.sh:*)"
+      "Bash(./push-to-github.sh:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

@@ -5569,29 +5569,50 @@
                     timestamp: new Date().toISOString(),
                     webhook_name: webhook.webhook_name,
                     message: `Test payload from DFY CRM Admin Panel for ${getActionDisplayName(webhook.webhook_name)} webhook`,
-                    user_email: 'test@example.com',
-                    location_id: 'test_location',
+                    userEmail: 'test@example.com',
+                    locationId: 'test_location_123',
                     // Include user profile fields in all webhooks
                     firstName: 'John',
                     lastName: 'Doe',
                     cellPhone: '(555) 123-4567',
                     companyName: 'Test Company Inc.',
-                    fullName: 'John Doe'
+                    fullName: 'John Doe',
+                    // Include progress tracking fields
+                    userGroup: {
+                        id: 1,
+                        name: 'New Employees'
+                    },
+                    currentTaskGroup: {
+                        id: 1,
+                        name: 'Onboarding Tasks',
+                        display_order: 1
+                    },
+                    groupProgress: {
+                        completed: 2,
+                        total: 5,
+                        percentage: 40
+                    },
+                    overallProgress: {
+                        completed: 7,
+                        total: 20,
+                        percentage: 35
+                    }
                 };
 
                 // Add action-specific data
                 if (webhook.webhook_name.startsWith('task_')) {
-                    testPayload.task_id = 'test_task_123';
-                    testPayload.task_title = 'Test Task Title';
+                    testPayload.taskId = 'test_task_123';
+                    testPayload.taskTitle = 'Test Task Title';
                     
                     if (webhook.webhook_name === 'task_completed') {
-                        testPayload.completed_at = new Date().toISOString();
+                        testPayload.completed = true;
+                        testPayload.completedAt = new Date().toISOString();
                         testPayload.completion_time_seconds = 300;
                     } else if (webhook.webhook_name === 'task_started') {
-                        testPayload.started_at = new Date().toISOString();
+                        testPayload.startedAt = new Date().toISOString();
                     } else if (webhook.webhook_name === 'task_assigned') {
-                        testPayload.assigned_at = new Date().toISOString();
-                        testPayload.assigned_to_groups = ['test_group'];
+                        testPayload.assignedAt = new Date().toISOString();
+                        testPayload.assignedToGroups = ['test_group'];
                     }
                 } else if (webhook.webhook_name.startsWith('user_')) {
                     if (webhook.webhook_name === 'user_profile_completed') {
@@ -5730,6 +5751,39 @@
             }
 
             await testSingleWebhook(document.getElementById('webhookId').value);
+        }
+
+        // Quick function to update all webhooks with new URL
+        async function updateAllWebhooksURL(newUrl) {
+            try {
+                const { data: webhooks, error: fetchError } = await supabaseClient
+                    .from('webhook_settings')
+                    .select('*');
+                
+                if (fetchError) throw fetchError;
+                
+                console.log(`Updating ${webhooks.length} webhooks with new URL: ${newUrl}`);
+                
+                for (const webhook of webhooks) {
+                    const { error: updateError } = await supabaseClient
+                        .from('webhook_settings')
+                        .update({ webhook_url: newUrl })
+                        .eq('id', webhook.id);
+                    
+                    if (updateError) {
+                        console.error(`Failed to update webhook ${webhook.webhook_name}:`, updateError);
+                    } else {
+                        console.log(`✓ Updated webhook: ${webhook.webhook_name}`);
+                    }
+                }
+                
+                console.log('All webhooks updated successfully!');
+                await loadWebhooks(); // Reload the list
+                return true;
+            } catch (error) {
+                console.error('Error updating webhooks:', error);
+                return false;
+            }
         }
 
         // Enhanced Global Admin Navigation System
