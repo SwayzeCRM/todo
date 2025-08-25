@@ -3215,7 +3215,7 @@
                 const { error } = await supabaseClient
                     .from('onboarding_tasks')
                     .update({
-                        ...formData,
+                        ...cleanDataForSupabase(formData),
                         updated_at: new Date().toISOString()
                     })
                     .eq('id', currentTask.id);
@@ -3385,6 +3385,14 @@
             return content.trim();
         }
 
+        // Remove fields that don't exist in database
+        function cleanDataForSupabase(data) {
+            const cleaned = { ...data };
+            // Remove notify_users as it doesn't exist in the database
+            delete cleaned.notify_users;
+            return cleaned;
+        }
+
         // Get next position for a new task
         async function getNextPosition(groupId = null) {
             try {
@@ -3467,7 +3475,7 @@
                     result = await supabaseClient
                         .from('onboarding_tasks')
                         .update({
-                            ...formData,
+                            ...cleanDataForSupabase(formData),
                             updated_at: new Date().toISOString()
                         })
                         .eq('id', currentTask.id)
@@ -3476,7 +3484,7 @@
                     // Create new task
                     result = await supabaseClient
                         .from('onboarding_tasks')
-                        .insert([formData])
+                        .insert([cleanDataForSupabase(formData)])
                         .select();
                 }
 
@@ -6810,7 +6818,7 @@
                 
                 const { error } = await supabaseClient
                     .from('onboarding_tasks')
-                    .insert([taskData]);
+                    .insert([cleanDataForSupabase(taskData)]);
                 
                 if (error) throw error;
                 

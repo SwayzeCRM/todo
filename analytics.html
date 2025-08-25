@@ -2751,6 +2751,14 @@
             }
         }
         
+        // Remove fields that don't exist in database
+        function cleanDataForSupabase(data) {
+            const cleaned = { ...data };
+            // Remove notify_users as it doesn't exist in the database
+            delete cleaned.notify_users;
+            return cleaned;
+        }
+        
         async function submitUserTask(event, userEmail, locationId) {
             event.preventDefault();
             
@@ -2773,22 +2781,23 @@
                 const taskId = `user-task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 
                 // Create the task with individual user targeting
+                const taskData = {
+                    task_id: taskId,
+                    title: formData.taskTitle,
+                    description: formData.taskDescription || null,
+                    instruction_title: formData.instructionsTitle,
+                    instruction_content: formData.instructionsContent || null,
+                    video_url: formData.videoUrl || null,
+                    form_embed_code: formData.formEmbedCode || null,
+                    position: 999, // Put user-specific tasks at the end
+                    is_active: true,
+                    target_type: 'individuals',
+                    target_users: JSON.stringify([userEmail]) // Target specific user
+                };
+                
                 const { data, error } = await supabaseClient
                     .from('onboarding_tasks')
-                    .insert([{
-                        task_id: taskId,
-                        title: formData.taskTitle,
-                        description: formData.taskDescription || null,
-                        instruction_title: formData.instructionsTitle,
-                        instruction_content: formData.instructionsContent || null,
-                        video_url: formData.videoUrl || null,
-                        form_embed_code: formData.formEmbedCode || null,
-                        position: 999, // Put user-specific tasks at the end
-                        is_active: true,
-                        target_type: 'individuals',
-                        target_users: JSON.stringify([userEmail]) // Target specific user
-                        // notify_users: true // Removed - column doesn't exist in database
-                    }])
+                    .insert([cleanDataForSupabase(taskData)])
                     .select();
                 
                 if (error) throw error;
