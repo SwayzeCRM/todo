@@ -1940,8 +1940,9 @@
         }
 
         // Create Group Modal Functions
-        let selectedGroups = new Set();
-        let selectedLocations = new Set();
+        // Removed - groups cannot contain other groups
+        // let selectedGroups = new Set();
+        // let selectedLocations = new Set();
         let allGroups = [];
         let allLocations = [];
 
@@ -2028,6 +2029,8 @@
             `).join('');
         }
 
+        // Removed - groups cannot contain other groups
+        /*
         function filterGroups() {
             const searchTerm = document.getElementById('groupSearch').value.toLowerCase();
             const results = document.getElementById('groupResults');
@@ -2055,7 +2058,9 @@
                 }
             });
         }
-
+        */
+        
+        /*
         function displayAllLocations() {
             const results = document.getElementById('locationResults');
             
@@ -2075,6 +2080,8 @@
             `).join('');
         }
 
+        // Removed - locations feature removed from groups
+        /*
         function filterLocations() {
             const searchTerm = document.getElementById('locationSearch').value.toLowerCase();
             const results = document.getElementById('locationResults');
@@ -2102,7 +2109,10 @@
                 }
             });
         }
-
+        */
+        
+        // Removed - groups cannot contain other groups and locations feature removed
+        /*
         function addGroup(groupId, groupName) {
             selectedGroups.add(groupId);
             updateSelectedDisplay();
@@ -2126,7 +2136,10 @@
             updateSelectedDisplay();
             filterLocations(); // Refresh filtered results to show removed item
         }
+        */
 
+        // Removed - groups cannot contain other groups and locations feature removed
+        /*
         function updateSelectedDisplay() {
             // Update selected groups display
             const selectedGroupsList = document.getElementById('selectedGroupsList');
@@ -2159,6 +2172,7 @@
                 selectedLocationsList.innerHTML = selectedLocationsArray.join('');
             }
         }
+        */
 
         async function createGroup(event) {
             event.preventDefault();
@@ -2951,35 +2965,8 @@
                     <textarea id="groupDescription" placeholder="Describe this group's purpose..."></textarea>
                 </div>
 
-                <div class="form-section">
-                    <h3>Add Existing Groups to this Group</h3>
-                    <div class="search-container">
-                        <input type="text" id="groupSearch" placeholder="Search and filter existing groups..." onkeyup="filterGroups()">
-                    </div>
-                    <div class="iframe-container">
-                        <div class="iframe-header">Available Groups</div>
-                        <div class="iframe-content" id="groupResults"></div>
-                    </div>
-                    <div id="selectedGroups" class="selected-items">
-                        <h4>Selected Groups:</h4>
-                        <div id="selectedGroupsList"></div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h3>Add Locations to this Group</h3>
-                    <div class="search-container">
-                        <input type="text" id="locationSearch" placeholder="Search and filter locations..." onkeyup="filterLocations()">
-                    </div>
-                    <div class="iframe-container">
-                        <div class="iframe-header">Available Locations</div>
-                        <div class="iframe-content" id="locationResults"></div>
-                    </div>
-                    <div id="selectedLocations" class="selected-items">
-                        <h4>Selected Locations:</h4>
-                        <div id="selectedLocationsList"></div>
-                    </div>
-                </div>
+                <!-- Removed nested groups feature - groups cannot contain other groups -->
+                <!-- Users belong to groups, not groups to groups -->
 
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" onclick="closeCreateGroupModal()">Cancel</button>
