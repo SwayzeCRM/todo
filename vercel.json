@@ -1,0 +1,26 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/analytics",
+      "destination": "/analytics.html"
+    },
+    {
+      "source": "/onboarding",
+      "destination": "/onboarding.html"
+    },
+    {
+      "source": "/test",
+      "destination": "/test.html"
+    }
+  ],
+  "cleanUrls": true,
+  "trailingSlash": false
+}
