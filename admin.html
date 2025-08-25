@@ -574,6 +574,15 @@
             background: #E5E7EB;
         }
 
+        .btn-danger {
+            background: #EF4444;
+            color: #FFF;
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+
         .btn-test {
             background: #10B981;
             color: #FFFFFF;
@@ -1775,6 +1784,11 @@
                 <form id="webhookEditForm">
                     <input type="hidden" id="webhookId">
                     <div class="form-group">
+                        <label for="webhookDisplayName">Webhook Name</label>
+                        <input type="text" id="webhookDisplayName" placeholder="e.g., Send to CRM, Notify Sales Team" required>
+                        <small>A friendly name to identify this webhook</small>
+                    </div>
+                    <div class="form-group">
                         <label for="webhookAction">Webhook Action/Event</label>
                         <select id="webhookAction" required onchange="handleWebhookActionChange()">
                             <option value="">Select an action that triggers this webhook...</option>
@@ -1839,6 +1853,7 @@
                         <button type="submit" class="btn btn-primary">Save Webhook</button>
                         <button type="button" class="btn btn-secondary" onclick="cancelWebhookEdit()">Cancel</button>
                         <button type="button" class="btn btn-test" onclick="testWebhookEndpoint()">Test Webhook</button>
+                        <button type="button" class="btn btn-danger" onclick="deleteWebhook()" id="deleteWebhookBtn" style="margin-left: auto;">Delete Webhook</button>
                     </div>
                 </form>
             </div>
@@ -5295,7 +5310,7 @@
                 return `
                     <div class="webhook-item">
                         <div class="webhook-item-header">
-                            <div class="webhook-name">${getActionDisplayName(webhook.webhook_name, taskGroupName)}</div>
+                            <div class="webhook-name">${webhook.display_name || getActionDisplayName(webhook.webhook_name, taskGroupName)}</div>
                             <div class="webhook-status ${webhook.is_active ? 'active' : 'inactive'}">
                                 ${webhook.is_active ? 'Active' : 'Inactive'}
                             </div>
@@ -5317,10 +5332,14 @@
         async function createNewWebhook() {
             // Clear form for new webhook
             document.getElementById('webhookId').value = '';
+            document.getElementById('webhookDisplayName').value = '';
             document.getElementById('webhookAction').value = '';
             document.getElementById('webhookUrl').value = '';
             document.getElementById('webhookDescription').value = '';
             document.getElementById('webhookActive').checked = true;
+            
+            // Hide delete button for new webhooks
+            document.getElementById('deleteWebhookBtn').style.display = 'none';
 
             // Load groups for rules dropdown
             await loadGroupsForRulesDropdown();
@@ -5341,10 +5360,14 @@
             if (!webhook) return;
 
             document.getElementById('webhookId').value = webhook.id;
+            document.getElementById('webhookDisplayName').value = webhook.display_name || '';
             document.getElementById('webhookAction').value = webhook.webhook_name;
             document.getElementById('webhookUrl').value = webhook.webhook_url;
             document.getElementById('webhookDescription').value = webhook.description || '';
             document.getElementById('webhookActive').checked = webhook.is_active;
+            
+            // Show delete button for existing webhooks
+            document.getElementById('deleteWebhookBtn').style.display = 'block';
 
             // Handle task group selection for group-specific webhooks
             await handleWebhookActionChange();
@@ -5507,6 +5530,7 @@
                 
                 const formData = {
                     webhook_name: document.getElementById('webhookAction').value,
+                    display_name: document.getElementById('webhookDisplayName').value,
                     webhook_url: document.getElementById('webhookUrl').value,
                     description: document.getElementById('webhookDescription').value,
                     is_active: document.getElementById('webhookActive').checked,
@@ -5751,6 +5775,41 @@
             }
 
             await testSingleWebhook(document.getElementById('webhookId').value);
+        }
+
+        // Delete webhook function
+        async function deleteWebhook() {
+            const webhookId = document.getElementById('webhookId').value;
+            if (!webhookId) {
+                showError('No webhook selected for deletion');
+                return;
+            }
+            
+            const webhook = allWebhooks.find(w => w.id === parseInt(webhookId));
+            if (!webhook) {
+                showError('Webhook not found');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete the webhook "${webhook.display_name || getActionDisplayName(webhook.webhook_name)}"? This action cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('webhook_settings')
+                    .delete()
+                    .eq('id', webhookId);
+                
+                if (error) throw error;
+                
+                showSuccess('Webhook deleted successfully');
+                cancelWebhookEdit();
+                await loadWebhooks();
+            } catch (error) {
+                console.error('Error deleting webhook:', error);
+                showError('Failed to delete webhook: ' + error.message);
+            }
         }
 
         // Quick function to update all webhooks with new URL
