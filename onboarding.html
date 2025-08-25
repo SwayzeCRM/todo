@@ -15,6 +15,127 @@
             box-sizing: border-box;
         }
 
+        /* Celebration Animation */
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes success-pulse {
+            0% {
+                transform: scale(0);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 0;
+            }
+        }
+
+        @keyframes streak-glow {
+            0%, 100% {
+                box-shadow: 0 0 5px rgba(251, 191, 36, 0.5);
+            }
+            50% {
+                box-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
+            }
+        }
+
+        .confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .confetti-piece {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: confetti-fall 3s linear;
+        }
+
+        .success-badge {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 50px;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 10000;
+            animation: success-pulse 1s ease-out;
+            pointer-events: none;
+        }
+
+        .streak-counter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        .streak-counter.active {
+            animation: streak-glow 2s infinite;
+        }
+
+        .streak-counter .streak-icon {
+            font-size: 20px;
+        }
+
+        .milestone-notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease-out;
+        }
+
+        .milestone-notification.show {
+            transform: translateX(0);
+        }
+
+        .milestone-notification h3 {
+            margin: 0 0 4px 0;
+            font-size: 18px;
+        }
+
+        .milestone-notification p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #F5F7FA;
@@ -851,6 +972,21 @@
     </style>
 </head>
 <body>
+    <!-- Streak Counter -->
+    <div class="streak-counter" id="streakCounter" style="display: none;">
+        <span class="streak-icon">🔥</span>
+        <span id="streakText">0 day streak!</span>
+    </div>
+
+    <!-- Confetti Container -->
+    <div class="confetti-container" id="confettiContainer"></div>
+
+    <!-- Milestone Notification -->
+    <div class="milestone-notification" id="milestoneNotification">
+        <h3 id="milestoneTitle">Achievement Unlocked!</h3>
+        <p id="milestoneMessage">Keep up the great work!</p>
+    </div>
+
     <div class="container" id="container">
         <div class="onboarding-panel">
             <!-- Personalized Welcome (shown after profile completion) -->
@@ -1012,6 +1148,9 @@
         let currentUser = null;
         let currentChecklist = [];
         let taskInstructions = {};
+        let currentStreak = 0;
+        let lastCompletionDate = null;
+        let completionSounds = [];
 
         // Fallback tasks in case database is empty
         const fallbackTasks = [
@@ -1626,6 +1765,11 @@
 
             await updateUserChecklist(updatedChecklist);
             renderTasks();
+
+            // Trigger celebration if task was completed (not uncompleted)
+            if (completed) {
+                celebrateCompletion();
+            }
 
             // Send webhook notification
             const params = getUrlParams();
@@ -2565,8 +2709,216 @@
             }
         });
 
+        // Gamification Functions
+        function initializeGamification() {
+            // Initialize completion sounds
+            initializeSounds();
+            
+            // Load streak data from localStorage
+            loadStreakData();
+            
+            // Show streak counter if user has a streak
+            updateStreakDisplay();
+        }
+
+        function initializeSounds() {
+            // Create multiple sound variations for variety
+            const soundUrls = [
+                'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi9/zPDTgDYGHm3A7OWVLwkQVazn77BdGAg+lt3vy3spBiR8x+/djjcGHWq07OedQAoQUqPg8bllHgg2jdT0x3kpBSl7yu7ZizoGHWe57OmZOgsOUKXj8K5iIwc2h9Pzx3kpBSh+zO7ajDkGH2q57OmYOwoOUKXh8K5iIAU2h9Pyx3srBSh+zO3ajDcGH2m07OmYOwoOUKXh8K1iIAU2h9Pyx3srBSh+zO3ajDcGH2m07OmYOwoOUKXh8a5iIAU2h9Pyx3srBSh+zO3ajDcGH2m07OmYOwoOUKXh8a5iIAU2h9Pyxnkq',
+                'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N+QQAoUXrTp66hVFApGn+DyvmwhBi9/zPDTgDYGHm3A7OWVLwkQVazn77BdGAg+lt3vy3spBiR8x+/djjcGHWq07OedQAoQUqPg8bllHgg2jdT0x3kpBSl7yu7ZizoGHWe57OmZOgsOUKXj8K5iIwc2h9Pzx3kpBSh+zO7ajDkGH2q57OmYOwoOUKXh8K5iIAU2h9Pyx3srBSh+zO3ajDcGH2m07OmYOwoOUKXh8K1iIAU2h9Pyx3srBSh+zO3ajDcGH2m07OmYOwoOUKXh8a5iIAU2h9Pyx3srBSh+zO3ajDcGH2m07OmYOwoOUKXh8a5iIAU2h9Pyxnkq'
+            ];
+            
+            completionSounds = soundUrls.map(url => {
+                const audio = new Audio(url);
+                audio.volume = 0.3;
+                return audio;
+            });
+        }
+
+        function playCompletionSound() {
+            // Play a random completion sound
+            const randomIndex = Math.floor(Math.random() * completionSounds.length);
+            const sound = completionSounds[randomIndex].cloneNode();
+            sound.play().catch(e => console.log('Could not play sound:', e));
+        }
+
+        function loadStreakData() {
+            const savedStreak = localStorage.getItem('taskStreak');
+            const savedDate = localStorage.getItem('lastCompletionDate');
+            
+            if (savedStreak) {
+                currentStreak = parseInt(savedStreak);
+            }
+            if (savedDate) {
+                lastCompletionDate = new Date(savedDate);
+            }
+        }
+
+        function updateStreak() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (lastCompletionDate) {
+                const lastDate = new Date(lastCompletionDate);
+                lastDate.setHours(0, 0, 0, 0);
+                
+                const dayDiff = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+                
+                if (dayDiff === 0) {
+                    // Same day, streak continues
+                } else if (dayDiff === 1) {
+                    // Next day, increment streak
+                    currentStreak++;
+                } else {
+                    // Streak broken, reset to 1
+                    currentStreak = 1;
+                }
+            } else {
+                // First completion
+                currentStreak = 1;
+            }
+            
+            lastCompletionDate = new Date();
+            
+            // Save to localStorage
+            localStorage.setItem('taskStreak', currentStreak.toString());
+            localStorage.setItem('lastCompletionDate', lastCompletionDate.toISOString());
+            
+            updateStreakDisplay();
+        }
+
+        function updateStreakDisplay() {
+            const streakCounter = document.getElementById('streakCounter');
+            const streakText = document.getElementById('streakText');
+            
+            if (currentStreak > 0) {
+                streakCounter.style.display = 'flex';
+                streakText.textContent = `${currentStreak} day${currentStreak > 1 ? 's' : ''} streak!`;
+                
+                if (currentStreak >= 3) {
+                    streakCounter.classList.add('active');
+                } else {
+                    streakCounter.classList.remove('active');
+                }
+            } else {
+                streakCounter.style.display = 'none';
+            }
+        }
+
+        function createConfetti() {
+            const container = document.getElementById('confettiContainer');
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE'];
+            
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti-piece';
+                    confetti.style.left = Math.random() * 100 + '%';
+                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                    container.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 30);
+            }
+        }
+
+        function showSuccessBadge(message) {
+            const badge = document.createElement('div');
+            badge.className = 'success-badge';
+            badge.textContent = message;
+            document.body.appendChild(badge);
+            
+            setTimeout(() => badge.remove(), 1000);
+        }
+
+        function checkMilestones() {
+            const completedCount = currentChecklist.filter(t => t.completed).length;
+            const totalCount = currentChecklist.length;
+            const percentage = (completedCount / totalCount) * 100;
+            
+            let milestone = null;
+            
+            if (percentage === 100) {
+                milestone = {
+                    title: '🎉 All Tasks Complete!',
+                    message: "You're a productivity champion!"
+                };
+            } else if (percentage >= 75 && percentage < 100) {
+                milestone = {
+                    title: '🚀 75% Complete!',
+                    message: 'Almost there! Keep pushing!'
+                };
+            } else if (percentage >= 50 && percentage < 75) {
+                milestone = {
+                    title: '⭐ Halfway There!',
+                    message: "You're doing amazing!"
+                };
+            } else if (percentage >= 25 && percentage < 50) {
+                milestone = {
+                    title: '💪 25% Complete!',
+                    message: 'Great progress! Keep it up!'
+                };
+            } else if (completedCount === 1) {
+                milestone = {
+                    title: '🎯 First Task Done!',
+                    message: "You've started your journey!"
+                };
+            }
+            
+            if (milestone && !sessionStorage.getItem(`milestone_${percentage}`)) {
+                showMilestoneNotification(milestone.title, milestone.message);
+                sessionStorage.setItem(`milestone_${percentage}`, 'true');
+            }
+        }
+
+        function showMilestoneNotification(title, message) {
+            const notification = document.getElementById('milestoneNotification');
+            const titleEl = document.getElementById('milestoneTitle');
+            const messageEl = document.getElementById('milestoneMessage');
+            
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+
+        function celebrateCompletion() {
+            // Play sound
+            playCompletionSound();
+            
+            // Show visual effects
+            createConfetti();
+            
+            // Show success message
+            const messages = [
+                'Awesome! 🎉',
+                'Great job! 💪',
+                'Keep it up! 🚀',
+                'You rock! ⭐',
+                'Amazing! 🎯',
+                'Fantastic! 🔥',
+                'Brilliant! ✨'
+            ];
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+            showSuccessBadge(randomMessage);
+            
+            // Update streak
+            updateStreak();
+            
+            // Check for milestones
+            setTimeout(() => checkMilestones(), 500);
+        }
+
         // Start the application
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+            initializeGamification();
+        });
     </script>
 </body>
 </html>
