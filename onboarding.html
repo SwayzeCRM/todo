@@ -1158,7 +1158,13 @@
                     task_title: taskData.taskTitle,
                     completed: taskData.completed,
                     completed_at: taskData.completedAt,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    // Include user profile information
+                    firstName: taskData.firstName || '',
+                    lastName: taskData.lastName || '',
+                    cellPhone: taskData.cellPhone || '',
+                    companyName: taskData.companyName || '',
+                    fullName: taskData.fullName || taskData.userEmail
                 };
 
                 const response = await fetch(webhookUrl, {
@@ -1445,6 +1451,13 @@
 
                 if (existingUser) {
                     console.log('Existing user found:', existingUser);
+                    console.log('User profile data:', {
+                        first_name: existingUser.first_name,
+                        last_name: existingUser.last_name,
+                        cell_phone: existingUser.cell_phone,
+                        company_name: existingUser.company_name,
+                        profile_completed: existingUser.profile_completed
+                    });
                     
                     // URL parameter group assignment is ONLY for initial creation
                     // If user already exists, respect their current group assignment
@@ -1563,6 +1576,15 @@
             // Send webhook notification
             const params = getUrlParams();
             if (params.email && params.locationId) {
+                // Debug: Log currentUser to see what profile data is available
+                console.log('Current user data for webhook:', currentUser);
+                console.log('User profile fields:', {
+                    firstName: currentUser?.first_name,
+                    lastName: currentUser?.last_name,
+                    cellPhone: currentUser?.cell_phone,
+                    companyName: currentUser?.company_name
+                });
+                
                 await sendWebhook({
                     userEmail: params.email,
                     locationId: params.locationId,
