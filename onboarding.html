@@ -1569,7 +1569,13 @@
                     taskId: taskId,
                     taskTitle: task.title,
                     completed: completed,
-                    completedAt: new Date().toISOString()
+                    completedAt: new Date().toISOString(),
+                    // Include user profile information
+                    firstName: currentUser?.first_name || '',
+                    lastName: currentUser?.last_name || '',
+                    cellPhone: currentUser?.cell_phone || '',
+                    companyName: currentUser?.company_name || '',
+                    fullName: [currentUser?.first_name, currentUser?.last_name].filter(n => n).join(' ') || params.email
                 });
             }
         }

@@ -5570,7 +5570,13 @@
                     webhook_name: webhook.webhook_name,
                     message: `Test payload from DFY CRM Admin Panel for ${getActionDisplayName(webhook.webhook_name)} webhook`,
                     user_email: 'test@example.com',
-                    location_id: 'test_location'
+                    location_id: 'test_location',
+                    // Include user profile fields in all webhooks
+                    firstName: 'John',
+                    lastName: 'Doe',
+                    cellPhone: '(555) 123-4567',
+                    companyName: 'Test Company Inc.',
+                    fullName: 'John Doe'
                 };
 
                 // Add action-specific data

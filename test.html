@@ -1044,7 +1044,13 @@
                     completed: true,
                     completed_at: new Date().toISOString(),
                     timestamp: new Date().toISOString(),
-                    source: 'DFY_CRM_Test'
+                    source: 'DFY_CRM_Test',
+                    // User profile fields
+                    firstName: 'John',
+                    lastName: 'Doe',
+                    cellPhone: '(555) 123-4567',
+                    companyName: 'Test Company Inc.',
+                    fullName: 'John Doe'
                 };
 
                 console.log('Sending test webhook payload:', samplePayload);
