@@ -1744,7 +1744,7 @@
 
                 <div class="btn-group">
                     <button type="submit" class="btn btn-primary" id="saveBtn">Save Task</button>
-                    <button type="button" class="btn btn-secondary" onclick="closeEditPanel()">Cancel</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeTaskModal()">Cancel</button>
                 </div>
             </form>
 
@@ -3519,9 +3519,9 @@
                     await sendUserNotifications(data[0], targetUsers);
                 }
                 
-                // Reload tasks and close panel
+                // Reload tasks and close modal
                 await loadTasks();
-                setTimeout(closeEditPanel, 1500);
+                setTimeout(closeTaskModal, 1500);
 
             } catch (error) {
                 console.error('Error saving task:', error);
