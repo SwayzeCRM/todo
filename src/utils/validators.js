@@ -80,7 +80,7 @@ export function sanitizeTaskData(taskData) {
     });
 
     // Ensure booleans are booleans
-    const booleanFields = ['is_active', 'notify_users'];
+    const booleanFields = ['is_active']; // Removed 'notify_users' - column doesn't exist in database
     booleanFields.forEach(field => {
         if (sanitized[field] !== undefined) {
             sanitized[field] = Boolean(sanitized[field]);

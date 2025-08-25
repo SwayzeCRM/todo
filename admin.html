@@ -1732,7 +1732,8 @@
                         <!-- Individual users will be loaded here dynamically -->
                     </div>
                     
-                    <div id="notifyUsersGroup" style="margin-top: 16px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
+                    <!-- Notification checkbox removed - notify_users column doesn't exist in database -->
+                    <div id="notifyUsersGroup" style="display: none; margin-top: 16px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
                         <label style="display: flex; align-items: center; gap: 8px; margin: 0;">
                             <input type="checkbox" id="notifyUsers" style="width: 16px; height: 16px; accent-color: #3B82F6;">
                             <span style="font-weight: 500; color: #374151;">Notify Users When Task is Created</span>
@@ -3120,8 +3121,8 @@
             // Update targeting options display
             updateTargetingOptions();
             
-            // Set notification checkbox
-            document.getElementById('notifyUsers').checked = task.notify_users || false;
+            // Set notification checkbox - removed (column doesn't exist in database)
+            // document.getElementById('notifyUsers').checked = false;
             
             // Set selected groups, locations, and users after a delay to allow for loading
             setTimeout(() => {
@@ -3188,7 +3189,7 @@
                 const targetGroups = targetType === 'groups' ? getSelectedGroups() : [];
                 const targetLocations = targetType === 'locations' ? getSelectedLocations() : [];
                 const targetUsers = targetType === 'individuals' ? getSelectedUsers() : [];
-                const notifyUsers = targetType === 'individuals' ? (document.getElementById('notifyUsers')?.checked || false) : false;
+                // const notifyUsers = targetType === 'individuals' ? (document.getElementById('notifyUsers')?.checked || false) : false; // Removed - column doesn't exist
                 const taskGroupId = document.getElementById('taskGroupSelect').value;
 
                 const formData = {
@@ -3205,7 +3206,7 @@
                     target_groups: targetGroups,
                     target_locations: targetLocations,
                     target_users: targetUsers,
-                    notify_users: notifyUsers,
+                    // notify_users: notifyUsers, // Removed - column doesn't exist in database
                     is_active: currentTask.is_active
                 };
 
@@ -3426,7 +3427,7 @@
                 const targetGroups = targetType === 'groups' ? getSelectedGroups() : [];
                 const targetLocations = targetType === 'locations' ? getSelectedLocations() : [];
                 const targetUsers = targetType === 'individuals' ? getSelectedUsers() : [];
-                const notifyUsers = document.getElementById('notifyUsers').checked;
+                // const notifyUsers = document.getElementById('notifyUsers').checked; // Removed - column doesn't exist
 
                 const taskGroupId = document.getElementById('taskGroupSelect').value;
                 
@@ -3454,7 +3455,7 @@
                     target_groups: targetGroups,
                     target_locations: targetLocations,
                     target_users: targetUsers,
-                    notify_users: notifyUsers,
+                    // notify_users: notifyUsers, // Removed - column doesn't exist in database
                     is_active: true
                 };
 
