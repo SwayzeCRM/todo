@@ -1676,10 +1676,11 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Instruction Content</label>
+                    <label>Instruction Content (Rich Text Editor)</label>
                     <div class="quill-container">
                         <div id="quillEditor"></div>
                     </div>
+                    <small style="color: #6B7280; display: block; margin-top: 5px;">Use the editor above to create detailed instructions with formatting, lists, and images</small>
                 </div>
 
                 <div class="form-group">
@@ -3383,6 +3384,34 @@
             return content.trim();
         }
 
+        // Get next position for a new task
+        async function getNextPosition(groupId = null) {
+            try {
+                let query = supabaseClient
+                    .from('onboarding_tasks')
+                    .select('position')
+                    .order('position', { ascending: false })
+                    .limit(1);
+                
+                // If groupId is provided, filter by that group
+                if (groupId) {
+                    query = query.eq('task_group_id', groupId);
+                }
+                
+                const { data: existingTasks, error } = await query;
+                
+                if (error) {
+                    console.error('Error getting next position:', error);
+                    return 1;
+                }
+                
+                return existingTasks && existingTasks.length > 0 ? existingTasks[0].position + 1 : 1;
+            } catch (error) {
+                console.error('Error in getNextPosition:', error);
+                return 1;
+            }
+        }
+
         // Save task
         async function saveTask(event) {
             event.preventDefault();
@@ -3400,6 +3429,17 @@
                 const notifyUsers = document.getElementById('notifyUsers').checked;
 
                 const taskGroupId = document.getElementById('taskGroupSelect').value;
+                
+                // Only get next position for new tasks
+                let position;
+                if (currentTask && currentTask.position) {
+                    // Editing existing task - keep current position
+                    position = currentTask.position;
+                } else {
+                    // New task - get next position
+                    position = await getNextPosition(taskGroupId ? parseInt(taskGroupId) : null);
+                }
+                
                 const formData = {
                     task_id: document.getElementById('taskId').value.trim(),
                     title: document.getElementById('title').value.trim(),
@@ -3409,7 +3449,7 @@
                     video_url: document.getElementById('videoUrl').value.trim() || null,
                     form_embed_code: document.getElementById('hasFormEmbed').checked ? document.getElementById('formEmbedCode').value.trim() : null,
                     task_group_id: taskGroupId ? parseInt(taskGroupId) : null,
-                    position: await getNextPosition(),
+                    position: position,
                     target_type: targetType,
                     target_groups: targetGroups,
                     target_locations: targetLocations,
@@ -6691,11 +6731,37 @@
                     <textarea id="newTaskContent" rows="4" style="width: 100%; padding: 12px; border: 1px solid #E5E7EB; border-radius: 4px; resize: vertical;" placeholder="Detailed instructions for the user..."></textarea>
                 </div>
                 
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label for="newTaskVideoUrl" style="display: block; margin-bottom: 8px; font-weight: 500;">Video URL (optional)</label>
+                    <input type="url" id="newTaskVideoUrl" style="width: 100%; padding: 12px; border: 1px solid #E5E7EB; border-radius: 4px;" placeholder="https://youtube.com/watch?v=... or https://vimeo.com/...">
+                    <small style="color: #6B7280;">Add a YouTube or Vimeo video URL for this task</small>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="newTaskHasFormEmbed" onchange="toggleNewTaskFormEmbed()" style="width: 16px; height: 16px;">
+                        <span style="font-weight: 500;">Include Embedded Form</span>
+                    </label>
+                </div>
+                
+                <div class="form-group" id="newTaskFormEmbedGroup" style="display: none; margin-bottom: 16px;">
+                    <label for="newTaskFormEmbedCode" style="display: block; margin-bottom: 8px; font-weight: 500;">Form Embed Code</label>
+                    <textarea id="newTaskFormEmbedCode" rows="5" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px;" placeholder="Paste your complete form embed code here (iframe and script tags)..."></textarea>
+                    <small style="color: #6B7280;">Paste the complete embed code including iframe and script tags</small>
+                </div>
+                
                 <div class="form-actions">
                     <button type="button" class="btn btn-primary" onclick="createNewTask(${groupId})">Create Task</button>
                     <button type="button" class="btn btn-secondary" onclick="backToTaskManagement(${groupId})">Back</button>
                 </div>
             `;
+            
+            // Initialize form embed toggle for new task form
+            window.toggleNewTaskFormEmbed = function() {
+                const checkbox = document.getElementById('newTaskHasFormEmbed');
+                const embedGroup = document.getElementById('newTaskFormEmbedGroup');
+                embedGroup.style.display = checkbox.checked ? 'block' : 'none';
+            };
         }
         
         // Create new task
@@ -6706,6 +6772,9 @@
                 const description = document.getElementById('newTaskDescription').value;
                 const instructionTitle = document.getElementById('newTaskInstructions').value;
                 const instructionContent = document.getElementById('newTaskContent').value;
+                const videoUrl = document.getElementById('newTaskVideoUrl').value;
+                const hasFormEmbed = document.getElementById('newTaskHasFormEmbed').checked;
+                const formEmbedCode = document.getElementById('newTaskFormEmbedCode').value;
                 
                 if (!title || !taskId) {
                     showError('Title and Task ID are required');
@@ -6730,6 +6799,8 @@
                     description: description || null,
                     instruction_title: instructionTitle || title,
                     instruction_content: instructionContent || null,
+                    video_url: videoUrl || null,
+                    form_embed_code: hasFormEmbed && formEmbedCode ? formEmbedCode : null,
                     position: nextPosition,
                     task_group_id: groupId,
                     is_active: true,
