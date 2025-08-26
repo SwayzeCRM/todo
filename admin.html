@@ -5528,9 +5528,10 @@
                     metadata.task_group_id = parseInt(taskGroupId);
                 }
                 
+                // Build form data - conditionally include display_name
+                const displayName = document.getElementById('webhookDisplayName').value;
                 const formData = {
                     webhook_name: document.getElementById('webhookAction').value,
-                    display_name: document.getElementById('webhookDisplayName').value,
                     webhook_url: document.getElementById('webhookUrl').value,
                     description: document.getElementById('webhookDescription').value,
                     is_active: document.getElementById('webhookActive').checked,
@@ -5538,6 +5539,11 @@
                     metadata: metadata,
                     updated_at: new Date().toISOString()
                 };
+                
+                // Only add display_name if it has a value (for backwards compatibility)
+                if (displayName) {
+                    formData.display_name = displayName;
+                }
 
                 let data, error;
 
