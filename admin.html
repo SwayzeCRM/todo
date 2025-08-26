@@ -1750,6 +1750,13 @@
                         <small style="color: #6b7280; margin-top: 4px; display: block;">Sends notification to selected users via your CRM system</small>
                     </div>
                 </div>
+                
+                <!-- Due Date for Individual Tasks Only -->
+                <div class="form-group" id="dueDateGroup" style="display: none;">
+                    <label for="taskDueDate">Due Date (Optional)</label>
+                    <input type="datetime-local" id="taskDueDate" style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                    <small style="color: #6B7280;">Set a deadline for this task. This will be included in the webhook for reminders.</small>
+                </div>
 
                 <div class="btn-group">
                     <button type="submit" class="btn btn-primary" id="saveBtn">Save Task</button>
@@ -2292,11 +2299,13 @@
             const groupsGroup = document.getElementById('groupsTargetingGroup');
             const locationsGroup = document.getElementById('locationsTargetingGroup');
             const individualsGroup = document.getElementById('individualsTargetingGroup');
+            const dueDateGroup = document.getElementById('dueDateGroup');
 
             // Hide all targeting groups first
             groupsGroup.style.display = 'none';
             locationsGroup.style.display = 'none';
             individualsGroup.style.display = 'none';
+            dueDateGroup.style.display = 'none';
 
             // Show relevant targeting group
             if (targetType === 'groups') {
@@ -2307,6 +2316,7 @@
                 loadLocations();
             } else if (targetType === 'individuals') {
                 individualsGroup.style.display = 'block';
+                dueDateGroup.style.display = 'block'; // Show due date for individual tasks
                 loadUsers();
             }
         }
@@ -3138,6 +3148,18 @@
             // Update targeting options display
             updateTargetingOptions();
             
+            // Set due date if it exists (only for individual tasks)
+            if (task.due_date && targetType === 'individuals') {
+                const dueDate = new Date(task.due_date);
+                // Format as datetime-local input value (YYYY-MM-DDTHH:mm)
+                const localDateTime = new Date(dueDate.getTime() - dueDate.getTimezoneOffset() * 60000)
+                    .toISOString()
+                    .slice(0, 16);
+                document.getElementById('taskDueDate').value = localDateTime;
+            } else {
+                document.getElementById('taskDueDate').value = '';
+            }
+            
             // Set notification checkbox - removed (column doesn't exist in database)
             // document.getElementById('notifyUsers').checked = false;
             
@@ -3471,6 +3493,13 @@
 
                 const taskGroupId = document.getElementById('taskGroupSelect').value;
                 
+                // Get due date only for individual tasks
+                let dueDate = null;
+                if (targetType === 'individuals') {
+                    const dueDateValue = document.getElementById('taskDueDate').value;
+                    dueDate = dueDateValue ? new Date(dueDateValue).toISOString() : null;
+                }
+                
                 // Only get next position for new tasks
                 let position;
                 if (currentTask && currentTask.position) {
@@ -3495,6 +3524,7 @@
                     target_groups: targetGroups,
                     target_locations: targetLocations,
                     target_users: targetUsers,
+                    due_date: dueDate, // Add due date for individual tasks
                     // notify_users: notifyUsers, // Removed - column doesn't exist in database
                     is_active: true
                 };

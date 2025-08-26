@@ -1788,6 +1788,7 @@
                     taskTitle: task.title,
                     completed: completed,
                     completedAt: new Date().toISOString(),
+                    dueDate: task.due_date || null, // Include task due date if it exists
                     // Include user profile information
                     firstName: currentUser?.first_name || '',
                     lastName: currentUser?.last_name || '',
