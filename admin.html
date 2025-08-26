@@ -1783,11 +1783,13 @@
                 <h3 id="webhookFormTitle">Edit Webhook</h3>
                 <form id="webhookEditForm">
                     <input type="hidden" id="webhookId">
+                    <!-- Temporarily hidden until database column is added
                     <div class="form-group">
                         <label for="webhookDisplayName">Webhook Name</label>
-                        <input type="text" id="webhookDisplayName" placeholder="e.g., Send to CRM, Notify Sales Team" required>
+                        <input type="text" id="webhookDisplayName" placeholder="e.g., Send to CRM, Notify Sales Team">
                         <small>A friendly name to identify this webhook</small>
                     </div>
+                    -->
                     <div class="form-group">
                         <label for="webhookAction">Webhook Action/Event</label>
                         <select id="webhookAction" required onchange="handleWebhookActionChange()">
@@ -5310,7 +5312,7 @@
                 return `
                     <div class="webhook-item">
                         <div class="webhook-item-header">
-                            <div class="webhook-name">${webhook.display_name || getActionDisplayName(webhook.webhook_name, taskGroupName)}</div>
+                            <div class="webhook-name">${getActionDisplayName(webhook.webhook_name, taskGroupName)}</div>
                             <div class="webhook-status ${webhook.is_active ? 'active' : 'inactive'}">
                                 ${webhook.is_active ? 'Active' : 'Inactive'}
                             </div>
@@ -5332,7 +5334,7 @@
         async function createNewWebhook() {
             // Clear form for new webhook
             document.getElementById('webhookId').value = '';
-            document.getElementById('webhookDisplayName').value = '';
+            // document.getElementById('webhookDisplayName').value = ''; // Temporarily disabled
             document.getElementById('webhookAction').value = '';
             document.getElementById('webhookUrl').value = '';
             document.getElementById('webhookDescription').value = '';
@@ -5360,7 +5362,8 @@
             if (!webhook) return;
 
             document.getElementById('webhookId').value = webhook.id;
-            document.getElementById('webhookDisplayName').value = webhook.display_name || '';
+            // Temporarily disabled until DB column is added:
+            // document.getElementById('webhookDisplayName').value = webhook.display_name || '';
             document.getElementById('webhookAction').value = webhook.webhook_name;
             document.getElementById('webhookUrl').value = webhook.webhook_url;
             document.getElementById('webhookDescription').value = webhook.description || '';
@@ -5506,8 +5509,11 @@
         document.getElementById('webhookEditForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            console.log('Starting webhook save...');
+            
             try {
                 const webhookId = document.getElementById('webhookId').value;
+                console.log('Webhook ID:', webhookId || 'New webhook');
                 
                 // Build rules object from dropdown
                 const select = document.getElementById('firingRulesSelect');
@@ -5528,22 +5534,38 @@
                     metadata.task_group_id = parseInt(taskGroupId);
                 }
                 
-                // Build form data - conditionally include display_name
-                const displayName = document.getElementById('webhookDisplayName').value;
+                // Build form data - TEMPORARILY removing display_name until DB is updated
+                // const displayName = document.getElementById('webhookDisplayName').value;
+                const webhookAction = document.getElementById('webhookAction').value;
+                const webhookUrl = document.getElementById('webhookUrl').value;
+                
+                // Validate required fields
+                if (!webhookAction) {
+                    showError('Please select a webhook action/event');
+                    return;
+                }
+                if (!webhookUrl) {
+                    showError('Please enter a webhook URL');
+                    return;
+                }
+                
                 const formData = {
-                    webhook_name: document.getElementById('webhookAction').value,
-                    webhook_url: document.getElementById('webhookUrl').value,
-                    description: document.getElementById('webhookDescription').value,
+                    webhook_name: webhookAction,
+                    webhook_url: webhookUrl,
+                    description: document.getElementById('webhookDescription').value || '',
                     is_active: document.getElementById('webhookActive').checked,
                     rules: rules,
                     metadata: metadata,
                     updated_at: new Date().toISOString()
                 };
                 
-                // Only add display_name if it has a value (for backwards compatibility)
-                if (displayName) {
-                    formData.display_name = displayName;
-                }
+                // NOTE: display_name field is commented out until database column is added
+                // Uncomment this after running the migration:
+                // if (displayName) {
+                //     formData.display_name = displayName;
+                // }
+                
+                console.log('Form data to save:', formData);
 
                 let data, error;
 
@@ -5567,17 +5589,31 @@
                     error = result.error;
                 }
 
-                if (error) throw error;
-
+                if (error) {
+                    console.error('Database error:', error);
+                    throw error;
+                }
+                
+                console.log('Webhook saved successfully:', data);
                 showSuccess(webhookId ? 'Webhook updated successfully!' : 'Webhook created successfully!');
+                
+                // Reset form
+                document.getElementById('webhookEditForm').reset();
+                document.getElementById('webhookForm').style.display = 'none';
+                
+                // Reload webhooks list
                 await loadWebhooks();
-                setTimeout(() => {
-                    document.getElementById('webhookForm').style.display = 'none';
-                }, 1500);
 
             } catch (error) {
                 console.error('Error saving webhook:', error);
-                showError('Failed to save webhook: ' + error.message);
+                console.error('Error details:', error);
+                
+                // Check for specific database errors
+                if (error.message && error.message.includes('display_name')) {
+                    showError('Database column issue. Please contact support to update database schema.');
+                } else {
+                    showError('Failed to save webhook: ' + (error.message || 'Unknown error'));
+                }
             }
         });
 
