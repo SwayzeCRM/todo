@@ -3450,13 +3450,22 @@
         
         // Show personalized welcome message
         function showPersonalizedWelcome(user) {
-            if (!user.profile_completed || !user.first_name) {
-                return; // Don't show if profile isn't completed
+            // Always update email in dropdown (even if profile not complete)
+            if (user.email) {
+                document.getElementById('dropdownUserEmail').textContent = user.email;
             }
             
-            // Build welcome message
+            if (!user.profile_completed || !user.first_name) {
+                // Even without profile, update what we have
+                document.getElementById('userInitials').textContent = 'U';
+                document.getElementById('userName').textContent = 'User';
+                document.getElementById('dropdownUserName').textContent = 'User';
+                document.getElementById('dropdownCompany').textContent = '';
+                return;
+            }
+            
+            // Build welcome message for completed profiles
             const fullName = [user.first_name, user.last_name].filter(n => n).join(' ');
-            const welcomeMessage = `Welcome ${fullName}!`;
             
             // Update navbar user display
             const userInitials = (user.first_name[0] + (user.last_name ? user.last_name[0] : '')).toUpperCase();
@@ -3469,7 +3478,6 @@
             document.getElementById('dropdownUserName').textContent = fullName;
             document.getElementById('dropdownUserEmail').textContent = user.email;
             document.getElementById('dropdownCompany').textContent = user.company_name || '';
-            
         }
         
         // Check and show welcome for existing users
