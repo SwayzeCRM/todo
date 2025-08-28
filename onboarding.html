@@ -145,13 +145,33 @@
             color: #1F2937;
         }
 
-        /* Main Layout */
+        /* Main Layout - Optimized for Modal */
         .main-container {
             display: flex;
             margin-top: 60px;
             height: calc(100vh - 60px);
             position: relative;
             transition: all 0.3s ease;
+        }
+        
+        /* Modal Mode - Hide sidebar, full width instructions */
+        body.modal-mode .task-panel {
+            display: none;
+        }
+        
+        body.modal-mode .main-container {
+            margin-top: 0;
+            height: 100vh;
+        }
+        
+        body.modal-mode .top-navbar {
+            display: none;
+        }
+        
+        body.modal-mode .instructions-panel {
+            flex: 1;
+            width: 100%;
+            padding: 0;
         }
         
         .main-container.instructions-open .instructions-panel {
@@ -693,13 +713,55 @@
 
         .instructions-header {
             margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: white;
+            border-bottom: 1px solid #E5E7EB;
         }
 
         .instructions-title {
             font-size: 24px;
             font-weight: 600;
-            margin-bottom: 16px;
             color: #111827;
+        }
+        
+        /* Navigation Controls */
+        .task-navigation {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .task-nav-btn {
+            background: #3B82F6;
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .task-nav-btn:hover:not(:disabled) {
+            background: #2563EB;
+            transform: scale(1.05);
+        }
+        
+        .task-nav-btn:disabled {
+            background: #D1D5DB;
+            cursor: not-allowed;
+        }
+        
+        .task-counter {
+            font-size: 14px;
+            color: #6B7280;
+            padding: 0 12px;
         }
 
         .close-btn {
@@ -791,10 +853,45 @@
         .video-container iframe,
         .video-container video {
             width: 100%;
-            height: 400px;
+            aspect-ratio: 16 / 9;
+            max-height: 70vh;
             border: none;
             border-radius: 12px;
             background: white;
+        }
+        
+        /* Complete Task Button */
+        .complete-task-section {
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .complete-task-btn {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .complete-task-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        
+        .complete-task-btn svg {
+            width: 20px;
+            height: 20px;
         }
 
         /* Form Styles for Instructions Panel */
@@ -900,6 +997,31 @@
             font-weight: 500;
         }
 
+        /* Modal responsive adjustments */
+        @media (max-width: 600px) {
+            body.modal-mode .instructions-header {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+            
+            body.modal-mode .instructions-title {
+                font-size: 20px;
+            }
+            
+            body.modal-mode .video-container iframe,
+            body.modal-mode .video-container video {
+                aspect-ratio: 16 / 9;
+                height: auto;
+                max-height: 250px;
+            }
+            
+            body.modal-mode .complete-task-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        
         @media (max-width: 768px) {
             .container {
                 width: 95%;
@@ -2523,10 +2645,54 @@
             return cleanedContent.trim();
         }
 
+        // Navigate to previous/next task
+        function navigateTask(direction) {
+            const openTasks = currentChecklist.filter(task => {
+                if (currentFilter === 'open' && task.completed) return false;
+                if (currentFilter === 'completed' && !task.completed) return false;
+                return true;
+            });
+            
+            const currentIndex = openTasks.findIndex(task => task.id === currentOpenTaskId);
+            let newIndex = currentIndex;
+            
+            if (direction === 'prev' && currentIndex > 0) {
+                newIndex = currentIndex - 1;
+            } else if (direction === 'next' && currentIndex < openTasks.length - 1) {
+                newIndex = currentIndex + 1;
+            }
+            
+            if (newIndex !== currentIndex && openTasks[newIndex]) {
+                showInstructions(openTasks[newIndex].id);
+            }
+        }
+        
+        // Complete current task and advance
+        function completeAndAdvance() {
+            if (!currentOpenTaskId) return;
+            
+            const task = currentChecklist.find(t => t.id === currentOpenTaskId);
+            if (!task || task.completed) return;
+            
+            // Show confirmation
+            pendingTaskComplete = { taskId: currentOpenTaskId, task, autoAdvance: true };
+            document.getElementById('taskCompleteTitle').textContent = 'Complete Task?';
+            document.getElementById('taskCompleteMessage').textContent = 
+                `Mark "${task.title}" as completed and move to the next task?`;
+            document.getElementById('taskCompleteOverlay').style.display = 'flex';
+        }
+        
         // Show instructions content (separated for reuse)
         function showInstructionsContent(taskId, instructions) {
             // Set the current open task
             currentOpenTaskId = taskId;
+            
+            // Get the task object
+            const task = currentChecklist.find(t => t.id === taskId);
+            if (!task) {
+                console.error('Task not found:', taskId);
+                return;
+            }
 
             // Hide empty state and show content
             document.getElementById('emptyState').style.display = 'none';
@@ -2592,13 +2758,43 @@
                 console.log('No embed code found for task:', taskId);
             }
             
-            // Create fresh HTML content - Order: Title, Video (on top), Content, then Form
+            // Get task position for navigation
+            const openTasks = currentChecklist.filter(t => !t.completed);
+            const currentIndex = openTasks.findIndex(t => t.id === taskId);
+            const totalTasks = openTasks.length;
+            const hasPrev = currentIndex > 0;
+            const hasNext = currentIndex < totalTasks - 1;
+            
+            // Create fresh HTML content with navigation
             const instructionsHtml = `
                 <div class="instructions-header">
                     <h2 class="instructions-title">${instructions.title}</h2>
+                    <div class="task-navigation">
+                        <button class="task-nav-btn" onclick="navigateTask('prev')" ${!hasPrev ? 'disabled' : ''}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                            </svg>
+                        </button>
+                        <span class="task-counter">${currentIndex + 1} / ${totalTasks}</span>
+                        <button class="task-nav-btn" onclick="navigateTask('next')" ${!hasNext ? 'disabled' : ''}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
-                ${videoHtml ? `<div class="video-section" style="background: transparent;">${videoHtml}</div>` : ''}
-                <div class="instructions-body" style="max-height: calc(100vh - ${videoHtml ? '380px' : '180px'}); overflow-y: auto; background: white;">
+                ${videoHtml ? `<div class="video-section" style="background: transparent; padding: 20px;">${videoHtml}</div>` : ''}
+                ${!task.completed ? `
+                    <div class="complete-task-section">
+                        <button class="complete-task-btn" onclick="completeAndAdvance()">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                            </svg>
+                            Complete Task
+                        </button>
+                    </div>
+                ` : ''}
+                <div class="instructions-body" style="overflow-y: auto; background: white; padding: 20px; margin: 20px;">
                     ${cleanContent}
                     ${formEmbedHtml}
                 </div>
@@ -2995,6 +3191,20 @@
                 // Show personalized welcome if profile is completed
                 checkExistingUserWelcome();
                 
+                // Check for modal mode and auto-open first incomplete task
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('modal') === 'true' || window.location !== window.parent.location) {
+                    document.body.classList.add('modal-mode');
+                    
+                    // Find and show first incomplete task
+                    const firstIncompleteTask = currentChecklist.find(t => !t.completed);
+                    if (firstIncompleteTask) {
+                        setTimeout(() => {
+                            showInstructions(firstIncompleteTask.id);
+                        }, 500);
+                    }
+                }
+                
             } catch (error) {
                 console.error('Initialization error:', error);
                 showError('Failed to load onboarding tasks. Please refresh the page or contact support.');
@@ -3324,8 +3534,31 @@
         async function confirmTaskComplete() {
             if (!pendingTaskComplete) return;
             
+            const autoAdvance = pendingTaskComplete.autoAdvance;
+            const taskId = pendingTaskComplete.taskId;
+            
             document.getElementById('taskCompleteOverlay').style.display = 'none';
-            await performTaskToggle(pendingTaskComplete.taskId, true);
+            await performTaskToggle(taskId, true);
+            
+            // Auto-advance to next task if requested
+            if (autoAdvance) {
+                const openTasks = currentChecklist.filter(t => !t.completed);
+                const nextTask = openTasks[0]; // Get first incomplete task
+                if (nextTask) {
+                    setTimeout(() => {
+                        showInstructions(nextTask.id);
+                    }, 500); // Small delay for smooth transition
+                } else {
+                    // All tasks complete!
+                    document.getElementById('emptyState').innerHTML = `
+                        <h2>🎉 Congratulations!</h2>
+                        <p>You've completed all your onboarding tasks!</p>
+                    `;
+                    document.getElementById('emptyState').style.display = 'block';
+                    document.getElementById('instructionsContent').style.display = 'none';
+                }
+            }
+            
             pendingTaskComplete = null;
         }
         
