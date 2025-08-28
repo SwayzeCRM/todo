@@ -3753,6 +3753,9 @@ Current Supabase limits:
 
             // Add custom HTML editing button
             addHtmlEditButton();
+            
+            // Add custom link handler
+            setupCustomLinkHandler();
 
             // Update preview on content change - removed as updatePreview is not needed
             // quillEditor.on('text-change', updatePreview);
@@ -3760,6 +3763,141 @@ Current Supabase limits:
             console.log('Quill editor initialized');
         }
 
+        // Setup custom link handler for Quill
+        function setupCustomLinkHandler() {
+            const toolbar = quillEditor.getModule('toolbar');
+            
+            // Override the default link handler
+            toolbar.addHandler('link', function(value) {
+                if (value) {
+                    const range = quillEditor.getSelection();
+                    if (range == null || range.length == 0) return;
+                    
+                    const selectedText = quillEditor.getText(range.index, range.length);
+                    
+                    // Check if we're editing an existing link
+                    const formats = quillEditor.getFormat(range);
+                    const existingUrl = formats.link || '';
+                    
+                    // Try to detect if the existing link opens in new tab
+                    let existingTarget = '_blank'; // Default to new tab
+                    if (existingUrl) {
+                        const content = quillEditor.root.innerHTML;
+                        const linkRegex = new RegExp(`<a[^>]*href=["']${existingUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'][^>]*>`, 'i');
+                        const match = content.match(linkRegex);
+                        if (match && match[0].includes('target="_self"')) {
+                            existingTarget = '_self';
+                        }
+                    }
+                    
+                    // Create custom link dialog
+                    const modal = document.createElement('div');
+                    modal.style.cssText = `
+                        position: fixed;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        background: white;
+                        padding: 24px;
+                        border-radius: 8px;
+                        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                        z-index: 10000;
+                        width: 420px;
+                    `;
+                    
+                    modal.innerHTML = `
+                        <h3 style="margin: 0 0 16px 0; color: #1f2937;">${existingUrl ? 'Edit' : 'Add'} Link</h3>
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">URL:</label>
+                            <input type="url" id="linkUrl" placeholder="https://example.com" value="${existingUrl}"
+                                style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 14px;">
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">Link Text:</label>
+                            <input type="text" id="linkText" value="${selectedText}" 
+                                style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 14px;">
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">Open in:</label>
+                            <div style="display: flex; gap: 16px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="radio" name="linkTarget" value="_blank" ${existingTarget === '_blank' ? 'checked' : ''}>
+                                    <span>New Tab (Recommended)</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="radio" name="linkTarget" value="_self" ${existingTarget === '_self' ? 'checked' : ''}>
+                                    <span>Same Window</span>
+                                </label>
+                            </div>
+                            <small style="color: #6b7280; display: block; margin-top: 8px;">
+                                Note: "Same Window" will navigate users away from the task in the CRM
+                            </small>
+                        </div>
+                        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                            <button id="cancelLink" style="padding: 8px 16px; border: 1px solid #e5e7eb; background: white; border-radius: 4px; cursor: pointer;">Cancel</button>
+                            <button id="insertLink" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">Insert Link</button>
+                        </div>
+                    `;
+                    
+                    // Create overlay
+                    const overlay = document.createElement('div');
+                    overlay.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: rgba(0,0,0,0.5);
+                        z-index: 9999;
+                    `;
+                    
+                    document.body.appendChild(overlay);
+                    document.body.appendChild(modal);
+                    
+                    // Focus URL input
+                    setTimeout(() => {
+                        document.getElementById('linkUrl').focus();
+                    }, 100);
+                    
+                    // Handle insert
+                    document.getElementById('insertLink').onclick = function() {
+                        const url = document.getElementById('linkUrl').value;
+                        const text = document.getElementById('linkText').value || url;
+                        const target = document.querySelector('input[name="linkTarget"]:checked').value;
+                        
+                        if (url) {
+                            // Delete the selected text first
+                            quillEditor.deleteText(range.index, range.length);
+                            
+                            // Insert the link with custom HTML
+                            const linkHtml = `<a href="${url}" target="${target}">${text}</a>`;
+                            quillEditor.clipboard.dangerouslyPasteHTML(range.index, linkHtml);
+                        }
+                        
+                        document.body.removeChild(modal);
+                        document.body.removeChild(overlay);
+                    };
+                    
+                    // Handle cancel
+                    document.getElementById('cancelLink').onclick = function() {
+                        document.body.removeChild(modal);
+                        document.body.removeChild(overlay);
+                    };
+                    
+                    // Handle Enter key in URL field
+                    document.getElementById('linkUrl').onkeypress = function(e) {
+                        if (e.key === 'Enter') {
+                            document.getElementById('insertLink').click();
+                        }
+                    };
+                    
+                } else {
+                    // Remove link
+                    quillEditor.format('link', false);
+                }
+            });
+        }
+        
         // Add custom HTML editing functionality
         function addHtmlEditButton() {
             const toolbar = quillEditor.getModule('toolbar');
