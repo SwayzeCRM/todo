@@ -666,36 +666,6 @@
         .task-details {
             flex: 1;
             pointer-events: none;
-            position: relative;
-        }
-        
-        .open-modal-btn {
-            position: absolute;
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #3B82F6;
-            border: none;
-            color: white;
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            pointer-events: auto;
-            opacity: 0;
-        }
-        
-        .task-item:hover .open-modal-btn {
-            opacity: 1;
-        }
-        
-        .open-modal-btn:hover {
-            background: #2563EB;
-            transform: translateY(-50%) scale(1.05);
         }
 
         .task-title {
@@ -2449,11 +2419,6 @@
                         <div class="task-details">
                             <div class="task-title">${task.title}</div>
                             <div class="task-description">${task.description}</div>
-                            <button class="open-modal-btn" onclick="event.stopPropagation(); openInModal('${task.id}')" title="Open in floating window">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
-                                </svg>
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -2957,54 +2922,6 @@
             taskList.innerHTML = `<div class="error">${message}</div>`;
         }
 
-        // Open task in floating modal (sends message to parent window)
-        function openInModal(taskId) {
-            console.log('Opening task in modal:', taskId);
-            
-            const instructions = taskInstructions[taskId];
-            if (!instructions) {
-                console.error('No instructions found for task:', taskId);
-                return;
-            }
-            
-            const task = currentChecklist.find(t => t.id === taskId);
-            if (!task) {
-                console.error('Task not found:', taskId);
-                return;
-            }
-            
-            // Send message to parent window (HighLevel)
-            window.parent.postMessage({
-                source: 'onboarding-app',
-                action: 'openTaskModal',
-                taskId: taskId,
-                taskTitle: task.title,
-                videoUrl: instructions.video_url || instructions.videoUrl,
-                videoType: instructions.video_type || instructions.videoType,
-                instructions: instructions.content,
-                embedCode: instructions.form_embed_code || instructions.formEmbedCode
-            }, '*');
-            
-            console.log('Message sent to parent window');
-        }
-        
-        // Listen for messages from parent window
-        window.addEventListener('message', function(event) {
-            // Handle task completion from modal
-            if (event.data && event.data.action === 'taskCompleted') {
-                const taskId = event.data.taskId;
-                if (taskId) {
-                    // Mark task as complete
-                    performTaskToggle(taskId, true);
-                }
-            }
-            
-            // Handle modal closed event
-            if (event.data && event.data.action === 'modalClosed') {
-                console.log('Modal was closed');
-            }
-        });
-        
         // Initialize application
         async function init() {
             try {
