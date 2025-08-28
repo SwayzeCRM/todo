@@ -620,6 +620,16 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
 
+        .task-item.current {
+            background: #DBEAFE;
+            border-color: #60A5FA;
+        }
+
+        .task-item.current:hover {
+            background: #BFDBFE;
+            border-color: #3B82F6;
+        }
+
         .task-item.completed {
             background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, rgba(37, 99, 235, 0.05) 100%);
             border-color: #3B82F6;
@@ -2495,8 +2505,9 @@
         
         // Render individual task item
         function renderTaskItem(task) {
+            const isCurrentTask = currentOpenTaskId === task.id;
             return `
-                <div class="task-item ${task.completed ? 'completed' : ''}" onclick="showInstructions('${task.id}')">
+                <div class="task-item ${task.completed ? 'completed' : ''} ${isCurrentTask ? 'current' : ''}" onclick="showInstructions('${task.id}')">
                     <div class="task-content">
                         <div class="task-checkbox ${task.completed ? 'checked' : ''}" 
                              onclick="event.stopPropagation(); toggleTask('${task.id}', ${!task.completed})"></div>
@@ -2648,6 +2659,9 @@
         function showInstructionsContent(taskId, instructions) {
             // Set the current open task
             currentOpenTaskId = taskId;
+            
+            // Re-render the task list to update the current task highlighting
+            renderTaskList();
             
             // Get the task object
             const task = currentChecklist.find(t => t.id === taskId);
