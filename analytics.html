@@ -2808,6 +2808,12 @@
                             <textarea id="userTaskEmbed" placeholder="<iframe>...</iframe>" rows="3"></textarea>
                         </div>
                         
+                        <div class="form-group">
+                            <label for="userTaskDueDate">Due Date (Optional)</label>
+                            <input type="datetime-local" id="userTaskDueDate" style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                            <small style="color: #6B7280; display: block; margin-top: 4px;">Set a deadline for this task completion</small>
+                        </div>
+                        
                         <div class="form-group" style="background: #F9FAFB; padding: 12px; border-radius: 6px; border: 1px solid #E5E7EB;">
                             <div style="font-weight: 500; color: #374151; margin-bottom: 4px;">Target User:</div>
                             <div style="color: #6B7280; font-size: 14px;">${userEmail} (${locationId})</div>
@@ -2843,7 +2849,10 @@
                 video_url: data.video_url || null,
                 form_embed_code: data.form_embed_code || null,
                 position: data.position,
-                is_active: data.is_active !== undefined ? data.is_active : true
+                is_active: data.is_active !== undefined ? data.is_active : true,
+                target_type: data.target_type || null,
+                target_users: data.target_users || null,
+                due_date: data.due_date || null
             };
             
             // Only add task_group_id if it exists
@@ -2863,7 +2872,8 @@
                 instructionsTitle: document.getElementById('userTaskInstructions').value.trim(),
                 instructionsContent: document.getElementById('userTaskContent').value.trim(),
                 videoUrl: document.getElementById('userTaskVideo').value.trim(),
-                formEmbedCode: document.getElementById('userTaskEmbed').value.trim()
+                formEmbedCode: document.getElementById('userTaskEmbed').value.trim(),
+                dueDate: document.getElementById('userTaskDueDate').value || null
             };
             
             if (!formData.taskTitle || !formData.instructionsTitle) {
@@ -2887,7 +2897,8 @@
                     position: 999, // Put user-specific tasks at the end
                     is_active: true,
                     target_type: 'individuals',
-                    target_users: JSON.stringify([userEmail]) // Target specific user
+                    target_users: JSON.stringify([userEmail]), // Target specific user
+                    due_date: formData.dueDate ? new Date(formData.dueDate).toISOString() : null
                 };
                 
                 const { data, error } = await supabaseClient

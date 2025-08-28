@@ -1656,22 +1656,59 @@
             </div>
             
             <form id="taskForm">
-                <div class="form-group">
-                    <label for="taskId">Task ID (unique identifier)</label>
-                    <input type="text" id="taskId" required>
-                </div>
+                <input type="hidden" id="taskId">
 
+                <!-- Simplified Show Task To Selection -->
                 <div class="form-group">
-                    <label for="taskGroupSelect">Task Group</label>
-                    <select id="taskGroupSelect" class="filter-select">
-                        <option value="">No Group (Standalone Task)</option>
-                        <!-- Task groups will be loaded here dynamically -->
+                    <label for="showTaskTo">Show Task To</label>
+                    <select id="showTaskTo" class="filter-select" onchange="updateShowTaskTo()">
+                        <option value="usergroup">User Group</option>
+                        <option value="individual">Individual User</option>
                     </select>
                 </div>
 
+                <!-- Individual User Selection with Search -->
+                <div class="form-group" id="individualUserSection">
+                    <label for="individualUserSelect">Select User</label>
+                    <input type="text" id="userSearchInput" placeholder="Search by name, email, or company..." 
+                           style="width: 100%; padding: 8px 12px; margin-bottom: 8px; border: 1px solid #e5e7eb; border-radius: 6px;"
+                           onkeyup="filterUserDropdown()">
+                    <select id="individualUserSelect" class="filter-select" size="5" 
+                            style="width: 100%; height: 120px; overflow-y: auto;">
+                        <!-- Users will be loaded here dynamically -->
+                    </select>
+                    <small style="color: #6B7280;">Select the user who should complete this task</small>
+                </div>
+
+                <!-- User Group Selection -->
+                <div class="form-group" id="userGroupSection" style="display: none;">
+                    <label for="userGroupSelect">Select User Group</label>
+                    <select id="userGroupSelect" class="filter-select" onchange="updateTaskGroupsForUserGroup()">
+                        <option value="">Select a user group...</option>
+                        <!-- User groups will be loaded here dynamically -->
+                    </select>
+                </div>
+
+                <!-- Task Groups for Selected User Group -->
+                <div class="form-group" id="taskGroupSection" style="display: none;">
+                    <label for="taskGroupSelect">Select Task Group</label>
+                    <select id="taskGroupSelect" class="filter-select">
+                        <option value="">Select a task group...</option>
+                        <!-- Task groups will be loaded here dynamically -->
+                    </select>
+                    <small style="color: #6B7280;">Tasks will be organized within this task group</small>
+                </div>
+
+                <!-- Due Date (shown for individual tasks) -->
+                <div class="form-group" id="dueDateSection">
+                    <label for="taskDueDate">Due Date (Optional)</label>
+                    <input type="datetime-local" id="taskDueDate" style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                    <small style="color: #6B7280;">Set a deadline for this task completion</small>
+                </div>
+
                 <div class="form-group">
-                    <label for="title">Title</label>
-                    <input type="text" id="title" required>
+                    <label for="title">Task Title <span style="color: red;">*</span></label>
+                    <input type="text" id="title" placeholder="Enter a descriptive task title" required>
                 </div>
 
                 <div class="form-group">
@@ -1693,8 +1730,31 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="videoUrl">Video URL (optional)</label>
-                    <input type="url" id="videoUrl" placeholder="https://youtube.com/watch?v=... or https://vimeo.com/...">
+                    <label>Video (optional)</label>
+                    <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 12px;">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="useVideoUrl" onchange="toggleVideoMode()" style="width: 18px; height: 18px; margin-right: 8px;">
+                            <span style="color: #374151;">Use video URL instead</span>
+                        </label>
+                    </div>
+                    
+                    <div id="videoUploadInput">
+                        <input type="file" id="videoFile" accept="video/*" onchange="handleVideoFileSelect(event)" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                        <small style="color: #6B7280; display: block; margin-top: 5px;">
+                            Supported formats: MP4, WebM, MOV. Large files may take time to upload.<br>
+                            <span style="color: #ef4444;">Note: Supabase free tier limits files to 50MB. For larger videos, use the URL option with YouTube, Vimeo, or other video hosting services.</span>
+                        </small>
+                        <div id="videoUploadProgress" style="display: none; margin-top: 10px;">
+                            <div style="background: #e5e7eb; border-radius: 4px; height: 8px;">
+                                <div id="videoProgressBar" style="background: #3b82f6; height: 100%; border-radius: 4px; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                            <small id="videoProgressText" style="color: #6B7280; margin-top: 5px; display: block;">Uploading...</small>
+                        </div>
+                    </div>
+                    
+                    <div id="videoUrlInput" style="display: none;">
+                        <input type="url" id="videoUrl" placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..." style="width: 100%;">
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -1711,52 +1771,6 @@
                 </div>
 
 
-                <div class="form-group">
-                    <label for="targetType">Show Task To</label>
-                    <select id="targetType" onchange="updateTargetingOptions()" class="filter-select">
-                        <option value="all">All Users</option>
-                        <option value="groups">Specific Groups</option>
-                        <option value="locations">Specific Locations</option>
-                        <option value="individuals">Specific Individual Users</option>
-                    </select>
-                </div>
-
-                <div class="form-group" id="groupsTargetingGroup" style="display: none;">
-                    <label for="targetGroups">Select Groups</label>
-                    <div id="groupsCheckboxContainer" style="max-height: 150px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px;">
-                        <!-- Groups will be loaded here dynamically -->
-                    </div>
-                </div>
-
-                <div class="form-group" id="locationsTargetingGroup" style="display: none;">
-                    <label for="targetLocations">Select Locations</label>
-                    <div id="locationsCheckboxContainer" style="max-height: 150px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px;">
-                        <!-- Locations will be loaded here dynamically -->
-                    </div>
-                </div>
-
-                <div class="form-group" id="individualsTargetingGroup" style="display: none;">
-                    <label for="targetIndividuals">Select Individual Users</label>
-                    <div id="individualsCheckboxContainer" style="max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px;">
-                        <!-- Individual users will be loaded here dynamically -->
-                    </div>
-                    
-                    <!-- Notification checkbox removed - notify_users column doesn't exist in database -->
-                    <div id="notifyUsersGroup" style="display: none; margin-top: 16px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
-                        <label style="display: flex; align-items: center; gap: 8px; margin: 0;">
-                            <input type="checkbox" id="notifyUsers" style="width: 16px; height: 16px; accent-color: #3B82F6;">
-                            <span style="font-weight: 500; color: #374151;">Notify Users When Task is Created</span>
-                        </label>
-                        <small style="color: #6b7280; margin-top: 4px; display: block;">Sends notification to selected users via your CRM system</small>
-                    </div>
-                </div>
-                
-                <!-- Due Date for Individual Tasks Only -->
-                <div class="form-group" id="dueDateGroup" style="display: none;">
-                    <label for="taskDueDate">Due Date (Optional)</label>
-                    <input type="datetime-local" id="taskDueDate" style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
-                    <small style="color: #6B7280;">Set a deadline for this task. This will be included in the webhook for reminders.</small>
-                </div>
 
                 <div class="btn-group">
                     <button type="submit" class="btn btn-primary" id="saveBtn">Save Task</button>
@@ -1895,7 +1909,15 @@
                 <form id="taskGroupEditForm">
                     <input type="hidden" id="taskGroupId">
                     <div class="form-group">
-                        <label for="taskGroupName">Group Name</label>
+                        <label for="taskGroupUserGroupSelect">User Group <span style="color: red;">*</span></label>
+                        <select id="taskGroupUserGroupSelect" class="filter-select" required>
+                            <option value="">Select a user group...</option>
+                            <!-- User groups will be loaded here dynamically -->
+                        </select>
+                        <small style="color: #ef4444;">Required: Task groups must belong to a user group</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskGroupName">Task Group Name <span style="color: red;">*</span></label>
                         <input type="text" id="taskGroupName" required>
                         <small>Name for this task group (e.g., "Onboarding Tasks", "Advanced Training")</small>
                     </div>
@@ -2013,6 +2035,26 @@
                         <button type="button" class="btn btn-danger" onclick="deleteSequence()" id="deleteSequenceBtn" style="display: none;">Delete</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Ordering Modal -->
+    <div id="taskOrderingModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+        <div class="modal-content" style="background: white; border-radius: 12px; width: 90%; max-width: 800px; max-height: 85vh; overflow-y: auto; position: relative; margin: 20px;">
+            <div class="panel-header" style="position: sticky; top: 0; background: white; z-index: 10; border-bottom: 1px solid #e5e7eb; padding: 20px 24px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                <h2 id="taskOrderingTitle" style="margin: 0; font-size: 20px; font-weight: 600; color: #111827;">Arrange Task Order</h2>
+                <button class="close-btn" onclick="closeTaskOrderingModal()" style="position: relative; top: 0; right: 0; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center;">&times;</button>
+            </div>
+            <div style="padding: 24px 24px 24px 24px;">
+                <p style="color: #6b7280; margin-bottom: 20px;">Drag tasks to reorder them within the group. Your new task has been added at the end.</p>
+                <div id="taskOrderingList" style="min-height: 200px;">
+                    <!-- Tasks will be populated here -->
+                </div>
+                <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
+                    <button class="btn btn-secondary" onclick="closeTaskOrderingModal()">Skip</button>
+                    <button class="btn btn-primary" onclick="saveTaskOrder()">Save Order</button>
+                </div>
             </div>
         </div>
     </div>
@@ -2292,32 +2334,749 @@
             const formGroup = document.getElementById('formEmbedGroup');
             formGroup.style.display = checkbox.checked ? 'block' : 'none';
         }
+        
+        // Toggle between video URL and upload
+        function toggleVideoMode() {
+            const useUrl = document.getElementById('useVideoUrl').checked;
+            const urlInput = document.getElementById('videoUrlInput');
+            const uploadInput = document.getElementById('videoUploadInput');
+            
+            if (useUrl) {
+                // Switch to URL mode
+                urlInput.style.display = 'block';
+                uploadInput.style.display = 'none';
+                // Clear upload input and preview if switching to URL
+                document.getElementById('videoFile').value = '';
+                const preview = uploadInput.querySelector('.video-preview-container');
+                if (preview) preview.remove();
+                selectedVideoFile = null;
+                uploadedVideoUrl = null;
+                uploadedVideoPath = null;
+            } else {
+                // Switch to upload mode
+                urlInput.style.display = 'none';
+                uploadInput.style.display = 'block';
+                // Clear URL input if switching to upload
+                document.getElementById('videoUrl').value = '';
+                // Remove URL preview if exists
+                const urlPreview = urlInput.querySelector('.video-preview-container');
+                if (urlPreview) urlPreview.remove();
+            }
+        }
+        
+        // Handle video file selection
+        let selectedVideoFile = null;
+        let uploadedVideoUrl = null;
+        let uploadedVideoPath = null;
+        
+        async function handleVideoFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                selectedVideoFile = null;
+                return;
+            }
+            
+            // No file size limit - allow unlimited video sizes
+            // Note: Supabase may have its own limits, but we'll let it handle that
+            console.log('Video file size:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
+            
+            // Validate file type
+            const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+            if (!allowedTypes.includes(file.type)) {
+                showError('Invalid video format. Please upload MP4, WebM, or MOV files.');
+                event.target.value = '';
+                return;
+            }
+            
+            selectedVideoFile = file;
+            console.log('Video file selected:', file.name, 'Size:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
+            
+            // Immediately upload the video
+            const uploadResult = await uploadVideoToStorage(file);
+            if (uploadResult) {
+                uploadedVideoUrl = uploadResult.url;
+                uploadedVideoPath = uploadResult.path;
+                console.log('Video uploaded successfully:', uploadedVideoUrl);
+            } else {
+                // Reset if upload failed
+                selectedVideoFile = null;
+                uploadedVideoUrl = null;
+                uploadedVideoPath = null;
+                event.target.value = '';
+            }
+        }
+        
+        // Upload video to Supabase storage
+        async function uploadVideoToStorage(file) {
+            if (!file) return null;
+            
+            try {
+                // Show progress
+                const progressDiv = document.getElementById('videoUploadProgress');
+                const progressBar = document.getElementById('videoProgressBar');
+                const progressText = document.getElementById('videoProgressText');
+                
+                progressDiv.style.display = 'block';
+                progressBar.style.width = '0%';
+                const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+                progressText.textContent = `Uploading video (${fileSizeMB} MB)...`;
+                
+                // Generate unique filename
+                const timestamp = Date.now();
+                const randomString = Math.random().toString(36).substring(7);
+                const fileExt = file.name.split('.').pop();
+                const fileName = `task-video-${timestamp}-${randomString}.${fileExt}`;
+                const filePath = `videos/${fileName}`;
+                
+                // For large files, simulate progress (since Supabase doesn't provide real progress)
+                let progressInterval;
+                if (file.size > 10 * 1024 * 1024) { // If file is larger than 10MB
+                    let simulatedProgress = 0;
+                    progressInterval = setInterval(() => {
+                        if (simulatedProgress < 90) {
+                            simulatedProgress += Math.random() * 10;
+                            simulatedProgress = Math.min(simulatedProgress, 90);
+                            progressBar.style.width = simulatedProgress + '%';
+                        }
+                    }, 500);
+                }
+                
+                // Upload to Supabase storage
+                const { data, error } = await supabaseClient.storage
+                    .from('task-videos')
+                    .upload(filePath, file, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+                
+                // Clear the progress interval
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                }
+                
+                if (error) {
+                    console.error('Storage upload error:', error);
+                    console.error('Error details:', {
+                        message: error.message,
+                        statusCode: error.statusCode,
+                        error: error.error,
+                        details: error
+                    });
+                    
+                    // Check various error conditions
+                    if (error.message?.includes('bucket') || error.statusCode === 404) {
+                        showError('Video storage is not configured. Please create a "task-videos" bucket in Supabase Storage.');
+                    } else if (error.statusCode === 413 || error.message?.includes('PayloadTooLargeError') || error.message?.includes('too large') || error.message?.includes('File size exceeded')) {
+                        showError(`File is too large for your current Supabase plan. 
 
-        // Update targeting options visibility
-        function updateTargetingOptions() {
-            const targetType = document.getElementById('targetType').value;
-            const groupsGroup = document.getElementById('groupsTargetingGroup');
-            const locationsGroup = document.getElementById('locationsTargetingGroup');
-            const individualsGroup = document.getElementById('individualsTargetingGroup');
-            const dueDateGroup = document.getElementById('dueDateGroup');
+Solutions:
+1. Use the "Use video URL instead" option and upload to YouTube, Vimeo, or Google Drive
+2. Upgrade your Supabase plan (Pro plan allows up to 5GB files)
+3. Compress the video before uploading
 
-            // Hide all targeting groups first
-            groupsGroup.style.display = 'none';
-            locationsGroup.style.display = 'none';
-            individualsGroup.style.display = 'none';
-            dueDateGroup.style.display = 'none';
+Current Supabase limits:
+- Free tier: 50MB max per file
+- Pro tier: 5GB max per file`);
+                    } else if (error.statusCode === 400) {
+                        showError('Upload failed. Please check storage bucket permissions. The bucket should be PUBLIC or have proper RLS policies.');
+                    } else if (error.statusCode === 401) {
+                        showError('Authentication error. Please check your Supabase configuration.');
+                    } else {
+                        showError('Failed to upload video: ' + (error.message || 'Unknown error'));
+                    }
+                    progressDiv.style.display = 'none';
+                    return null;
+                }
+                
+                // Update progress to 100% when complete
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Processing...';
+                
+                // Get public URL
+                const { data: urlData } = supabaseClient.storage
+                    .from('task-videos')
+                    .getPublicUrl(filePath);
+                
+                progressText.textContent = 'Upload complete!';
+                setTimeout(() => {
+                    progressDiv.style.display = 'none';
+                }, 2000);
+                
+                // Show video preview after successful upload
+                const uploadInput = document.getElementById('videoUploadInput');
+                if (uploadInput && urlData.publicUrl) {
+                    // Remove any existing preview
+                    const existingPreview = uploadInput.querySelector('.video-preview-container');
+                    if (existingPreview) {
+                        existingPreview.remove();
+                    }
+                    
+                    // Create new preview
+                    const previewContainer = document.createElement('div');
+                    previewContainer.className = 'video-preview-container';
+                    previewContainer.style.cssText = 'margin-top: 15px; padding: 15px; background: #f0fdf4; border-radius: 8px; border: 1px solid #86efac;';
+                    previewContainer.innerHTML = `
+                        <div style="font-weight: 600; color: #166534; margin-bottom: 10px;">
+                            <i data-lucide="check-circle" style="width: 16px; height: 16px; display: inline-block; margin-right: 6px; color: #22c55e;"></i>
+                            Video Ready
+                        </div>
+                        <video controls style="width: 100%; max-width: 400px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <source src="${urlData.publicUrl}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <div style="margin-top: 10px; color: #166534; font-size: 14px;">
+                            This video will be attached to the task when you save.
+                        </div>
+                    `;
+                    uploadInput.appendChild(previewContainer);
+                    
+                    // Initialize lucide icons
+                    setTimeout(() => lucide.createIcons(), 100);
+                }
+                
+                return {
+                    url: urlData.publicUrl,
+                    path: filePath
+                };
+            } catch (error) {
+                console.error('Error uploading video:', error);
+                showError('Failed to upload video: ' + error.message);
+                document.getElementById('videoUploadProgress').style.display = 'none';
+                return null;
+            }
+        }
 
-            // Show relevant targeting group
-            if (targetType === 'groups') {
-                groupsGroup.style.display = 'block';
-                loadGroups();
-            } else if (targetType === 'locations') {
-                locationsGroup.style.display = 'block';
-                loadLocations();
-            } else if (targetType === 'individuals') {
-                individualsGroup.style.display = 'block';
-                dueDateGroup.style.display = 'block'; // Show due date for individual tasks
-                loadUsers();
+        // Update Show Task To selection
+        function updateShowTaskTo() {
+            console.log('updateShowTaskTo called');
+            const showTaskTo = document.getElementById('showTaskTo');
+            if (!showTaskTo) {
+                console.error('showTaskTo element not found');
+                return;
+            }
+            
+            const showTaskToValue = showTaskTo.value;
+            console.log('Show task to value:', showTaskToValue);
+            
+            const individualSection = document.getElementById('individualUserSection');
+            const userGroupSection = document.getElementById('userGroupSection');
+            const taskGroupSection = document.getElementById('taskGroupSection');
+            const dueDateSection = document.getElementById('dueDateSection');
+            
+            if (!individualSection || !userGroupSection) {
+                console.error('Required sections not found');
+                return;
+            }
+            
+            if (showTaskToValue === 'individual') {
+                console.log('Showing individual user selection');
+                // Show individual user selection
+                individualSection.style.display = 'block';
+                userGroupSection.style.display = 'none';
+                taskGroupSection.style.display = 'none';
+                dueDateSection.style.display = 'block';
+                
+                // Set required attributes
+                document.getElementById('individualUserSelect').setAttribute('required', 'required');
+                document.getElementById('userGroupSelect').removeAttribute('required');
+                
+                // Load users if not already loaded
+                loadIndividualUsers();
+            } else if (showTaskToValue === 'usergroup') {
+                console.log('Showing user group selection');
+                // Show user group selection
+                individualSection.style.display = 'none';
+                userGroupSection.style.display = 'block';
+                // Task group section will be shown dynamically when user group is selected
+                taskGroupSection.style.display = 'none';
+                dueDateSection.style.display = 'none';
+                
+                // Set required attributes
+                document.getElementById('userGroupSelect').setAttribute('required', 'required');
+                document.getElementById('individualUserSelect').removeAttribute('required');
+                
+                // Load user groups
+                loadUserGroupsForDropdown();
+            }
+        }
+        
+        // Task Ordering Modal Functions
+        let currentOrderingGroupId = null;
+        let currentNewTaskId = null;
+        
+        async function showTaskOrderingModal(groupId, newTaskId) {
+            currentOrderingGroupId = groupId;
+            currentNewTaskId = newTaskId;
+            
+            try {
+                // Load all tasks in this group
+                const { data: groupTasks, error } = await supabaseClient
+                    .from('onboarding_tasks')
+                    .select('*')
+                    .eq('task_group_id', groupId)
+                    .order('position', { ascending: true });
+                
+                if (error) throw error;
+                
+                // Get the task group name
+                const taskGroup = allTaskGroupsData.find(g => g.id === parseInt(groupId));
+                const groupName = taskGroup ? taskGroup.group_name : 'Task Group';
+                
+                document.getElementById('taskOrderingTitle').textContent = `Arrange Tasks in "${groupName}"`;
+                
+                // Render the tasks list
+                const listContainer = document.getElementById('taskOrderingList');
+                listContainer.innerHTML = '';
+                
+                if (groupTasks && groupTasks.length > 0) {
+                    const sortableList = document.createElement('div');
+                    sortableList.className = 'sortable-list';
+                    sortableList.style.cssText = 'display: flex; flex-direction: column; gap: 0; padding: 8px 0;';
+                    
+                    groupTasks.forEach((task, index) => {
+                        const taskItem = document.createElement('div');
+                        taskItem.className = 'task-order-item';
+                        taskItem.dataset.taskId = task.id;
+                        taskItem.draggable = true;
+                        
+                        // Highlight the new task
+                        const isNewTask = task.id === newTaskId;
+                        
+                        taskItem.style.cssText = `
+                            padding: 14px 16px;
+                            background: ${isNewTask ? '#fef3c7' : '#ffffff'};
+                            border: 2px solid ${isNewTask ? '#fbbf24' : '#e5e7eb'};
+                            border-radius: 8px;
+                            cursor: move;
+                            display: flex;
+                            align-items: center;
+                            gap: 12px;
+                            transition: all 0.2s;
+                            margin-bottom: 8px;
+                            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+                        `;
+                        
+                        taskItem.innerHTML = `
+                            <span style="color: #6b7280; user-select: none;">⋮⋮</span>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #374151;">
+                                    ${task.title}
+                                    ${isNewTask ? '<span style="background: #fbbf24; color: #78350f; font-size: 12px; padding: 2px 8px; border-radius: 4px; margin-left: 8px;">NEW</span>' : ''}
+                                </div>
+                                ${task.description ? `<div style="font-size: 14px; color: #6b7280; margin-top: 4px;">${task.description}</div>` : ''}
+                            </div>
+                            <span style="color: #9ca3af; font-size: 14px;">Position ${index + 1}</span>
+                        `;
+                        
+                        // Add drag event listeners
+                        taskItem.addEventListener('dragstart', handleDragStart);
+                        taskItem.addEventListener('dragover', handleDragOver);
+                        taskItem.addEventListener('drop', handleDrop);
+                        taskItem.addEventListener('dragend', handleDragEnd);
+                        taskItem.addEventListener('dragenter', handleDragEnter);
+                        taskItem.addEventListener('dragleave', handleDragLeave);
+                        
+                        sortableList.appendChild(taskItem);
+                    });
+                    
+                    listContainer.appendChild(sortableList);
+                } else {
+                    listContainer.innerHTML = '<p style="color: #6b7280; text-align: center;">No tasks in this group yet.</p>';
+                }
+                
+                // Show the modal
+                document.getElementById('taskOrderingModal').style.display = 'flex';
+                
+            } catch (error) {
+                console.error('Error loading tasks for ordering:', error);
+                showError('Failed to load tasks for ordering');
+            }
+        }
+        
+        // Drag and drop handlers
+        let draggedElement = null;
+        
+        function handleDragStart(e) {
+            draggedElement = e.target;
+            e.target.style.opacity = '0.4';
+            e.dataTransfer.effectAllowed = 'move';
+        }
+        
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+        
+        function handleDragEnter(e) {
+            if (e.target.classList.contains('task-order-item')) {
+                e.target.style.borderColor = '#3b82f6';
+                e.target.style.backgroundColor = '#eff6ff';
+            }
+        }
+        
+        function handleDragLeave(e) {
+            if (e.target.classList.contains('task-order-item')) {
+                const isNewTask = e.target.dataset.taskId === String(currentNewTaskId);
+                e.target.style.borderColor = isNewTask ? '#fbbf24' : '#e5e7eb';
+                e.target.style.backgroundColor = isNewTask ? '#fef3c7' : '#ffffff';
+            }
+        }
+        
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            
+            if (draggedElement !== e.target && e.target.classList.contains('task-order-item')) {
+                const container = e.target.parentNode;
+                const allItems = Array.from(container.children);
+                const draggedIndex = allItems.indexOf(draggedElement);
+                const targetIndex = allItems.indexOf(e.target);
+                
+                if (draggedIndex < targetIndex) {
+                    container.insertBefore(draggedElement, e.target.nextSibling);
+                } else {
+                    container.insertBefore(draggedElement, e.target);
+                }
+            }
+            
+            return false;
+        }
+        
+        function handleDragEnd(e) {
+            e.target.style.opacity = '1';
+            
+            // Reset all items' styles
+            document.querySelectorAll('.task-order-item').forEach(item => {
+                const isNewTask = item.dataset.taskId === String(currentNewTaskId);
+                item.style.borderColor = isNewTask ? '#fbbf24' : '#e5e7eb';
+                item.style.backgroundColor = isNewTask ? '#fef3c7' : '#ffffff';
+            });
+            
+            // Update position numbers
+            document.querySelectorAll('.task-order-item').forEach((item, index) => {
+                const positionSpan = item.querySelector('span:last-child');
+                if (positionSpan) {
+                    positionSpan.textContent = `Position ${index + 1}`;
+                }
+            });
+        }
+        
+        async function saveTaskOrder() {
+            try {
+                const items = document.querySelectorAll('.task-order-item');
+                
+                if (!items || items.length === 0) {
+                    console.log('No items to reorder');
+                    closeTaskOrderingModal();
+                    return;
+                }
+                
+                const updates = [];
+                
+                items.forEach((item, index) => {
+                    const taskId = parseInt(item.dataset.taskId);
+                    console.log('Processing task item:', {
+                        element: item,
+                        datasetTaskId: item.dataset.taskId,
+                        parsedId: taskId,
+                        isValid: !isNaN(taskId) && taskId > 0
+                    });
+                    
+                    if (!isNaN(taskId) && taskId > 0) {
+                        updates.push({
+                            id: taskId,
+                            position: index + 1
+                        });
+                    } else {
+                        console.warn('Invalid or zero task ID found, skipping:', item.dataset.taskId);
+                    }
+                });
+                
+                console.log('Updating task positions:', updates);
+                
+                if (updates.length === 0) {
+                    console.log('No valid tasks to update');
+                    closeTaskOrderingModal();
+                    return;
+                }
+                
+                // Check if we're authenticated
+                const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+                console.log('Auth session:', sessionData?.session ? 'Authenticated' : 'Not authenticated');
+                
+                // Update all positions in database
+                for (const update of updates) {
+                    console.log(`Updating task ${update.id} to position ${update.position}`);
+                    
+                    const { data, error } = await supabaseClient
+                        .from('onboarding_tasks')
+                        .update({ position: update.position })
+                        .eq('id', update.id)
+                        .select();
+                    
+                    if (error) {
+                        console.error('Error updating task position:', {
+                            taskId: update.id,
+                            position: update.position,
+                            error: error,
+                            message: error.message,
+                            details: error.details,
+                            hint: error.hint,
+                            code: error.code,
+                            statusCode: error.statusCode
+                        });
+                        
+                        // Provide helpful error message based on error type
+                        if (error.code === '42501' || error.message?.includes('permission denied') || error.message?.includes('RLS')) {
+                            showError('Permission denied. Please run the fix_task_rls_policies.sql script in your Supabase SQL editor to fix RLS policies.');
+                        } else if (error.code === '23503') {
+                            showError('Foreign key constraint error. The task might reference invalid data.');
+                        } else {
+                            showError(`Failed to update task position: ${error.message || 'Unknown error'}`);
+                        }
+                        
+                        throw error;
+                    }
+                    
+                    console.log('Successfully updated task:', update.id, 'to position:', update.position);
+                }
+                
+                showSuccess('Task order saved successfully!');
+                await loadTasks();
+                closeTaskOrderingModal();
+                
+            } catch (error) {
+                console.error('Error saving task order:', {
+                    error: error,
+                    message: error?.message,
+                    details: error?.details,
+                    hint: error?.hint,
+                    code: error?.code
+                });
+                showError('Failed to save task order: ' + (error?.message || 'Unknown error'));
+            }
+        }
+        
+        function closeTaskOrderingModal() {
+            document.getElementById('taskOrderingModal').style.display = 'none';
+            currentOrderingGroupId = null;
+            currentNewTaskId = null;
+        }
+        
+        // Load individual users with company info for searchable dropdown
+        let allUsersData = [];
+        async function loadIndividualUsers() {
+            const selectElement = document.getElementById('individualUserSelect');
+            
+            if (!selectElement) {
+                console.error('Individual user select element not found');
+                return;
+            }
+            
+            try {
+                console.log('Loading individual users...');
+                const { data, error } = await supabaseClient
+                    .from('onboarding_users')
+                    .select('id, first_name, last_name, email, company_name, created_at')
+                    .order('email', { ascending: true });
+                
+                if (error) {
+                    console.error('Supabase error:', error);
+                    throw error;
+                }
+                
+                console.log('Users loaded:', data?.length || 0, 'users');
+                allUsersData = data || [];
+                
+                // Clear existing options
+                selectElement.innerHTML = '';
+                
+                if (!data || data.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No users found';
+                    selectElement.appendChild(option);
+                    return;
+                }
+                
+                // Add placeholder option
+                const placeholderOption = document.createElement('option');
+                placeholderOption.value = '';
+                placeholderOption.textContent = 'Select a user...';
+                selectElement.appendChild(placeholderOption);
+                
+                // Add users to dropdown
+                data.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User';
+                    option.textContent = `${fullName} - ${user.email}${user.company_name ? ' - ' + user.company_name : ''}`;
+                    option.setAttribute('data-name', fullName.toLowerCase());
+                    option.setAttribute('data-email', user.email?.toLowerCase() || '');
+                    option.setAttribute('data-company', user.company_name?.toLowerCase() || '');
+                    selectElement.appendChild(option);
+                });
+                
+                return Promise.resolve();
+            } catch (error) {
+                console.error('Error loading individual users:', error);
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Error loading users';
+                selectElement.appendChild(option);
+                return Promise.reject(error);
+            }
+        }
+        
+        // Filter user dropdown based on search
+        function filterUserDropdown() {
+            const searchInput = document.getElementById('userSearchInput').value.toLowerCase();
+            const selectElement = document.getElementById('individualUserSelect');
+            const options = selectElement.getElementsByTagName('option');
+            
+            for (let option of options) {
+                const name = option.getAttribute('data-name') || '';
+                const email = option.getAttribute('data-email') || '';
+                const company = option.getAttribute('data-company') || '';
+                
+                if (name.includes(searchInput) || email.includes(searchInput) || company.includes(searchInput)) {
+                    option.style.display = '';
+                } else {
+                    option.style.display = 'none';
+                }
+            }
+        }
+        
+        // Load user groups for dropdown
+        async function loadUserGroupsForDropdown() {
+            const selectElement = document.getElementById('userGroupSelect');
+            
+            if (!selectElement) {
+                console.error('User group select element not found');
+                return;
+            }
+            
+            try {
+                console.log('Loading user groups...');
+                const { data, error } = await supabaseClient
+                    .from('user_groups')
+                    .select('*')
+                    .order('group_name', { ascending: true });
+                
+                if (error) {
+                    console.error('Supabase error loading user groups:', error);
+                    throw error;
+                }
+                
+                console.log('User groups loaded:', data?.length || 0, 'groups');
+                
+                // Clear existing options (keep first one)
+                while (selectElement.options.length > 1) {
+                    selectElement.remove(1);
+                }
+                
+                if (!data || data.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No user groups found';
+                    selectElement.appendChild(option);
+                    return;
+                }
+                
+                // Add user groups to dropdown
+                data.forEach(group => {
+                    const option = document.createElement('option');
+                    option.value = group.id;
+                    option.textContent = group.group_name;
+                    selectElement.appendChild(option);
+                });
+                
+                return Promise.resolve();
+            } catch (error) {
+                console.error('Error loading user groups:', error);
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Error loading groups';
+                selectElement.appendChild(option);
+                return Promise.reject(error);
+            }
+        }
+        
+        // Update task groups based on selected user group
+        async function updateTaskGroupsForUserGroup() {
+            const userGroupId = document.getElementById('userGroupSelect').value;
+            const taskGroupSection = document.getElementById('taskGroupSection');
+            const taskGroupSelect = document.getElementById('taskGroupSelect');
+            
+            if (!userGroupId) {
+                taskGroupSection.style.display = 'none';
+                return Promise.resolve();
+            }
+            
+            taskGroupSection.style.display = 'block';
+            
+            try {
+                console.log('Loading task groups for user group:', userGroupId);
+                
+                // Load task groups that belong to this user group OR have no user group (available to all)
+                const { data, error } = await supabaseClient
+                    .from('task_groups')
+                    .select('*')
+                    .or(`user_group_id.eq.${userGroupId},user_group_id.is.null`)
+                    .eq('is_active', true)
+                    .order('display_order', { ascending: true });
+                
+                if (error) throw error;
+                
+                console.log('Task groups loaded:', data?.length || 0, 'groups');
+                
+                // Clear existing options (keep first one)
+                while (taskGroupSelect.options.length > 1) {
+                    taskGroupSelect.remove(1);
+                }
+                
+                if (!data || data.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No task groups available for this user group';
+                    taskGroupSelect.appendChild(option);
+                    
+                    // Add a help message
+                    const helpText = document.createElement('small');
+                    helpText.style.color = '#ef4444';
+                    helpText.style.display = 'block';
+                    helpText.style.marginTop = '8px';
+                    helpText.textContent = 'Note: Task groups need to be associated with user groups. Please create task groups for this user group.';
+                    
+                    // Remove any existing help text
+                    const existingHelp = taskGroupSelect.parentElement.querySelector('small.help-text');
+                    if (existingHelp) existingHelp.remove();
+                    
+                    helpText.className = 'help-text';
+                    taskGroupSelect.parentElement.appendChild(helpText);
+                    return;
+                }
+                
+                // Remove help text if it exists
+                const existingHelp = taskGroupSelect.parentElement.querySelector('small.help-text');
+                if (existingHelp) existingHelp.remove();
+                
+                // Add task groups to dropdown
+                data.forEach(group => {
+                    const option = document.createElement('option');
+                    option.value = group.id;
+                    option.textContent = group.group_name;
+                    taskGroupSelect.appendChild(option);
+                });
+                
+                return Promise.resolve();
+            } catch (error) {
+                console.error('Error loading task groups:', error);
+                return Promise.reject(error);
             }
         }
 
@@ -2550,18 +3309,33 @@
         async function loadTasks() {
             try {
                 console.log('Loading tasks from database...');
-                const { data, error } = await supabaseClient
+                
+                // Load tasks
+                const { data: tasksData, error: tasksError } = await supabaseClient
                     .from('onboarding_tasks')
                     .select('*')
                     .order('position');
 
-                if (error) {
-                    console.error('Database error:', error);
-                    throw error;
+                if (tasksError) {
+                    console.error('Database error:', tasksError);
+                    throw tasksError;
+                }
+                
+                // Also load task groups for reference
+                const { data: groupsData, error: groupsError } = await supabaseClient
+                    .from('task_groups')
+                    .select('*')
+                    .order('display_order');
+                    
+                if (groupsError) {
+                    console.error('Error loading task groups:', groupsError);
+                    // Don't throw, just log - task groups are not critical
                 }
 
-                tasks = data || [];
-                console.log('Tasks loaded:', tasks);
+                tasks = tasksData || [];
+                allTaskGroupsData = groupsData || [];
+                
+                console.log('Tasks loaded:', tasks.length, 'Task groups loaded:', allTaskGroupsData.length);
                 renderTasks();
             } catch (error) {
                 console.error('Error loading tasks:', error);
@@ -2853,9 +3627,8 @@
             setTimeout(() => {
                 if (task) {
                     populateForm(task);
-                } else {
-                    clearForm();
                 }
+                // clearForm is already called in addNewTask() for new tasks
             }, 100);
             
             isEditing = true;
@@ -3126,9 +3899,104 @@
             document.getElementById('title').value = task.title;
             document.getElementById('description').value = task.description;
             document.getElementById('instructionTitle').value = task.instruction_title;
-            document.getElementById('videoUrl').value = task.video_url || '';
-            document.getElementById('taskGroupSelect').value = task.task_group_id || '';
-            // Position is now managed automatically in task groups
+            
+            // Handle video based on type
+            if (task.video_type === 'upload' && task.video_url) {
+                // Uploaded video
+                document.getElementById('useVideoUrl').checked = false;
+                toggleVideoMode();
+                uploadedVideoUrl = task.video_url;
+                uploadedVideoPath = task.video_storage_path;
+                // Show video preview
+                const uploadInput = document.getElementById('videoUploadInput');
+                if (uploadInput) {
+                    let previewContainer = uploadInput.querySelector('.video-preview-container');
+                    if (!previewContainer) {
+                        previewContainer = document.createElement('div');
+                        previewContainer.className = 'video-preview-container';
+                        previewContainer.style.cssText = 'margin-top: 15px; padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;';
+                        previewContainer.innerHTML = `
+                            <div style="font-weight: 600; color: #374151; margin-bottom: 10px;">Current Video:</div>
+                            <video controls style="width: 100%; max-width: 400px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <source src="${task.video_url}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                            <div style="margin-top: 10px; color: #6b7280; font-size: 14px;">
+                                <i data-lucide="info" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i>
+                                Select a new file above to replace this video
+                            </div>
+                        `;
+                        uploadInput.appendChild(previewContainer);
+                        // Initialize lucide icons for the info icon
+                        setTimeout(() => lucide.createIcons(), 100);
+                    }
+                }
+            } else if (task.video_url) {
+                // URL video - show preview for URL videos too
+                document.getElementById('useVideoUrl').checked = true;
+                toggleVideoMode();
+                document.getElementById('videoUrl').value = task.video_url;
+                
+                // Show video preview for URL videos
+                const urlInput = document.getElementById('videoUrlInput');
+                if (urlInput && task.video_url) {
+                    setTimeout(() => {
+                        let previewContainer = urlInput.querySelector('.video-preview-container');
+                        if (!previewContainer) {
+                            previewContainer = document.createElement('div');
+                            previewContainer.className = 'video-preview-container';
+                            previewContainer.style.cssText = 'margin-top: 15px; padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;';
+                            
+                            // Determine if it's YouTube, Vimeo, or direct video
+                            let videoContent = '';
+                            if (task.video_url.includes('youtube.com') || task.video_url.includes('youtu.be')) {
+                                // Extract YouTube video ID
+                                let videoId = '';
+                                if (task.video_url.includes('youtube.com')) {
+                                    const urlParams = new URLSearchParams(new URL(task.video_url).search);
+                                    videoId = urlParams.get('v');
+                                } else if (task.video_url.includes('youtu.be')) {
+                                    videoId = task.video_url.split('/').pop();
+                                }
+                                if (videoId) {
+                                    videoContent = `<iframe width="400" height="225" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen style="border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></iframe>`;
+                                }
+                            } else if (task.video_url.includes('vimeo.com')) {
+                                // Extract Vimeo video ID
+                                const videoId = task.video_url.split('/').pop().split('?')[0];
+                                videoContent = `<iframe width="400" height="225" src="https://player.vimeo.com/video/${videoId}" frameborder="0" allowfullscreen style="border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></iframe>`;
+                            } else {
+                                // Direct video URL or other platform
+                                videoContent = `
+                                    <video controls style="width: 100%; max-width: 400px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                        <source src="${task.video_url}" type="video/mp4">
+                                        Your browser does not support the video tag.
+                                    </video>
+                                `;
+                            }
+                            
+                            previewContainer.innerHTML = `
+                                <div style="font-weight: 600; color: #374151; margin-bottom: 10px;">Current Video:</div>
+                                ${videoContent}
+                                <div style="margin-top: 10px; color: #6b7280; font-size: 14px;">
+                                    <i data-lucide="info" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i>
+                                    Change the URL above to update the video
+                                </div>
+                            `;
+                            urlInput.appendChild(previewContainer);
+                            // Initialize lucide icons for the info icon
+                            setTimeout(() => lucide.createIcons(), 100);
+                        }
+                    }, 200);
+                }
+            } else {
+                // No video - default to upload mode
+                document.getElementById('useVideoUrl').checked = false;
+                toggleVideoMode();
+                document.getElementById('videoUrl').value = '';
+                uploadedVideoUrl = null;
+                uploadedVideoPath = null;
+            }
 
             // Check if there's form embed code
             if (task.form_embed_code) {
@@ -3141,38 +4009,88 @@
                 document.getElementById('formEmbedGroup').style.display = 'none';
             }
 
-            // Set targeting information
-            const targetType = task.target_type || 'all';
-            document.getElementById('targetType').value = targetType;
-            
-            // Update targeting options display
-            updateTargetingOptions();
-            
-            // Set due date if it exists (only for individual tasks)
-            if (task.due_date && targetType === 'individuals') {
-                const dueDate = new Date(task.due_date);
-                // Format as datetime-local input value (YYYY-MM-DDTHH:mm)
-                const localDateTime = new Date(dueDate.getTime() - dueDate.getTimezoneOffset() * 60000)
-                    .toISOString()
-                    .slice(0, 16);
-                document.getElementById('taskDueDate').value = localDateTime;
-            } else {
-                document.getElementById('taskDueDate').value = '';
-            }
-            
-            // Set notification checkbox - removed (column doesn't exist in database)
-            // document.getElementById('notifyUsers').checked = false;
-            
-            // Set selected groups, locations, and users after a delay to allow for loading
-            setTimeout(() => {
-                if (targetType === 'groups' && task.target_groups) {
-                    setSelectedGroups(Array.isArray(task.target_groups) ? task.target_groups : []);
-                } else if (targetType === 'locations' && task.target_locations) {
-                    setSelectedLocations(Array.isArray(task.target_locations) ? task.target_locations : []);
-                } else if (targetType === 'individuals' && task.target_users) {
-                    setSelectedUsers(Array.isArray(task.target_users) ? task.target_users : []);
+            // Determine if it's individual or group task
+            if (task.target_type === 'individuals' && task.target_users && task.target_users.length > 0) {
+                // Individual task
+                document.getElementById('showTaskTo').value = 'individual';
+                updateShowTaskTo();
+                
+                // Load users and set selection with a delay to ensure dropdown is populated
+                loadIndividualUsers().then(() => {
+                    setTimeout(() => {
+                        const individualSelect = document.getElementById('individualUserSelect');
+                        if (individualSelect) {
+                            individualSelect.value = task.target_users[0];
+                            // If value wasn't set (user might not be in list), try again
+                            if (!individualSelect.value && task.target_users[0]) {
+                                console.log('User not found in dropdown, ID:', task.target_users[0]);
+                            }
+                        }
+                    }, 100);
+                });
+                
+                // Set due date if it exists
+                if (task.due_date) {
+                    const dueDate = new Date(task.due_date);
+                    const localDateTime = new Date(dueDate.getTime() - dueDate.getTimezoneOffset() * 60000)
+                        .toISOString()
+                        .slice(0, 16);
+                    document.getElementById('taskDueDate').value = localDateTime;
                 }
-            }, 500);
+            } else if (task.target_type === 'groups' && task.target_groups && task.target_groups.length > 0) {
+                // User group task
+                document.getElementById('showTaskTo').value = 'usergroup';
+                updateShowTaskTo();
+                
+                // Load user groups and set selection with proper chaining
+                loadUserGroupsForDropdown().then(() => {
+                    setTimeout(() => {
+                        const userGroupSelect = document.getElementById('userGroupSelect');
+                        if (userGroupSelect && task.target_groups[0]) {
+                            userGroupSelect.value = task.target_groups[0];
+                            
+                            // Then load task groups and set selection if exists
+                            if (task.task_group_id) {
+                                updateTaskGroupsForUserGroup().then(() => {
+                                    setTimeout(() => {
+                                        const taskGroupSelect = document.getElementById('taskGroupSelect');
+                                        if (taskGroupSelect) {
+                                            taskGroupSelect.value = task.task_group_id;
+                                        }
+                                    }, 100);
+                                });
+                            } else {
+                                // Still trigger updateTaskGroupsForUserGroup to show available groups
+                                updateTaskGroupsForUserGroup();
+                            }
+                        }
+                    }, 100);
+                });
+            } else if (task.task_group_id) {
+                // Task has a task group but no target groups - this might be legacy data
+                // Try to find the user group from the task group
+                document.getElementById('showTaskTo').value = 'usergroup';
+                updateShowTaskTo();
+                
+                loadUserGroupsForDropdown().then(() => {
+                    // If we have allTaskGroupsData, find the user group for this task group
+                    const taskGroupData = allTaskGroupsData.find(g => g.id === task.task_group_id);
+                    if (taskGroupData && taskGroupData.user_group_id) {
+                        setTimeout(() => {
+                            document.getElementById('userGroupSelect').value = taskGroupData.user_group_id;
+                            updateTaskGroupsForUserGroup().then(() => {
+                                setTimeout(() => {
+                                    document.getElementById('taskGroupSelect').value = task.task_group_id;
+                                }, 100);
+                            });
+                        }, 100);
+                    }
+                });
+            } else {
+                // Default to user group if unclear
+                document.getElementById('showTaskTo').value = 'usergroup';
+                updateShowTaskTo();
+            }
 
             // Set Quill content after editor is initialized
             setTimeout(() => {
@@ -3185,10 +4103,35 @@
         // Clear form
         function clearForm() {
             document.getElementById('taskForm').reset();
+            document.getElementById('taskId').value = generateTaskId(); // Auto-generate new task ID
+            document.getElementById('showTaskTo').value = 'usergroup';
+            document.getElementById('formEmbedCode').value = '';
+            document.getElementById('formEmbedGroup').style.display = 'none';
+            document.getElementById('taskDueDate').value = '';
+            document.getElementById('userSearchInput').value = '';
             
-            // Calculate next position
-            const maxPosition = Math.max(0, ...tasks.map(t => t.position));
-            // Position will be assigned automatically when task is created
+            // Reset video inputs - default to upload mode
+            document.getElementById('useVideoUrl').checked = false;
+            toggleVideoMode();
+            selectedVideoFile = null;
+            uploadedVideoUrl = null;
+            uploadedVideoPath = null;
+            document.getElementById('videoFile').value = '';
+            document.getElementById('videoUrl').value = '';
+            // Remove any video preview
+            const uploadInput = document.getElementById('videoUploadInput');
+            if (uploadInput) {
+                const preview = uploadInput.querySelector('.video-preview-container');
+                if (preview) preview.remove();
+            }
+            const urlInput = document.getElementById('videoUrlInput');
+            if (urlInput) {
+                const urlPreview = urlInput.querySelector('.video-preview-container');
+                if (urlPreview) urlPreview.remove();
+            }
+            
+            // Reset to user group view (default)
+            updateShowTaskTo();
 
             // Clear Quill content
             setTimeout(() => {
@@ -3274,9 +4217,19 @@
             }
         }
 
+        // Generate unique task ID
+        function generateTaskId() {
+            const timestamp = Date.now();
+            const randomStr = Math.random().toString(36).substring(2, 8);
+            return `TASK-${timestamp}-${randomStr}`.toUpperCase();
+        }
+        
         // Add new task
         async function addNewTask() {
             console.log('addNewTask called');
+            
+            // Clear form first for new task
+            clearForm();
             
             // Create new task modal
             showTaskModal(null);
@@ -3334,17 +4287,17 @@
                 closeBtn.onclick = closeTaskModal;
             }
             
-            // Load task groups for dropdown
-            loadTaskGroupsForDropdown();
-            
             // Initialize editor and populate form
             initQuillEditor();
             
+            // Initialize the form with proper view
             setTimeout(() => {
                 if (task) {
                     populateForm(task);
                 } else {
                     clearForm();
+                    // Load users for initial individual view
+                    loadIndividualUsers();
                 }
             }, 100);
             
@@ -3485,19 +4438,60 @@
             }
 
             try {
-                const targetType = document.getElementById('targetType').value;
-                const targetGroups = targetType === 'groups' ? getSelectedGroups() : [];
-                const targetLocations = targetType === 'locations' ? getSelectedLocations() : [];
-                const targetUsers = targetType === 'individuals' ? getSelectedUsers() : [];
-                // const notifyUsers = document.getElementById('notifyUsers').checked; // Removed - column doesn't exist
-
-                const taskGroupId = document.getElementById('taskGroupSelect').value;
+                const showTaskTo = document.getElementById('showTaskTo').value;
+                let targetType, targetGroups, targetUsers, taskGroupId, dueDate;
                 
-                // Get due date only for individual tasks
-                let dueDate = null;
-                if (targetType === 'individuals') {
+                if (showTaskTo === 'individual') {
+                    // Individual user task
+                    const individualUserId = document.getElementById('individualUserSelect').value;
+                    if (!individualUserId) {
+                        showError('Please select a user for this task');
+                        return;
+                    }
+                    
+                    targetType = 'individuals';
+                    targetGroups = [];
+                    targetUsers = [individualUserId];
+                    taskGroupId = null;
+                    
+                    // Get due date for individual task
                     const dueDateValue = document.getElementById('taskDueDate').value;
                     dueDate = dueDateValue ? new Date(dueDateValue).toISOString() : null;
+                    
+                } else if (showTaskTo === 'usergroup') {
+                    // User group task
+                    const userGroupId = document.getElementById('userGroupSelect').value;
+                    if (!userGroupId) {
+                        showError('Please select a user group');
+                        return;
+                    }
+                    
+                    taskGroupId = document.getElementById('taskGroupSelect').value;
+                    targetType = 'groups';
+                    targetGroups = [userGroupId];
+                    targetUsers = [];
+                    dueDate = null;
+                }
+                
+                // Handle video based on selected option
+                let videoUrl = null;
+                let videoType = null;
+                let videoStoragePath = null;
+                
+                const useUrl = document.getElementById('useVideoUrl').checked;
+                
+                if (useUrl) {
+                    // Use URL input
+                    videoUrl = document.getElementById('videoUrl').value.trim() || null;
+                    videoType = videoUrl ? 'url' : null;
+                } else {
+                    // Use uploaded video if available
+                    if (uploadedVideoUrl) {
+                        videoUrl = uploadedVideoUrl;
+                        videoType = 'upload';
+                        videoStoragePath = uploadedVideoPath;
+                        console.log('Using already uploaded video:', videoUrl);
+                    }
                 }
                 
                 // Only get next position for new tasks
@@ -3516,16 +4510,17 @@
                     description: document.getElementById('description').value.trim(),
                     instruction_title: document.getElementById('instructionTitle').value.trim(),
                     instruction_content: cleanContentForSaving(),
-                    video_url: document.getElementById('videoUrl').value.trim() || null,
+                    video_url: videoUrl,
+                    video_type: videoType,
+                    video_storage_path: videoStoragePath,
                     form_embed_code: document.getElementById('hasFormEmbed').checked ? document.getElementById('formEmbedCode').value.trim() : null,
                     task_group_id: taskGroupId ? parseInt(taskGroupId) : null,
                     position: position,
                     target_type: targetType,
                     target_groups: targetGroups,
-                    target_locations: targetLocations,
+                    target_locations: [],
                     target_users: targetUsers,
-                    due_date: dueDate, // Add due date for individual tasks
-                    // notify_users: notifyUsers, // Removed - column doesn't exist in database
+                    due_date: dueDate,
                     is_active: true
                 };
 
@@ -3558,17 +4553,40 @@
                 }
 
                 console.log('Task saved:', data);
-                showSuccess(currentTask ? 'Task updated successfully!' : 'Task created successfully!');
+                console.log('Returned data structure:', {
+                    data: data,
+                    firstItem: data?.[0],
+                    id: data?.[0]?.id
+                });
                 
-                // Send notifications if required and targeting individuals
-                if (!currentTask && targetType === 'individuals' && notifyUsers && targetUsers.length > 0) {
-                    console.log('Sending notifications to users:', targetUsers);
-                    await sendUserNotifications(data[0], targetUsers);
+                // If this is a new task with a task group, show the ordering modal
+                if (!currentTask && taskGroupId) {
+                    showSuccess('Task created successfully!');
+                    
+                    // Get the newly created task ID
+                    const newTaskId = data && data[0] ? data[0].id : null;
+                    
+                    if (!newTaskId) {
+                        console.error('New task ID not found in response:', data);
+                        // If we don't have the ID, just reload and close without showing ordering
+                        await loadTasks();
+                        closeTaskModal();
+                        return;
+                    }
+                    
+                    // Reload tasks to get the latest data including the new task
+                    await loadTasks();
+                    closeTaskModal();
+                    
+                    console.log('Showing ordering modal for task group:', taskGroupId, 'new task ID:', newTaskId);
+                    // Show task ordering modal with the correct new task ID
+                    showTaskOrderingModal(taskGroupId, newTaskId);
+                } else {
+                    showSuccess(currentTask ? 'Task updated successfully!' : 'Task created successfully!');
+                    // Reload tasks and close modal
+                    await loadTasks();
+                    setTimeout(closeTaskModal, 1500);
                 }
-                
-                // Reload tasks and close modal
-                await loadTasks();
-                setTimeout(closeTaskModal, 1500);
 
             } catch (error) {
                 console.error('Error saving task:', error);
@@ -4146,11 +5164,35 @@
 
         // Show forms in edit panel functions
         async function showTaskGroupFormInEditPanel(group = null) {
+            // First, load user groups for the dropdown
+            const { data: userGroups, error } = await supabaseClient
+                .from('user_groups')
+                .select('*')
+                .order('group_name', { ascending: true });
+            
+            if (error) {
+                console.error('Error loading user groups:', error);
+                showError('Failed to load user groups');
+                return;
+            }
+            
             const editPanelContent = document.querySelector('#editPanel form');
             editPanelContent.innerHTML = `
                 <input type="hidden" id="editTaskGroupId" value="${group ? group.id : ''}">
                 <div class="form-group">
-                    <label for="editTaskGroupName">Group Name</label>
+                    <label for="editTaskGroupUserGroup">User Group <span style="color: red;">*</span></label>
+                    <select id="editTaskGroupUserGroup" class="filter-select" required>
+                        <option value="">Select a user group...</option>
+                        ${userGroups.map(ug => `
+                            <option value="${ug.id}" ${group && group.user_group_id === ug.id ? 'selected' : ''}>
+                                ${ug.group_name}
+                            </option>
+                        `).join('')}
+                    </select>
+                    <small style="color: #ef4444;">Required: Task groups must belong to a user group</small>
+                </div>
+                <div class="form-group">
+                    <label for="editTaskGroupName">Task Group Name <span style="color: red;">*</span></label>
                     <input type="text" id="editTaskGroupName" value="${group ? group.group_name : ''}" required>
                     <small>Name for this task group (e.g., "Onboarding Tasks", "Advanced Training")</small>
                 </div>
@@ -4217,9 +5259,17 @@
             
             try {
                 const groupId = document.getElementById('editTaskGroupId').value;
+                const userGroupId = document.getElementById('editTaskGroupUserGroup').value;
+                
+                if (!userGroupId) {
+                    showError('Please select a user group. Task groups must belong to a user group.');
+                    return;
+                }
+                
                 const formData = {
                     group_name: document.getElementById('editTaskGroupName').value,
                     group_description: document.getElementById('editTaskGroupDescription').value,
+                    user_group_id: parseInt(userGroupId),
                     display_order: parseInt(document.getElementById('editTaskGroupOrder').value) || 0,
                     is_active: document.getElementById('editTaskGroupActive').checked,
                     card_color: document.getElementById('editTaskGroupColor').value,
@@ -4346,7 +5396,7 @@
                                         <input type="checkbox" value="${task.id}" ${isAssigned ? 'checked' : ''} style="margin-right: 8px;">
                                         <strong>${task.title}</strong>
                                         <div style="font-size: 12px; color: #666; margin-top: 4px;">
-                                            Position: ${task.position} | ${task.task_id}
+                                            Position: ${task.position}
                                         </div>
                                     </label>
                                 `;
@@ -4462,7 +5512,7 @@
                                                         <strong style="color: #374151;">${task.title}</strong>
                                                     </div>
                                                     <div style="font-size: 12px; color: #6B7280; margin-bottom: 8px;">
-                                                        Position: ${task.position} | ID: ${task.task_id}
+                                                        Position: ${task.position}
                                                     </div>
                                                     <div style="font-size: 13px; color: #4B5563; line-height: 1.4;">
                                                         ${task.description ? task.description.substring(0, 100) + (task.description.length > 100 ? '...' : '') : 'No description'}
@@ -4499,7 +5549,7 @@
                                 <select id="existingTaskSelect" style="width: 100%; padding: 8px; border: 1px solid #E5E7EB; border-radius: 4px; font-size: 14px;">
                                     <option value="">Select a task to add...</option>
                                     ${allTasks ? allTasks.filter(task => !task.task_group_id || task.task_group_id !== groupId).map(task => 
-                                        `<option value="${task.id}">${task.title} (${task.task_id})</option>`
+                                        `<option value="${task.id}">${task.title}</option>`
                                     ).join('') : ''}
                                 </select>
                                 <button type="button" class="btn btn-secondary" onclick="addExistingTaskToGroup()" style="width: 100%; margin-top: 8px; padding: 8px;">Add Selected Task</button>
@@ -4730,9 +5780,13 @@
         }
 
         // Create new task group
-        function createNewTaskGroup() {
+        async function createNewTaskGroup() {
+            // Load user groups for dropdown
+            await loadUserGroupsForTaskGroupForm();
+            
             // Clear form for new task group
             document.getElementById('taskGroupId').value = '';
+            document.getElementById('taskGroupUserGroupSelect').value = '';
             document.getElementById('taskGroupName').value = '';
             document.getElementById('taskGroupDescription').value = '';
             document.getElementById('taskGroupOrder').value = allTaskGroupsData.length;
@@ -4744,11 +5798,15 @@
         }
 
         // Edit task group
-        function editTaskGroup(groupId) {
+        async function editTaskGroup(groupId) {
             const group = allTaskGroupsData.find(g => g.id === groupId);
             if (!group) return;
 
+            // Load user groups for dropdown
+            await loadUserGroupsForTaskGroupForm();
+
             document.getElementById('taskGroupId').value = group.id;
+            document.getElementById('taskGroupUserGroupSelect').value = group.user_group_id || '';
             document.getElementById('taskGroupName').value = group.group_name;
             document.getElementById('taskGroupDescription').value = group.group_description || '';
             document.getElementById('taskGroupOrder').value = group.display_order;
@@ -4759,6 +5817,35 @@
             document.getElementById('taskGroupForm').style.display = 'block';
         }
 
+        // Load user groups for task group form dropdown
+        async function loadUserGroupsForTaskGroupForm() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('user_groups')
+                    .select('*')
+                    .order('group_name', { ascending: true });
+                
+                if (error) throw error;
+                
+                const selectElement = document.getElementById('taskGroupUserGroupSelect');
+                
+                // Clear existing options (keep first one)
+                while (selectElement.options.length > 1) {
+                    selectElement.remove(1);
+                }
+                
+                // Add user groups to dropdown
+                data.forEach(group => {
+                    const option = document.createElement('option');
+                    option.value = group.id;
+                    option.textContent = group.group_name;
+                    selectElement.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading user groups for task group form:', error);
+            }
+        }
+        
         // Cancel task group edit
         function cancelTaskGroupEdit() {
             document.getElementById('taskGroupForm').style.display = 'none';
@@ -4770,9 +5857,17 @@
             
             try {
                 const groupId = document.getElementById('taskGroupId').value;
+                const userGroupId = document.getElementById('taskGroupUserGroupSelect').value;
+                
+                if (!userGroupId) {
+                    showError('Please select a user group. Task groups must belong to a user group.');
+                    return;
+                }
+                
                 const formData = {
                     group_name: document.getElementById('taskGroupName').value,
                     group_description: document.getElementById('taskGroupDescription').value,
+                    user_group_id: parseInt(userGroupId),
                     display_order: parseInt(document.getElementById('taskGroupOrder').value) || 0,
                     is_active: document.getElementById('taskGroupActive').checked,
                     updated_at: new Date().toISOString()
@@ -4852,7 +5947,7 @@
                             <input type="checkbox" value="${task.id}" ${isAssigned ? 'checked' : ''} style="margin-right: 8px;">
                             <strong>${task.title}</strong>
                             <div style="font-size: 12px; color: #666; margin-top: 4px;">
-                                Position: ${task.position} | ${task.task_id}
+                                Position: ${task.position}
                             </div>
                         </label>
                     `;
@@ -6990,12 +8085,6 @@
                 </div>
                 
                 <div class="form-group" style="margin-bottom: 16px;">
-                    <label for="newTaskId" style="display: block; margin-bottom: 8px; font-weight: 500;">Task ID</label>
-                    <input type="text" id="newTaskId" required style="width: 100%; padding: 12px; border: 1px solid #E5E7EB; border-radius: 4px;" placeholder="e.g., setup-profile">
-                    <small style="color: #6B7280;">Unique identifier for this task</small>
-                </div>
-                
-                <div class="form-group" style="margin-bottom: 16px;">
                     <label for="newTaskDescription" style="display: block; margin-bottom: 8px; font-weight: 500;">Description</label>
                     <textarea id="newTaskDescription" rows="3" style="width: 100%; padding: 12px; border: 1px solid #E5E7EB; border-radius: 4px; resize: vertical;" placeholder="Describe what this task involves..."></textarea>
                 </div>
@@ -7047,7 +8136,7 @@
         async function createNewTask(groupId) {
             try {
                 const title = document.getElementById('newTaskTitle').value;
-                const taskId = document.getElementById('newTaskId').value;
+                const taskId = generateTaskId(); // Auto-generate task ID
                 const description = document.getElementById('newTaskDescription').value;
                 const instructionTitle = document.getElementById('newTaskInstructions').value;
                 const instructionContent = document.getElementById('newTaskContent').value;
@@ -7055,8 +8144,8 @@
                 const hasFormEmbed = document.getElementById('newTaskHasFormEmbed').checked;
                 const formEmbedCode = document.getElementById('newTaskFormEmbedCode').value;
                 
-                if (!title || !taskId) {
-                    showError('Title and Task ID are required');
+                if (!title) {
+                    showError('Title is required');
                     return;
                 }
                 
@@ -7274,6 +8363,10 @@
 
             userGroupsList.innerHTML = allUserGroupsData.map((group, index) => {
                 const cardColor = group.card_color || '#f1f5f9';
+                // Generate the full URL with all parameters including HighLevel custom fields format
+                const baseUrl = window.location.origin + '/onboarding.html';
+                const fullUrl = `${baseUrl}?email={{contact.email}}&location={{location.id}}&user_group=${encodeURIComponent(group.group_name)}`;
+                
                 return `
                     <div class="user-group-card" style="background: ${cardColor}; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; margin-bottom: 12px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s; position: relative;">
                         <div style="display: flex; justify-content: between; align-items: flex-start; gap: 16px;">
@@ -7288,8 +8381,31 @@
                                     <div style="color: #4b5563; font-size: 14px; line-height: 1.4; margin-bottom: 8px;">
                                         ${group.group_description || '<em style="color: #9ca3af;">No description</em>'}
                                     </div>
-                                    <div style="color: #6b7280; font-size: 12px;">
+                                    <div style="color: #6b7280; font-size: 12px; margin-bottom: 12px;">
                                         Created: ${new Date(group.created_at).toLocaleDateString()}
+                                    </div>
+                                    
+                                    <!-- URL Section with copy functionality -->
+                                    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; margin-top: 12px;">
+                                        <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 8px;">
+                                            <label style="font-size: 12px; font-weight: 600; color: #4b5563; text-transform: uppercase; letter-spacing: 0.5px;">
+                                                HighLevel Custom Menu URL
+                                            </label>
+                                            <button onclick="copyUserGroupUrl('${btoa(fullUrl)}')" 
+                                                    class="btn-small" 
+                                                    style="padding: 4px 8px; font-size: 11px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                                Copy URL
+                                            </button>
+                                        </div>
+                                        <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #374151; word-break: break-all; line-height: 1.4; background: white; padding: 8px; border-radius: 4px; border: 1px solid #e5e7eb;">
+                                            ${fullUrl}
+                                        </div>
+                                        <div style="margin-top: 8px; font-size: 11px; color: #6b7280;">
+                                            <strong>Parameters included:</strong><br>
+                                            • <code style="background: #f3f4f6; padding: 2px 4px; border-radius: 3px;">{{contact.email}}</code> - HighLevel contact email<br>
+                                            • <code style="background: #f3f4f6; padding: 2px 4px; border-radius: 3px;">{{location.id}}</code> - HighLevel location ID<br>
+                                            • <code style="background: #f3f4f6; padding: 2px 4px; border-radius: 3px;">user_group</code> - This user group (${group.group_name})
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -7308,6 +8424,41 @@
             
             // Refresh icons for dynamically created content
             setTimeout(() => lucide.createIcons(), 100);
+        }
+        
+        // Copy user group URL to clipboard
+        function copyUserGroupUrl(encodedUrl) {
+            const url = atob(encodedUrl);
+            navigator.clipboard.writeText(url).then(() => {
+                // Show success feedback
+                event.target.textContent = 'Copied!';
+                event.target.style.background = '#10b981';
+                setTimeout(() => {
+                    event.target.textContent = 'Copy URL';
+                    event.target.style.background = '#3b82f6';
+                }, 2000);
+            }).catch(err => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = url;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    event.target.textContent = 'Copied!';
+                    event.target.style.background = '#10b981';
+                    setTimeout(() => {
+                        event.target.textContent = 'Copy URL';
+                        event.target.style.background = '#3b82f6';
+                    }, 2000);
+                } catch (err) {
+                    console.error('Failed to copy URL:', err);
+                    alert('Failed to copy URL. Please copy manually.');
+                }
+                document.body.removeChild(textArea);
+            });
         }
 
         // Create new user group

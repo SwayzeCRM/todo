@@ -85,7 +85,7 @@
 
         .streak-counter {
             position: fixed;
-            top: 20px;
+            top: 80px; /* Move below navbar */
             right: 20px;
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             color: white;
@@ -137,53 +137,429 @@
         }
 
         body {
+            margin: 0;
+            padding: 0;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #F5F7FA;
             min-height: 100vh;
+            color: #1F2937;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            margin-top: 60px;
+            height: calc(100vh - 60px);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .main-container.instructions-open .instructions-panel {
+            flex: 1;
+            width: auto;
+            padding: 24px;
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        /* Task Panel (Left Sidebar) */
+        .task-panel {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #E5E7EB;
+            height: 100%;
+            overflow-y: auto;
+            transition: width 0.3s ease;
+            position: relative;
+            flex-shrink: 0;
+        }
+        
+        .task-panel.collapsed {
+            width: 0;
+            overflow: hidden;
+        }
+        
+        .panel-header {
+            padding: 20px;
+            border-bottom: 1px solid #E5E7EB;
+            background: #F9FAFB;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .panel-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #111827;
+            font-weight: 600;
+        }
+        
+        .panel-close {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #6B7280;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #1F2937;
-            padding: 20px;
+            border-radius: 6px;
+        }
+        
+        .panel-close:hover {
+            background: #F3F4F6;
+            color: #111827;
+        }
+        
+        .task-controls {
+            padding: 16px;
+            border-bottom: 1px solid #E5E7EB;
+            background: #F9FAFB;
+        }
+        
+        .task-filter-dropdown {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            background: white;
+            font-size: 14px;
+            color: #374151;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+        
+        .task-filter-dropdown:focus {
+            outline: none;
+            border-color: #3B82F6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+        
+        .search-container {
+            position: relative;
+        }
+        
+        .task-search-input {
+            width: 100%;
+            padding: 8px 12px 8px 36px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            background: white;
+            font-size: 14px;
+            color: #374151;
+        }
+        
+        .task-search-input:focus {
+            outline: none;
+            border-color: #3B82F6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9CA3AF;
+            pointer-events: none;
+        }
+        
+        .task-list-container {
+            padding: 16px;
         }
 
-        .container {
-            background: linear-gradient(180deg, #FFFFFF 0%, #F9FAFB 100%);
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            max-width: 1200px;
-            width: 100%;
-            min-height: 700px;
+        /* Top Navigation Bar Styles */
+        .top-navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: white;
+            border-bottom: 1px solid #E5E7EB;
+            z-index: 1000;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        .nav-container {
             display: flex;
-            transition: all 0.3s ease-out;
+            align-items: center;
+            justify-content: space-between;
+            height: 100%;
+            padding: 0 20px;
+            max-width: 100%;
+        }
+        
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: #6B7280;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        
+        .menu-toggle:hover {
+            background: #F3F4F6;
+            color: #111827;
+        }
+        
+        .brand h2 {
+            margin: 0;
+            font-size: 18px;
+            color: #111827;
+            font-weight: 600;
+        }
+        
+        .nav-center {
+            flex: 1;
+            max-width: 400px;
+            margin: 0 20px;
+        }
+        
+        .progress-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .progress-bar-horizontal {
+            flex: 1;
+            height: 6px;
+            background: #E5E7EB;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-fill-horizontal {
+            height: 100%;
+            background: linear-gradient(90deg, #3B82F6, #8B5CF6);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .progress-text {
+            font-size: 13px;
+            color: #6B7280;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        
+        .user-menu {
+            position: relative;
+        }
+        
+        .user-menu-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: none;
             border: 1px solid #E5E7EB;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .user-menu-btn:hover {
+            background: #F9FAFB;
+            border-color: #D1D5DB;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667EEA, #764BA2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .user-name {
+            font-size: 14px;
+            color: #374151;
+            font-weight: 500;
+        }
+        
+        .user-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border: 1px solid #E5E7EB;
+            width: 250px;
+            display: none;
+            z-index: 1001;
+        }
+        
+        .user-dropdown.active {
+            display: block;
+        }
+        
+        .dropdown-header {
+            padding: 16px;
+            border-bottom: 1px solid #E5E7EB;
+        }
+        
+        .dropdown-user-info {
+            font-size: 14px;
+        }
+        
+        .dropdown-user-info > div:first-child {
+            font-weight: 600;
+            color: #111827;
+        }
+        
+        .dropdown-user-info > div:nth-child(2) {
+            color: #6B7280;
+            margin-top: 4px;
+        }
+        
+        .dropdown-user-info > div:nth-child(3) {
+            color: #3B82F6;
+            margin-top: 4px;
+            font-size: 13px;
+        }
+        
+        .dropdown-divider {
+            height: 1px;
+            background: #E5E7EB;
+        }
+        
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 14px;
+            color: #374151;
+        }
+        
+        .dropdown-item:hover {
+            background: #F9FAFB;
         }
 
         .onboarding-panel {
             flex: 1;
             padding: 24px;
+            padding-left: 80px;
             background: #FFFFFF;
-            transition: flex 0.3s ease-out;
+            transition: all 0.3s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Tasks list container */
+        .tasks-sidebar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 350px;
+            background: #F9FAFB;
+            border-right: 1px solid #E5E7EB;
+            padding: 70px 20px 20px 20px;
+            overflow-y: auto;
+            transition: transform 0.3s ease-out;
+            z-index: 999;
+        }
+        
+        /* Sidebar collapsed state - default */
+        .sidebar-collapsed .tasks-sidebar {
+            transform: translateX(-100%);
+        }
+        
+        /* Sidebar expanded state */
+        .sidebar-expanded .tasks-sidebar {
+            transform: translateX(0);
+        }
+        
+        /* Adjust main content based on sidebar state */
+        .sidebar-collapsed .task-content,
+        .sidebar-collapsed .user-welcome,
+        .sidebar-collapsed #profileSetup {
+            margin-left: 0;
+            transition: margin-left 0.3s ease-out;
+        }
+        
+        .sidebar-expanded .task-content,
+        .sidebar-expanded .user-welcome,
+        .sidebar-expanded #profileSetup {
+            margin-left: 330px;
+            transition: margin-left 0.3s ease-out;
         }
 
         .container.instructions-open .onboarding-panel {
             flex: 0.5;
         }
-
-        .instructions-panel {
-            flex: 0;
-            background: #FFFFFF;
-            color: #1F2937;
-            padding: 0;
-            transition: all 0.3s ease-out;
-            overflow: hidden;
-            border-left: 1px solid #E5E7EB;
+        
+        .container.instructions-open .sidebar-collapsed {
+            flex: 0.15;
+        }
+        
+        .container.instructions-open .sidebar-expanded {
+            flex: 0.5;
         }
 
-        .container.instructions-open .instructions-panel {
-            flex: 0.5;
-            padding: 24px;
+        .instructions-panel {
+            flex: 1;
+            background: #F9FAFB;
+            color: #1F2937;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .instructions-panel .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #6B7280;
+            padding: 40px;
+        }
+        
+        .instructions-panel .empty-state h2 {
+            font-size: 28px;
+            color: #111827;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .instructions-panel .empty-state p {
+            font-size: 16px;
+            color: #6B7280;
         }
 
         .header {
@@ -231,12 +607,12 @@
             background: #FFFFFF;
             border: 1px solid #E5E7EB;
             border-radius: 8px;
-            padding: 20px;
+            padding: 16px;
             transition: all 0.2s ease-out;
             cursor: pointer;
             position: relative;
-            margin: 0 20px 16px 20px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 12px;
+            display: block;
         }
 
         .task-item:hover {
@@ -252,12 +628,14 @@
 
         .task-content {
             display: flex;
-            align-items: flex-start;
-            gap: 16px;
+            align-items: center;
+            gap: 12px;
         }
 
         .task-checkbox {
             width: 20px;
+            height: 20px;
+            min-width: 20px;
             height: 20px;
             border: 2px solid #E5E7EB;
             border-radius: 6px;
@@ -288,6 +666,36 @@
         .task-details {
             flex: 1;
             pointer-events: none;
+            position: relative;
+        }
+        
+        .open-modal-btn {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #3B82F6;
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            pointer-events: auto;
+            opacity: 0;
+        }
+        
+        .task-item:hover .open-modal-btn {
+            opacity: 1;
+        }
+        
+        .open-modal-btn:hover {
+            background: #2563EB;
+            transform: translateY(-50%) scale(1.05);
         }
 
         .task-title {
@@ -306,14 +714,11 @@
         }
 
         .instructions-content {
-            opacity: 0;
-            transform: translateX(20px);
-            transition: all 0.3s ease-out;
-        }
-
-        .container.instructions-open .instructions-content {
-            opacity: 1;
-            transform: translateX(0);
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            padding: 20px;
+            background: #F9FAFB;
         }
 
         .instructions-header {
@@ -321,10 +726,10 @@
         }
 
         .instructions-title {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 600;
-            margin-bottom: 12px;
-            color: #1F2937;
+            margin-bottom: 16px;
+            color: #111827;
         }
 
         .close-btn {
@@ -352,46 +757,80 @@
         .instructions-body {
             line-height: 1.6;
             color: #1F2937;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        /* Custom scrollbar for instructions */
+        .instructions-body::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .instructions-body::-webkit-scrollbar-track {
+            background: #F3F4F6;
+            border-radius: 4px;
+        }
+        
+        .instructions-body::-webkit-scrollbar-thumb {
+            background: #9CA3AF;
+            border-radius: 4px;
+        }
+        
+        .instructions-body::-webkit-scrollbar-thumb:hover {
+            background: #6B7280;
         }
 
         .instructions-body h2 {
             margin: 16px 0 8px 0;
             font-size: 18px;
             font-weight: 600;
-            color: #FFFFFF;
+            color: #1F2937;
         }
 
         .instructions-body p {
             margin-bottom: 12px;
-            opacity: 0.9;
+            color: #4B5563;
         }
 
         .instructions-body ul {
             margin-left: 20px;
             margin-bottom: 12px;
+            color: #4B5563;
         }
 
         .instructions-body li {
             margin-bottom: 6px;
-            opacity: 0.9;
+            color: #4B5563;
         }
 
         .video-container {
-            margin: 20px 0;
-            border-radius: 8px;
+            margin: 0 0 20px 0;
+            border-radius: 12px;
             overflow: hidden;
+            background: transparent;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .video-section {
+            margin-top: 20px;
+            background: transparent !important;
         }
 
-        .video-container iframe {
+        .video-container iframe,
+        .video-container video {
             width: 100%;
-            height: 250px;
+            height: 400px;
             border: none;
+            border-radius: 12px;
+            background: white;
         }
 
         /* Form Styles for Instructions Panel */
         .instruction-form {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: #F9FAFB;
+            border: 1px solid #E5E7EB;
             border-radius: 8px;
             padding: 20px;
             margin: 16px 0;
@@ -460,7 +899,7 @@
         /* Form Labels */
         .instructions-body label {
             display: block;
-            color: rgba(255, 255, 255, 0.9);
+            color: #374151;
             font-weight: 500;
             margin-bottom: 4px;
             font-size: 14px;
@@ -987,41 +1426,95 @@
         <p id="milestoneMessage">Keep up the great work!</p>
     </div>
 
-    <div class="container" id="container">
-        <div class="onboarding-panel">
-            <!-- Personalized Welcome (shown after profile completion) -->
-            <div id="userWelcome" class="user-welcome">
-                <button class="edit-profile-btn" onclick="openEditProfileModal()" title="Edit profile information">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+    <!-- Top Navigation Bar -->
+    <nav class="top-navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <button class="menu-toggle" id="menuToggle" onclick="toggleTaskPanel()" title="Toggle tasks panel">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 12h18M3 6h18M3 18h18"/>
                     </svg>
                 </button>
-                <h1 id="welcomeMessage">Welcome!</h1>
-                <div class="user-info">
-                    <div class="user-info-row" id="companyInfo"></div>
-                    <div class="user-info-row" id="emailInfo"></div>
-                    <div class="user-info-row" id="locationInfo"></div>
+                <div class="brand">
+                    <h2>DFY CRM Onboarding</h2>
                 </div>
             </div>
-            
-            <!-- Default Header (shown before profile completion) -->
-            <div id="defaultHeader" class="header default-header">
-                <h1>Welcome to DFY CRM</h1>
-                <p>Let's get your account set up and ready to go</p>
+            <div class="nav-center">
+                <div class="progress-indicator">
+                    <div class="progress-bar-horizontal">
+                        <div class="progress-fill-horizontal" id="progressFill"></div>
+                    </div>
+                    <span class="progress-text" id="progressText">0% Complete</span>
+                </div>
             </div>
-
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-
-            <div id="taskList" class="task-list">
-                <div class="loading">Loading your onboarding tasks...</div>
+            <div class="nav-right">
+                <div class="user-menu" id="userMenu">
+                    <button class="user-menu-btn" onclick="toggleUserDropdown()">
+                        <div class="user-avatar" id="userAvatar">
+                            <span id="userInitials">?</span>
+                        </div>
+                        <span class="user-name" id="userName">Guest</span>
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+                        </svg>
+                    </button>
+                    <div class="user-dropdown" id="userDropdown">
+                        <div class="dropdown-header">
+                            <div class="dropdown-user-info">
+                                <div id="dropdownUserName">Guest</div>
+                                <div id="dropdownUserEmail">Not logged in</div>
+                                <div id="dropdownCompany"></div>
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" onclick="openEditProfileModal()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                            </svg>
+                            Edit Profile
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
+    </nav>
 
-        <div class="instructions-panel">
-            <button class="close-btn" onclick="closeInstructions()">&times;</button>
-            <div class="instructions-content" id="instructionsContent">
+    <div class="main-container" id="mainContainer">
+        <!-- Task Panel (Left Sidebar) -->
+        <aside class="task-panel" id="taskPanel">
+            <div class="panel-header">
+                <h3>Your Tasks</h3>
+                <button class="panel-close" onclick="toggleTaskPanel()">×</button>
+            </div>
+            <div class="task-controls">
+                <select id="taskFilter" class="task-filter-dropdown" onchange="filterTasks()">
+                    <option value="open">Open Tasks</option>
+                    <option value="completed">Completed Tasks</option>
+                    <option value="all">All Tasks</option>
+                </select>
+                <div class="search-container">
+                    <input type="text" id="taskSearch" class="task-search-input" placeholder="Search tasks..." oninput="searchTasks()">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="task-list-container">
+                <div id="taskList" class="task-list">
+                    <div class="loading">Loading your onboarding tasks...</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Instructions Panel -->
+        <div class="instructions-panel" id="instructionsPanel">
+            <div class="empty-state" id="emptyState">
+                <h2>Welcome to Your Onboarding</h2>
+                <p>Select a task from the left panel to get started</p>
+            </div>
+            <button class="close-btn" onclick="closeInstructions()" style="display: none;">&times;</button>
+            <div class="instructions-content" id="instructionsContent" style="display: none;">
                 <!-- Instructions will be loaded here -->
             </div>
         </div>
@@ -1136,6 +1629,23 @@
             <div class="confirm-buttons">
                 <button class="confirm-btn cancel" onclick="cancelOptOut()">Keep Notifications</button>
                 <button class="confirm-btn confirm" onclick="confirmOptOut()">Turn Off</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Completion Confirmation Modal -->
+    <div id="taskCompleteOverlay" class="confirm-overlay" style="display: none;">
+        <div class="confirm-modal">
+            <div class="icon" style="background: #D1FAE5;">
+                <svg viewBox="0 0 24 24" fill="#059669">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                </svg>
+            </div>
+            <h3 id="taskCompleteTitle">Complete Task?</h3>
+            <p id="taskCompleteMessage">This task will be marked as completed. You can view completed tasks anytime by changing the filter to "Completed Tasks".</p>
+            <div class="confirm-buttons">
+                <button class="confirm-btn cancel" onclick="cancelTaskComplete()">Cancel</button>
+                <button class="confirm-btn confirm" style="background: #059669; border-color: #059669;" onclick="confirmTaskComplete()">Mark Complete</button>
             </div>
         </div>
     </div>
@@ -1380,6 +1890,7 @@
                         title: task.instruction_title,
                         content: task.instruction_content,
                         video_url: task.video_url,
+                        video_type: task.video_type,
                         form_embed_code: task.form_embed_code,
                         groupInfo: task.task_groups ? {
                             id: task.task_groups.id,
@@ -1629,8 +2140,8 @@
                 const tasks = await loadTasks();
                 const initialChecklist = tasks.map(task => ({
                     id: task.task_id,
-                    title: task.title,
-                    description: task.description,
+                    title: task.task_title || task.title || '',
+                    description: task.task_description || task.description || '',
                     completed: false
                 }));
 
@@ -1746,6 +2257,8 @@
         }
         
         // Toggle task completion
+        let pendingTaskComplete = null;
+        
         async function toggleTask(taskId, completed) {
             console.log('Toggling task:', taskId, completed);
             
@@ -1756,11 +2269,30 @@
                 return;
             }
             
-            const updatedChecklist = currentChecklist.map(task => {
-                if (task.id === taskId) {
-                    return { ...task, completed: completed };
+            // If completing a task, show confirmation
+            if (completed) {
+                pendingTaskComplete = { taskId, task };
+                document.getElementById('taskCompleteTitle').textContent = 'Complete Task?';
+                document.getElementById('taskCompleteMessage').textContent = 
+                    `Mark "${task.title}" as completed? You can view completed tasks anytime by changing the filter to "Completed Tasks".`;
+                document.getElementById('taskCompleteOverlay').style.display = 'flex';
+                return;
+            }
+            
+            // If uncompleting, do it immediately
+            await performTaskToggle(taskId, completed);
+        }
+        
+        async function performTaskToggle(taskId, completed) {
+            // Find the task being toggled
+            const task = currentChecklist.find(t => t.id === taskId);
+            if (!task) return;
+            
+            const updatedChecklist = currentChecklist.map(t => {
+                if (t.id === taskId) {
+                    return { ...t, completed: completed };
                 }
-                return task;
+                return t;
             });
 
             await updateUserChecklist(updatedChecklist);
@@ -1804,6 +2336,24 @@
             }
         }
 
+        // Current filter state
+        let currentFilter = 'open';
+        let currentSearchTerm = '';
+        
+        // Filter tasks based on dropdown selection
+        function filterTasks() {
+            const filterValue = document.getElementById('taskFilter').value;
+            currentFilter = filterValue;
+            renderTasks();
+        }
+        
+        // Search tasks based on input
+        function searchTasks() {
+            const searchTerm = document.getElementById('taskSearch').value.toLowerCase();
+            currentSearchTerm = searchTerm;
+            renderTasks();
+        }
+        
         // Render tasks with group headers
         function renderTasks() {
             const taskList = document.getElementById('taskList');
@@ -1812,12 +2362,34 @@
                 taskList.innerHTML = '<div class="error">No tasks found. Please contact support.</div>';
                 return;
             }
+            
+            // Filter tasks based on current filter and search
+            let filteredTasks = currentChecklist.filter(task => {
+                // Apply status filter
+                if (currentFilter === 'open' && task.completed) return false;
+                if (currentFilter === 'completed' && !task.completed) return false;
+                
+                // Apply search filter
+                if (currentSearchTerm) {
+                    const searchableText = `${task.title} ${task.description}`.toLowerCase();
+                    if (!searchableText.includes(currentSearchTerm)) return false;
+                }
+                
+                return true;
+            });
+            
+            if (filteredTasks.length === 0) {
+                const filterText = currentFilter === 'open' ? 'open' : currentFilter === 'completed' ? 'completed' : '';
+                const searchText = currentSearchTerm ? ` matching "${currentSearchTerm}"` : '';
+                taskList.innerHTML = `<div style="text-align: center; padding: 40px; color: #6B7280;">No ${filterText} tasks found${searchText}.</div>`;
+                return;
+            }
 
             // Group tasks by their task group
             const taskGroups = {};
             const ungroupedTasks = [];
             
-            currentChecklist.forEach(task => {
+            filteredTasks.forEach(task => {
                 const groupInfo = getTaskGroupInfo(task.id);
                 if (groupInfo) {
                     const groupKey = `${groupInfo.id}_${groupInfo.name}`;
@@ -1877,6 +2449,11 @@
                         <div class="task-details">
                             <div class="task-title">${task.title}</div>
                             <div class="task-description">${task.description}</div>
+                            <button class="open-modal-btn" onclick="event.stopPropagation(); openInModal('${task.id}')" title="Open in floating window">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1898,9 +2475,11 @@
         function updateProgress() {
             const completed = currentChecklist.filter(task => task.completed).length;
             const total = currentChecklist.length;
-            const percentage = total > 0 ? (completed / total) * 100 : 0;
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
             
+            // Update horizontal progress bar in navbar
             document.getElementById('progressFill').style.width = percentage + '%';
+            document.getElementById('progressText').textContent = `${percentage}% Complete`;
         }
 
         // Track currently open task to manage state
@@ -1915,6 +2494,8 @@
                 console.error('No instructions found for task:', taskId);
                 return;
             }
+            
+            console.log('Instructions object:', instructions);
 
             // If this is the same task that's already open, do nothing
             if (currentOpenTaskId === taskId) {
@@ -1945,7 +2526,7 @@
             // Remove Quill toolbar elements
             cleanedContent = cleanedContent.replace(/<div class="ql-toolbar[^>]*>[\s\S]*?<\/div>/gi, '');
             
-            // Remove any toolbar-related elements
+            // Remove any toolbar-related elements but preserve iframes and embeds
             cleanedContent = cleanedContent.replace(/<span class="ql-[^"]*"[^>]*>[\s\S]*?<\/span>/gi, '');
             
             // Remove Quill editor containers but keep content
@@ -1954,15 +2535,23 @@
             // Remove any other Quill-specific classes and elements
             cleanedContent = cleanedContent.replace(/class="ql-[^"]*"/gi, '');
             
-            // Remove any empty div elements that might be left behind
-            cleanedContent = cleanedContent.replace(/<div[^>]*>\s*<\/div>/gi, '');
+            // DON'T remove divs that contain iframes or scripts (calendar embeds)
+            cleanedContent = cleanedContent.replace(/<div[^>]*>(\s*)<\/div>/gi, (match, content) => {
+                // Only remove truly empty divs
+                if (!content || content.trim() === '') {
+                    return '';
+                }
+                return match;
+            });
             
-            // Remove any script tags that might have been included accidentally
+            // Preserve calendar/booking scripts and iframes
+            // Only remove scripts that are specifically Quill-related
             cleanedContent = cleanedContent.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, (match) => {
-                // Keep external scripts but remove inline Quill scripts
+                // Remove only Quill-specific scripts
                 if (match.includes('quill') || match.includes('ql-')) {
                     return '';
                 }
+                // Keep all other scripts (including calendar embeds)
                 return match;
             });
             
@@ -1974,6 +2563,11 @@
             // Set the current open task
             currentOpenTaskId = taskId;
 
+            // Hide empty state and show content
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('instructionsContent').style.display = 'block';
+            document.getElementById('instructionsPanel').querySelector('.close-btn').style.display = 'block';
+
             // Get the instructions content container
             const instructionsContent = document.getElementById('instructionsContent');
             
@@ -1984,41 +2578,63 @@
             instructionsContent.className = 'instructions-content';
 
             let videoHtml = '';
-            if (instructions.video_url) {
-                // Convert YouTube/Vimeo URLs to embeddable format
-                let embedUrl = instructions.video_url;
-                if (embedUrl.includes('youtube.com/watch')) {
-                    embedUrl = embedUrl.replace('watch?v=', 'embed/');
-                } else if (embedUrl.includes('youtu.be/')) {
-                    embedUrl = embedUrl.replace('youtu.be/', 'youtube.com/embed/');
-                } else if (embedUrl.includes('vimeo.com/')) {
-                    embedUrl = embedUrl.replace('vimeo.com/', 'player.vimeo.com/video/');
-                }
+            if (instructions.video_url || instructions.videoUrl) {
+                const videoUrl = instructions.video_url || instructions.videoUrl;
+                const videoType = instructions.video_type || instructions.videoType;
                 
-                videoHtml = `
-                    <div class="video-container">
-                        <iframe src="${embedUrl}" allowfullscreen></iframe>
-                    </div>
-                `;
+                // Check if this is an uploaded video (from Supabase storage)
+                if (videoType === 'upload') {
+                    // For uploaded videos, use HTML5 video player
+                    videoHtml = `
+                        <div class="video-container">
+                            <video controls style="width: 100%; height: 100%;">
+                                <source src="${videoUrl}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                    `;
+                } else {
+                    // For URL videos, convert YouTube/Vimeo URLs to embeddable format
+                    let embedUrl = videoUrl;
+                    if (embedUrl.includes('youtube.com/watch')) {
+                        embedUrl = embedUrl.replace('watch?v=', 'embed/');
+                    } else if (embedUrl.includes('youtu.be/')) {
+                        embedUrl = embedUrl.replace('youtu.be/', 'youtube.com/embed/');
+                    } else if (embedUrl.includes('vimeo.com/')) {
+                        embedUrl = embedUrl.replace('vimeo.com/', 'player.vimeo.com/video/');
+                    }
+                    
+                    videoHtml = `
+                        <div class="video-container">
+                            <iframe src="${embedUrl}" allowfullscreen></iframe>
+                        </div>
+                    `;
+                }
             }
 
             // Clean the instruction content from any Quill editor artifacts
-            const cleanContent = cleanQuillContent(instructions.content);
+            const cleanContent = cleanQuillContent(instructions.content || '');
             
-            // Add form embed if present
+            // Add form embed if present (check both field names)
             let formEmbedHtml = '';
-            if (instructions.form_embed_code) {
-                formEmbedHtml = `<div style="margin: 20px 0;">${instructions.form_embed_code}</div>`;
+            const embedCode = instructions.form_embed_code || instructions.formEmbedCode;
+            if (embedCode) {
+                console.log('Found embed code for task:', taskId);
+                console.log('Embed code:', embedCode);
+                // Don't escape the HTML - it needs to be rendered as-is
+                formEmbedHtml = `<div class="calendar-embed" style="margin: 20px 0; min-height: 500px;">${embedCode}</div>`;
+            } else {
+                console.log('No embed code found for task:', taskId);
             }
             
-            // Create fresh HTML content - Order: Title, Content, Video, then Form
+            // Create fresh HTML content - Order: Title, Video (on top), Content, then Form
             const instructionsHtml = `
                 <div class="instructions-header">
                     <h2 class="instructions-title">${instructions.title}</h2>
                 </div>
-                <div class="instructions-body">
+                ${videoHtml ? `<div class="video-section" style="background: transparent;">${videoHtml}</div>` : ''}
+                <div class="instructions-body" style="max-height: calc(100vh - ${videoHtml ? '380px' : '180px'}); overflow-y: auto; background: white;">
                     ${cleanContent}
-                    ${videoHtml}
                     ${formEmbedHtml}
                 </div>
             `;
@@ -2028,9 +2644,20 @@
             
             // Enable form functionality for any forms in the content
             enableInstructionForms();
-
-            // Show the instructions panel
-            document.getElementById('container').classList.add('instructions-open');
+            
+            // Execute any calendar embed scripts after a short delay
+            setTimeout(() => {
+                const calendarEmbeds = instructionsContent.querySelectorAll('.calendar-embed script');
+                calendarEmbeds.forEach(script => {
+                    const newScript = document.createElement('script');
+                    if (script.src) {
+                        newScript.src = script.src;
+                    } else {
+                        newScript.textContent = script.textContent;
+                    }
+                    script.parentNode.replaceChild(newScript, script);
+                });
+            }, 100);
         }
 
         // Enable form functionality in instruction panels
@@ -2280,13 +2907,39 @@
             }, 4000);
         }
 
+        // Toggle task panel
+        function toggleTaskPanel() {
+            const panel = document.getElementById('taskPanel');
+            
+            if (panel.classList.contains('collapsed')) {
+                panel.classList.remove('collapsed');
+            } else {
+                panel.classList.add('collapsed');
+            }
+        }
+        
+        // Toggle user dropdown
+        function toggleUserDropdown() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('active');
+        }
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.user-menu')) {
+                document.getElementById('userDropdown')?.classList.remove('active');
+            }
+        });
+        
         // Close instructions
         function closeInstructions() {
-            // Remove the instructions-open class
-            document.getElementById('container').classList.remove('instructions-open');
-            
             // Clear the current open task
             currentOpenTaskId = null;
+            
+            // Show empty state and hide content
+            document.getElementById('emptyState').style.display = 'block';
+            document.getElementById('instructionsContent').style.display = 'none';
+            document.getElementById('instructionsPanel').querySelector('.close-btn').style.display = 'none';
             
             // Clear the instructions content completely
             const instructionsContent = document.getElementById('instructionsContent');
@@ -2304,6 +2957,54 @@
             taskList.innerHTML = `<div class="error">${message}</div>`;
         }
 
+        // Open task in floating modal (sends message to parent window)
+        function openInModal(taskId) {
+            console.log('Opening task in modal:', taskId);
+            
+            const instructions = taskInstructions[taskId];
+            if (!instructions) {
+                console.error('No instructions found for task:', taskId);
+                return;
+            }
+            
+            const task = currentChecklist.find(t => t.id === taskId);
+            if (!task) {
+                console.error('Task not found:', taskId);
+                return;
+            }
+            
+            // Send message to parent window (HighLevel)
+            window.parent.postMessage({
+                source: 'onboarding-app',
+                action: 'openTaskModal',
+                taskId: taskId,
+                taskTitle: task.title,
+                videoUrl: instructions.video_url || instructions.videoUrl,
+                videoType: instructions.video_type || instructions.videoType,
+                instructions: instructions.content,
+                embedCode: instructions.form_embed_code || instructions.formEmbedCode
+            }, '*');
+            
+            console.log('Message sent to parent window');
+        }
+        
+        // Listen for messages from parent window
+        window.addEventListener('message', function(event) {
+            // Handle task completion from modal
+            if (event.data && event.data.action === 'taskCompleted') {
+                const taskId = event.data.taskId;
+                if (taskId) {
+                    // Mark task as complete
+                    performTaskToggle(taskId, true);
+                }
+            }
+            
+            // Handle modal closed event
+            if (event.data && event.data.action === 'modalClosed') {
+                console.log('Modal was closed');
+            }
+        });
+        
         // Initialize application
         async function init() {
             try {
@@ -2334,16 +3035,16 @@
                             // Update existing task with latest database info, keep completion status
                             return {
                                 id: dbTask.task_id,
-                                title: dbTask.title,  // Always use latest from database
-                                description: dbTask.description,  // Always use latest from database
+                                title: dbTask.task_title || dbTask.title || '',  // Use task_title from database
+                                description: dbTask.task_description || dbTask.description || '',  // Use task_description from database
                                 completed: existingUserTask.completed  // Preserve user's completion status
                             };
                         } else {
                             // New task from database
                             return {
                                 id: dbTask.task_id,
-                                title: dbTask.title,
-                                description: dbTask.description,
+                                title: dbTask.task_title || dbTask.title || '',
+                                description: dbTask.task_description || dbTask.description || '',
                                 completed: false
                             };
                         }
@@ -2483,16 +3184,16 @@
                             // Update existing task with latest database info, keep completion status
                             return {
                                 id: dbTask.task_id,
-                                title: dbTask.title,
-                                description: dbTask.description,
+                                title: dbTask.task_title || dbTask.title || '',
+                                description: dbTask.task_description || dbTask.description || '',
                                 completed: existingUserTask.completed
                             };
                         } else {
                             // New task from database
                             return {
                                 id: dbTask.task_id,
-                                title: dbTask.title,
-                                description: dbTask.description,
+                                title: dbTask.task_title || dbTask.title || '',
+                                description: dbTask.task_description || dbTask.description || '',
                                 completed: false
                             };
                         }
@@ -2509,8 +3210,14 @@
                     taskInstructions[task.task_id] = {
                         title: task.instruction_title,
                         content: task.instruction_content,
-                        videoUrl: task.video_url,
-                        formEmbedCode: task.form_embed_code
+                        video_url: task.video_url,
+                        video_type: task.video_type,
+                        form_embed_code: task.form_embed_code,
+                        groupInfo: task.task_groups ? {
+                            id: task.task_groups?.id,
+                            name: task.task_groups?.group_name,
+                            display_order: task.task_groups?.display_order
+                        } : null
                     };
                 });
                 
@@ -2675,23 +3382,18 @@
             const fullName = [user.first_name, user.last_name].filter(n => n).join(' ');
             const welcomeMessage = `Welcome ${fullName}!`;
             
-            // Update welcome elements
-            document.getElementById('welcomeMessage').textContent = welcomeMessage;
+            // Update navbar user display
+            const userInitials = (user.first_name[0] + (user.last_name ? user.last_name[0] : '')).toUpperCase();
+            const userName = user.first_name || 'Guest';
             
-            // Update company info
-            if (user.company_name) {
-                document.getElementById('companyInfo').textContent = user.company_name;
-            }
+            document.getElementById('userInitials').textContent = userInitials;
+            document.getElementById('userName').textContent = userName;
             
-            // Update email info  
-            document.getElementById('emailInfo').textContent = user.email;
+            // Update dropdown info
+            document.getElementById('dropdownUserName').textContent = fullName;
+            document.getElementById('dropdownUserEmail').textContent = user.email;
+            document.getElementById('dropdownCompany').textContent = user.company_name || '';
             
-            // Update location info
-            document.getElementById('locationInfo').textContent = `Location: ${user.location_id}`;
-            
-            // Show personalized welcome and hide default header
-            document.getElementById('userWelcome').style.display = 'block';
-            document.getElementById('defaultHeader').style.display = 'none';
         }
         
         // Check and show welcome for existing users
@@ -2701,12 +3403,32 @@
             }
         }
 
+        // Task completion confirmation functions
+        async function confirmTaskComplete() {
+            if (!pendingTaskComplete) return;
+            
+            document.getElementById('taskCompleteOverlay').style.display = 'none';
+            await performTaskToggle(pendingTaskComplete.taskId, true);
+            pendingTaskComplete = null;
+        }
+        
+        function cancelTaskComplete() {
+            document.getElementById('taskCompleteOverlay').style.display = 'none';
+            pendingTaskComplete = null;
+        }
+        
         // Modal click handlers
         document.addEventListener('click', function(event) {
             // Close edit profile modal when clicking outside
             const editProfileOverlay = document.getElementById('editProfileOverlay');
             if (event.target === editProfileOverlay) {
                 closeEditProfileModal();
+            }
+            
+            // Close task complete modal when clicking outside
+            const taskCompleteOverlay = document.getElementById('taskCompleteOverlay');
+            if (event.target === taskCompleteOverlay) {
+                cancelTaskComplete();
             }
         });
 
