@@ -84,19 +84,17 @@
         }
 
         .streak-counter {
-            position: fixed;
-            top: 80px; /* Move below navbar */
-            right: 20px;
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             color: white;
-            padding: 10px 20px;
-            border-radius: 30px;
+            padding: 6px 12px;
+            border-radius: 20px;
             font-weight: bold;
             display: flex;
             align-items: center;
-            gap: 8px;
-            z-index: 100;
+            gap: 6px;
             transition: all 0.3s ease;
+            font-size: 13px;
+            margin-left: 12px;
         }
 
         .streak-counter.active {
@@ -104,7 +102,7 @@
         }
 
         .streak-counter .streak-icon {
-            font-size: 20px;
+            font-size: 16px;
         }
 
         .milestone-notification {
@@ -1495,6 +1493,10 @@
                         <div class="progress-fill-horizontal" id="progressFill"></div>
                     </div>
                     <span class="progress-text" id="progressText">0% Complete</span>
+                    <div class="streak-counter" id="streakCounter" style="display: none;">
+                        <span class="streak-icon">🔥</span>
+                        <span class="streak-text" id="streakText">0 Day Streak</span>
+                    </div>
                 </div>
             </div>
             <div class="nav-right">
@@ -2457,12 +2459,7 @@
 
             let html = '';
             
-            // Render ungrouped tasks first
-            if (ungroupedTasks.length > 0) {
-                html += ungroupedTasks.map(task => renderTaskItem(task)).join('');
-            }
-            
-            // Render grouped tasks with headers
+            // Sort and render grouped tasks first with headers
             Object.values(taskGroups)
                 .sort((a, b) => (a.info.display_order || 0) - (b.info.display_order || 0))
                 .forEach(group => {
@@ -2470,6 +2467,7 @@
                     const totalCount = group.tasks.length;
                     const isCompleted = completedCount === totalCount;
                     
+                    // Always show group header first
                     html += `
                         <div class="task-group-header ${isCompleted ? 'completed' : ''}">
                             <div class="task-group-title">
@@ -2482,8 +2480,14 @@
                         </div>
                     `;
                     
+                    // Then render all tasks in this group
                     html += group.tasks.map(task => renderTaskItem(task)).join('');
                 });
+            
+            // Render ungrouped tasks last (without a header)
+            if (ungroupedTasks.length > 0) {
+                html += ungroupedTasks.map(task => renderTaskItem(task)).join('');
+            }
 
             taskList.innerHTML = html;
             updateProgress();
