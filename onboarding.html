@@ -154,25 +154,6 @@
             transition: all 0.3s ease;
         }
         
-        /* Modal Mode - Hide sidebar, full width instructions */
-        body.modal-mode .task-panel {
-            display: none;
-        }
-        
-        body.modal-mode .main-container {
-            margin-top: 0;
-            height: 100vh;
-        }
-        
-        body.modal-mode .top-navbar {
-            display: none;
-        }
-        
-        body.modal-mode .instructions-panel {
-            flex: 1;
-            width: 100%;
-            padding: 0;
-        }
         
         .main-container.instructions-open .instructions-panel {
             flex: 1;
@@ -746,6 +727,8 @@
             align-items: center;
             justify-content: center;
             transition: all 0.2s;
+            font-size: 18px;
+            font-weight: bold;
         }
         
         .task-nav-btn:hover:not(:disabled) {
@@ -997,31 +980,6 @@
             font-weight: 500;
         }
 
-        /* Modal responsive adjustments */
-        @media (max-width: 600px) {
-            body.modal-mode .instructions-header {
-                flex-direction: column;
-                gap: 12px;
-                text-align: center;
-            }
-            
-            body.modal-mode .instructions-title {
-                font-size: 20px;
-            }
-            
-            body.modal-mode .video-container iframe,
-            body.modal-mode .video-container video {
-                aspect-ratio: 16 / 9;
-                height: auto;
-                max-height: 250px;
-            }
-            
-            body.modal-mode .complete-task-btn {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-        
         @media (max-width: 768px) {
             .container {
                 width: 95%;
@@ -2770,16 +2728,12 @@
                 <div class="instructions-header">
                     <h2 class="instructions-title">${instructions.title}</h2>
                     <div class="task-navigation">
-                        <button class="task-nav-btn" onclick="navigateTask('prev')" ${!hasPrev ? 'disabled' : ''}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-                            </svg>
+                        <button class="task-nav-btn" onclick="navigateTask('prev')" ${!hasPrev ? 'disabled' : ''} title="Previous task">
+                            ←
                         </button>
                         <span class="task-counter">${currentIndex + 1} / ${totalTasks}</span>
-                        <button class="task-nav-btn" onclick="navigateTask('next')" ${!hasNext ? 'disabled' : ''}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-                            </svg>
+                        <button class="task-nav-btn" onclick="navigateTask('next')" ${!hasNext ? 'disabled' : ''} title="Next task">
+                            →
                         </button>
                     </div>
                 </div>
@@ -2787,10 +2741,7 @@
                 ${!task.completed ? `
                     <div class="complete-task-section">
                         <button class="complete-task-btn" onclick="completeAndAdvance()">
-                            <svg viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                            </svg>
-                            Complete Task
+                            ✓ Complete Task
                         </button>
                     </div>
                 ` : ''}
@@ -3191,18 +3142,12 @@
                 // Show personalized welcome if profile is completed
                 checkExistingUserWelcome();
                 
-                // Check for modal mode and auto-open first incomplete task
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('modal') === 'true' || window.location !== window.parent.location) {
-                    document.body.classList.add('modal-mode');
-                    
-                    // Find and show first incomplete task
-                    const firstIncompleteTask = currentChecklist.find(t => !t.completed);
-                    if (firstIncompleteTask) {
-                        setTimeout(() => {
-                            showInstructions(firstIncompleteTask.id);
-                        }, 500);
-                    }
+                // Auto-open first incomplete task for better UX
+                const firstIncompleteTask = currentChecklist.find(t => !t.completed);
+                if (firstIncompleteTask) {
+                    setTimeout(() => {
+                        showInstructions(firstIncompleteTask.id);
+                    }, 500);
                 }
                 
             } catch (error) {
