@@ -1006,6 +1006,58 @@
             transition: all 0.2s;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
+        
+        /* Deep Link Button Styles */
+        .deep-link-btn {
+            background: #7C3AED;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-left: 8px;
+        }
+        
+        .deep-link-btn:hover {
+            background: #6D28D9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .deep-link-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+        
+        /* Notification Animations */
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
 
         .expand-video-btn:hover {
             background: #2563EB;
@@ -2012,6 +2064,17 @@
         let currentStreak = 0;
         let lastCompletionDate = null;
         let completionSounds = [];
+        
+        // Deep Link Environment Detection
+        let highLevelEnvironment = {
+            baseUrl: null,
+            locationId: null,
+            fullUrl: null,
+            detected: false
+        };
+        
+        let activeDeepLinks = {}; // Store active deep links for tasks
+        let pendingDeepLinkPath = null; // Store deep link path to open after loading
 
         // Fallback tasks in case database is empty
         const fallbackTasks = [
@@ -2527,6 +2590,248 @@
             }
         }
 
+        // Detect HighLevel Environment
+        function detectHighLevelEnvironment() {
+            try {
+                let parentUrl = null;
+                
+                // Try to get parent window URL
+                if (window.parent && window.parent !== window) {
+                    try {
+                        parentUrl = window.parent.location.href;
+                    } catch (e) {
+                        console.log('Cross-origin restriction, trying alternative detection...');
+                    }
+                }
+                
+                // Fallback: Check referrer
+                if (!parentUrl && document.referrer) {
+                    parentUrl = document.referrer;
+                }
+                
+                // Fallback: Check current URL
+                if (!parentUrl && window.location.href.includes('/location/')) {
+                    parentUrl = window.location.href;
+                }
+                
+                // Check URL parameters for deep link path
+                const urlParams = new URLSearchParams(window.location.search);
+                const deepLinkPath = urlParams.get('deeplink') || urlParams.get('path');
+                if (deepLinkPath) {
+                    pendingDeepLinkPath = deepLinkPath;
+                    console.log('Deep link path detected:', deepLinkPath);
+                }
+                
+                if (parentUrl) {
+                    // Parse HighLevel URL structure
+                    const urlMatch = parentUrl.match(/^(https?:\/\/[^\/]+).*\/location\/([a-zA-Z0-9]+)/);
+                    if (urlMatch) {
+                        highLevelEnvironment.baseUrl = urlMatch[1];
+                        highLevelEnvironment.locationId = urlMatch[2];
+                        highLevelEnvironment.fullUrl = parentUrl;
+                        highLevelEnvironment.detected = true;
+                        
+                        console.log('HighLevel environment detected:', highLevelEnvironment);
+                        
+                        // Check if we're on a deep link path
+                        const pathMatch = parentUrl.match(/\/location\/[^\/]+\/(task\/[^\/\?#]+)/);
+                        if (pathMatch && !pendingDeepLinkPath) {
+                            pendingDeepLinkPath = pathMatch[1];
+                            console.log('Deep link path from parent URL:', pendingDeepLinkPath);
+                        }
+                        
+                        return true;
+                    }
+                }
+                
+                return false;
+            } catch (error) {
+                console.error('Error detecting HighLevel environment:', error);
+                return false;
+            }
+        }
+        
+        // Load active deep links for tasks
+        async function loadActiveDeepLinks() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('deep_links')
+                    .select('task_id, custom_path')
+                    .eq('is_active', true);
+                
+                if (error) {
+                    console.error('Error loading deep links:', error);
+                    return;
+                }
+                
+                // Create a map of task_id to custom_path
+                activeDeepLinks = {};
+                if (data && data.length > 0) {
+                    data.forEach(link => {
+                        activeDeepLinks[link.task_id] = link.custom_path;
+                    });
+                    console.log('Active deep links loaded:', activeDeepLinks);
+                }
+            } catch (error) {
+                console.error('Error in loadActiveDeepLinks:', error);
+            }
+        }
+        
+        // Open task by deep link path
+        async function openTaskByDeepLink(customPath) {
+            try {
+                // Remove leading slash if present
+                customPath = customPath.replace(/^\/+/, '');
+                
+                console.log('Opening task by deep link:', customPath);
+                
+                // Find the task associated with this deep link
+                const { data, error } = await supabaseClient
+                    .from('deep_links')
+                    .select('task_id')
+                    .eq('custom_path', customPath)
+                    .eq('is_active', true)
+                    .single();
+                
+                if (error || !data) {
+                    console.error('Deep link not found or inactive:', customPath);
+                    return false;
+                }
+                
+                const taskId = data.task_id;
+                
+                // Find the task in the current checklist
+                const task = currentChecklist.find(t => t.id === taskId);
+                if (task) {
+                    // Open the task instructions
+                    showInstructions(taskId);
+                    
+                    // Track deep link click
+                    trackDeepLinkClick(customPath);
+                    
+                    return true;
+                } else {
+                    console.error('Task not found in current checklist:', taskId);
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error opening task by deep link:', error);
+                return false;
+            }
+        }
+        
+        // Track deep link click
+        async function trackDeepLinkClick(customPath) {
+            try {
+                // Increment click count using the SQL function
+                const { error } = await supabaseClient
+                    .rpc('increment_deep_link_clicks', {
+                        link_id: customPath
+                    });
+                
+                if (error) {
+                    // Try alternative method - direct update
+                    await supabaseClient
+                        .from('deep_links')
+                        .update({ 
+                            click_count: supabaseClient.raw('click_count + 1')
+                        })
+                        .eq('custom_path', customPath);
+                }
+            } catch (error) {
+                console.error('Error tracking deep link click:', error);
+            }
+        }
+        
+        // Create deep link button for task
+        function createDeepLinkButton(taskId) {
+            const customPath = activeDeepLinks[taskId];
+            if (!customPath || !highLevelEnvironment.detected) {
+                return ''; // No deep link or environment not detected
+            }
+            
+            const fullUrl = `${highLevelEnvironment.baseUrl}/v2/location/${highLevelEnvironment.locationId}/${customPath}`;
+            
+            return `
+                <button class="deep-link-btn" onclick="copyTaskDeepLink('${taskId}', '${customPath}')" title="Copy deep link">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                    Get Link
+                </button>
+            `;
+        }
+        
+        // Copy task deep link to clipboard
+        async function copyTaskDeepLink(taskId, customPath) {
+            if (!highLevelEnvironment.detected) {
+                showNotification('Environment not detected. Deep links unavailable.', 'error');
+                return;
+            }
+            
+            const fullUrl = `${highLevelEnvironment.baseUrl}/v2/location/${highLevelEnvironment.locationId}/${customPath}`;
+            
+            try {
+                // Update parent window URL using History API
+                if (window.parent && window.parent !== window) {
+                    try {
+                        window.parent.history.pushState(null, '', fullUrl);
+                    } catch (e) {
+                        console.log('Cannot update parent URL:', e);
+                    }
+                }
+                
+                // Copy to clipboard
+                await navigator.clipboard.writeText(fullUrl);
+                
+                // Track the click
+                trackDeepLinkClick(customPath);
+                
+                // Show success notification with the URL
+                showNotification(`Deep link copied!<br><small>${fullUrl}</small>`, 'success');
+            } catch (error) {
+                // Fallback copy method
+                const textarea = document.createElement('textarea');
+                textarea.value = fullUrl;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                
+                showNotification(`Deep link copied!<br><small>${fullUrl}</small>`, 'success');
+            }
+        }
+        
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#10B981' : type === 'error' ? '#EF4444' : '#3B82F6'};
+                color: white;
+                padding: 16px 24px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                z-index: 10000;
+                max-width: 400px;
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 5000);
+        }
+        
         // Update user checklist
         async function updateUserChecklist(checklist) {
             try {
@@ -3196,6 +3501,7 @@
                                     </svg>
                                     Expand Video
                                 </button>
+                                ${createDeepLinkButton(taskId)}
                             </div>
                         </div>
                     `;
@@ -3222,6 +3528,7 @@
                                     </svg>
                                     Expand Video
                                 </button>
+                                ${createDeepLinkButton(taskId)}
                             </div>
                         </div>
                     `;
@@ -3599,6 +3906,9 @@
         // Initialize application
         async function init() {
             try {
+                // Detect HighLevel environment first
+                detectHighLevelEnvironment();
+                
                 const params = getUrlParams();
                 console.log('URL parameters:', params);
 
@@ -3607,8 +3917,13 @@
                     return;
                 }
 
-                // Load user and tasks
-                currentUser = await loadUser(params.email, params.locationId, params.group);
+                // Load user, tasks, and deep links in parallel
+                const [user, deepLinks] = await Promise.all([
+                    loadUser(params.email, params.locationId, params.group),
+                    loadActiveDeepLinks()
+                ]);
+                
+                currentUser = user;
                 
                 // Load fresh tasks and merge with user's checklist
                 const dbTasks = await loadTasks();
@@ -3669,12 +3984,27 @@
                 // Show personalized welcome if profile is completed
                 checkExistingUserWelcome();
                 
-                // Auto-open first incomplete task for better UX
-                const firstIncompleteTask = currentChecklist.find(t => !t.completed);
-                if (firstIncompleteTask) {
-                    setTimeout(() => {
-                        showInstructions(firstIncompleteTask.id);
+                // Check for pending deep link
+                if (pendingDeepLinkPath) {
+                    console.log('Processing pending deep link:', pendingDeepLinkPath);
+                    setTimeout(async () => {
+                        const opened = await openTaskByDeepLink(pendingDeepLinkPath);
+                        if (!opened) {
+                            // Fallback to first incomplete task
+                            const firstIncompleteTask = currentChecklist.find(t => !t.completed);
+                            if (firstIncompleteTask) {
+                                showInstructions(firstIncompleteTask.id);
+                            }
+                        }
                     }, 500);
+                } else {
+                    // Auto-open first incomplete task for better UX
+                    const firstIncompleteTask = currentChecklist.find(t => !t.completed);
+                    if (firstIncompleteTask) {
+                        setTimeout(() => {
+                            showInstructions(firstIncompleteTask.id);
+                        }, 500);
+                    }
                 }
                 
             } catch (error) {
