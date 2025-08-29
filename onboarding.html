@@ -871,6 +871,7 @@
 
         .video-container {
             position: relative;
+            cursor: pointer;
         }
 
         .video-container iframe,
@@ -880,7 +881,104 @@
             max-height: 70vh;
             border: none;
             border-radius: 12px;
-            background: white;
+            background: #000;
+        }
+
+        /* Custom Play Overlay */
+        .video-play-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .video-play-overlay:hover {
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .video-play-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .play-button {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s;
+        }
+
+        .video-play-overlay:hover .play-button {
+            transform: scale(1.1);
+        }
+
+        .play-button svg {
+            width: 30px;
+            height: 30px;
+            fill: #1F2937;
+            margin-left: 4px;
+        }
+
+        .pause-button svg {
+            margin-left: 0;
+        }
+
+        /* Video Controls Bar */
+        .video-custom-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .video-container:hover .video-custom-controls,
+        .video-custom-controls.visible {
+            opacity: 1;
+        }
+
+        .video-progress-bar {
+            flex: 1;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .video-progress {
+            height: 100%;
+            background: #3B82F6;
+            border-radius: 2px;
+            width: 0%;
+            position: relative;
+        }
+
+        .video-time {
+            color: white;
+            font-size: 12px;
+            min-width: 80px;
+            text-align: center;
         }
 
         .video-controls {
@@ -2763,6 +2861,86 @@
             return cleanedContent.trim();
         }
 
+        // Toggle video play/pause
+        function toggleVideoPlay(taskId) {
+            const video = document.getElementById(`task-video-${taskId}`);
+            const overlay = document.getElementById(`play-overlay-${taskId}`);
+            const controls = document.getElementById(`video-controls-${taskId}`);
+            
+            if (!video) return;
+            
+            if (video.paused) {
+                video.play();
+                overlay.classList.add('hidden');
+                controls.classList.add('visible');
+                
+                // Setup video progress tracking
+                setupVideoProgress(taskId);
+            } else {
+                video.pause();
+                overlay.classList.remove('hidden');
+                
+                // Update play button to show play icon
+                const playButton = overlay.querySelector('.play-button svg');
+                if (playButton) {
+                    playButton.innerHTML = '<path d="M8 5v14l11-7z"/>';
+                }
+            }
+        }
+        
+        // Setup video progress tracking
+        function setupVideoProgress(taskId) {
+            const video = document.getElementById(`task-video-${taskId}`);
+            const progressBar = document.getElementById(`video-progress-${taskId}`);
+            const timeDisplay = document.getElementById(`video-time-${taskId}`);
+            
+            if (!video) return;
+            
+            // Update progress bar
+            video.addEventListener('timeupdate', function() {
+                const progress = (video.currentTime / video.duration) * 100;
+                if (progressBar) {
+                    progressBar.style.width = progress + '%';
+                }
+                
+                // Update time display
+                if (timeDisplay) {
+                    const currentTime = formatTime(video.currentTime);
+                    const duration = formatTime(video.duration);
+                    timeDisplay.textContent = `${currentTime} / ${duration}`;
+                }
+            });
+            
+            // Handle video ended
+            video.addEventListener('ended', function() {
+                const overlay = document.getElementById(`play-overlay-${taskId}`);
+                if (overlay) {
+                    overlay.classList.remove('hidden');
+                }
+            });
+        }
+        
+        // Seek video on progress bar click
+        function seekVideo(event, taskId) {
+            event.stopPropagation();
+            const video = document.getElementById(`task-video-${taskId}`);
+            const progressBar = event.currentTarget;
+            
+            if (!video || !progressBar) return;
+            
+            const rect = progressBar.getBoundingClientRect();
+            const pos = (event.clientX - rect.left) / rect.width;
+            video.currentTime = pos * video.duration;
+        }
+        
+        // Format time helper
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${minutes}:${secs.toString().padStart(2, '0')}`;
+        }
+        
         // Expand video to full modal
         function expandVideo(taskId) {
             const task = currentChecklist.find(t => t.id === taskId);
@@ -2784,28 +2962,64 @@
             const currentIndex = currentChecklist.findIndex(t => t.id === taskId);
             const totalTasks = currentChecklist.length;
             
-            expandedContainer.innerHTML = `
-                <div class="video-expanded-content">
-                    ${videoClone.outerHTML}
-                    <div class="video-controls-overlay">
-                        <div class="video-task-info">
-                            <div class="video-task-title">${task.title}</div>
-                            <div class="video-task-progress">Task ${currentIndex + 1} of ${totalTasks}</div>
+            // For regular videos, add custom controls to expanded view
+            if (videoElement.tagName === 'VIDEO') {
+                expandedContainer.innerHTML = `
+                    <div class="video-expanded-content" onclick="toggleVideoPlay('expanded')">
+                        ${videoClone.outerHTML}
+                        <div class="video-play-overlay" id="play-overlay-expanded">
+                            <div class="play-button">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                            </div>
                         </div>
-                        <button class="exit-expand-btn" onclick="exitExpandedVideo()">
-                            ← Back to Instructions
-                        </button>
+                        <div class="video-controls-overlay">
+                            <div class="video-task-info">
+                                <div class="video-task-title">${task.title}</div>
+                                <div class="video-task-progress">Task ${currentIndex + 1} of ${totalTasks}</div>
+                            </div>
+                            <button class="exit-expand-btn" onclick="exitExpandedVideo()">
+                                ← Back to Instructions
+                            </button>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+                
+                // Update the cloned video ID
+                const expandedVideo = expandedContainer.querySelector('video');
+                if (expandedVideo) {
+                    expandedVideo.id = 'task-video-expanded';
+                    
+                    // Copy current time from original video
+                    expandedVideo.currentTime = videoElement.currentTime;
+                    
+                    // Auto-play if original was playing
+                    if (!videoElement.paused) {
+                        expandedVideo.play();
+                        const overlay = expandedContainer.querySelector('#play-overlay-expanded');
+                        if (overlay) overlay.classList.add('hidden');
+                    }
+                }
+            } else {
+                // For iframes, use standard controls
+                expandedContainer.innerHTML = `
+                    <div class="video-expanded-content">
+                        ${videoClone.outerHTML}
+                        <div class="video-controls-overlay">
+                            <div class="video-task-info">
+                                <div class="video-task-title">${task.title}</div>
+                                <div class="video-task-progress">Task ${currentIndex + 1} of ${totalTasks}</div>
+                            </div>
+                            <button class="exit-expand-btn" onclick="exitExpandedVideo()">
+                                ← Back to Instructions
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
             
             document.body.appendChild(expandedContainer);
-            
-            // If it's a video element, play it
-            const expandedVideo = document.getElementById('expanded-video');
-            if (expandedVideo && expandedVideo.tagName === 'VIDEO') {
-                expandedVideo.play();
-            }
         }
         
         // Exit expanded video mode
@@ -2896,14 +3110,27 @@
                 
                 // Check if this is an uploaded video (from Supabase storage)
                 if (videoType === 'upload') {
-                    // For uploaded videos, use HTML5 video player
+                    // For uploaded videos, use HTML5 video player with custom controls
                     videoHtml = `
                         <div class="video-wrapper">
-                            <div class="video-container">
-                                <video controls style="width: 100%; height: 100%;" id="task-video-${taskId}">
+                            <div class="video-container" onclick="toggleVideoPlay('${taskId}')">
+                                <video id="task-video-${taskId}" style="width: 100%; height: 100%;">
                                     <source src="${videoUrl}" type="video/mp4">
                                     Your browser does not support the video tag.
                                 </video>
+                                <div class="video-play-overlay" id="play-overlay-${taskId}">
+                                    <div class="play-button">
+                                        <svg viewBox="0 0 24 24">
+                                            <path d="M8 5v14l11-7z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="video-custom-controls" id="video-controls-${taskId}">
+                                    <div class="video-progress-bar" onclick="seekVideo(event, '${taskId}')">
+                                        <div class="video-progress" id="video-progress-${taskId}"></div>
+                                    </div>
+                                    <div class="video-time" id="video-time-${taskId}">0:00 / 0:00</div>
+                                </div>
                             </div>
                             <div class="video-controls">
                                 <button class="expand-video-btn" onclick="expandVideo('${taskId}')">
