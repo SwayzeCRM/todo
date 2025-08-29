@@ -2110,14 +2110,9 @@
         // Filter tasks based on user targeting
         function filterTasksForUser(tasks, user) {
             return tasks.filter(task => {
-                const targetType = task.target_type || 'all';
+                const targetType = task.target_type || 'groups'; // Default to groups
                 
-                // Show to all users
-                if (targetType === 'all') {
-                    return true;
-                }
-                
-                // Group-based targeting
+                // Group-based targeting (now required)
                 if (targetType === 'groups') {
                     const taskGroups = Array.isArray(task.target_groups) ? task.target_groups : [];
                     
@@ -3972,6 +3967,11 @@
 
                 if (!params.email || !params.locationId) {
                     showError('Missing required parameters. Please access this page through your DFY CRM dashboard.');
+                    return;
+                }
+
+                if (!params.group) {
+                    showError('Missing user group parameter. A user group is required to display tasks.');
                     return;
                 }
 

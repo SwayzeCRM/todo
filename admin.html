@@ -1667,7 +1667,6 @@
                     <label for="taskFilter" class="filter-label">Filter:</label>
                     <select id="taskFilter" class="task-filter" onchange="handleFilterChange()">
                         <option value="all">All Tasks</option>
-                        <option value="everyone">Everyone</option>
                         <option value="groups">Groups</option>
                         <option value="locations">Locations</option>
                         <option value="individuals">Individuals</option>
@@ -2006,8 +2005,7 @@
                     </div>
                     <div class="form-group">
                         <label for="firingRulesSelect">Applies To</label>
-                        <select id="firingRulesSelect" onchange="handleFiringRulesChange()" multiple style="height: 120px; width: 100%;">
-                            <option value="all" selected>All Users</option>
+                        <select id="firingRulesSelect" onchange="handleFiringRulesChange()" multiple style="height: 120px; width: 100%;" required>
                             <!-- Groups will be populated here -->
                         </select>
                         <small>Hold Ctrl (Cmd on Mac) to select multiple groups, or select "All Users" for everyone</small>
@@ -2274,8 +2272,7 @@
                     </div>
                     <div class="form-group">
                         <label for="sequenceAppliesTo">Applies To</label>
-                        <select id="sequenceAppliesTo" multiple style="height: 120px;" onchange="handleSequenceAppliesToChange()">
-                            <option value="all" selected>All Users</option>
+                        <select id="sequenceAppliesTo" multiple style="height: 120px;" onchange="handleSequenceAppliesToChange()" required>
                             <!-- User groups will be populated here -->
                         </select>
                         <small>Hold Ctrl (Cmd on Mac) to select multiple user groups, or select "All Users" for everyone</small>
@@ -3634,13 +3631,12 @@ Current Supabase limits:
         // Get task targeting indicator
         function getTaskIndicator(targetType, task) {
             const icons = {
-                'all': { class: 'everyone', label: 'Everyone' },
                 'groups': { class: 'groups', label: 'Groups' },
                 'locations': { class: 'locations', label: 'Locations' },
                 'individuals': { class: 'individuals', label: 'Users' }
             };
             
-            const icon = icons[targetType] || icons['all'];
+            const icon = icons[targetType] || icons['groups'];
             return `<span class="task-indicator ${icon.class}">
                         <span class="task-indicator-icon"></span>
                         ${icon.label}
@@ -3710,8 +3706,7 @@ Current Supabase limits:
                     
                     // First filter by target type
                     let matchesTargetType = false;
-                    if (filterValue === 'everyone') matchesTargetType = targetType === 'all';
-                    else if (filterValue === 'groups') matchesTargetType = targetType === 'groups';
+                    if (filterValue === 'groups') matchesTargetType = targetType === 'groups';
                     else if (filterValue === 'locations') matchesTargetType = targetType === 'locations';  
                     else if (filterValue === 'individuals') matchesTargetType = targetType === 'individuals';
                     else matchesTargetType = true;
@@ -7497,8 +7492,8 @@ Current Supabase limits:
                 if (error) throw error;
 
                 const select = document.getElementById('firingRulesSelect');
-                // Clear existing options except "All Users"
-                select.innerHTML = '<option value="all">All Users</option>';
+                // Clear existing options
+                select.innerHTML = '<option value="" disabled selected>Select User Groups</option>';
                 
                 if (groups && groups.length > 0) {
                     groups.forEach(group => {
@@ -8260,8 +8255,7 @@ Current Supabase limits:
                     <div class="form-group" style="margin-bottom: 20px;">
                         <label for="editTargetType" style="display: block; margin-bottom: 8px; font-weight: 600;">Who does this sequence apply to?</label>
                         <select id="editTargetType" required style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px;" onchange="toggleUserGroupSelection()">
-                            <option value="all">All Users</option>
-                            <option value="groups">Specific User Group</option>
+                            <option value="groups" selected>User Groups</option>
                             <option value="manual">Manual Task Assignment</option>
                         </select>
                     </div>
@@ -9126,7 +9120,8 @@ Current Supabase limits:
                     position: nextPosition,
                     task_group_id: groupId,
                     is_active: true,
-                    target_type: 'all'
+                    target_type: 'groups',
+                    target_groups: '[]'
                 };
                 
                 const { error } = await supabaseClient
