@@ -72,8 +72,7 @@ SELECT
     dl.created_at,
     dl.updated_at,
     ot.title as task_title,
-    ot.category as task_category,
-    ot.order_index as task_order
+    ot.position as task_order
 FROM deep_links dl
 LEFT JOIN onboarding_tasks ot ON dl.task_id = ot.id
 ORDER BY dl.created_at DESC;

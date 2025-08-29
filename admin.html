@@ -5282,7 +5282,7 @@ Current Supabase limits:
             try {
                 const { data, error } = await supabaseClient
                     .from('onboarding_tasks')
-                    .select('id, title, category')
+                    .select('id, title')
                     .order('position');
                 
                 if (error) throw error;
@@ -5290,28 +5290,13 @@ Current Supabase limits:
                 const select = document.getElementById('deepLinkTask');
                 select.innerHTML = '<option value="">Choose a task...</option>';
                 
-                // Group tasks by category
-                const grouped = {};
+                // Add tasks to dropdown (no grouping since we don't have categories)
                 data.forEach(task => {
-                    const category = task.category || 'Uncategorized';
-                    if (!grouped[category]) grouped[category] = [];
-                    grouped[category].push(task);
-                });
-                
-                // Add tasks to dropdown
-                Object.keys(grouped).forEach(category => {
-                    const optgroup = document.createElement('optgroup');
-                    optgroup.label = category;
-                    
-                    grouped[category].forEach(task => {
-                        const option = document.createElement('option');
-                        option.value = task.id;
-                        option.textContent = task.title;
-                        option.dataset.title = task.title;
-                        optgroup.appendChild(option);
-                    });
-                    
-                    select.appendChild(optgroup);
+                    const option = document.createElement('option');
+                    option.value = task.id;
+                    option.textContent = task.title;
+                    option.dataset.title = task.title;
+                    select.appendChild(option);
                 });
             } catch (error) {
                 console.error('Error loading tasks for deep links:', error);
