@@ -2812,21 +2812,20 @@ Current Supabase limits:
                 const updates = [];
                 
                 items.forEach((item, index) => {
-                    const taskId = parseInt(item.dataset.taskId);
+                    const taskId = item.dataset.taskId; // Don't parse as int - it's a UUID
                     console.log('Processing task item:', {
                         element: item,
                         datasetTaskId: item.dataset.taskId,
-                        parsedId: taskId,
-                        isValid: !isNaN(taskId) && taskId > 0
+                        position: index + 1
                     });
                     
-                    if (!isNaN(taskId) && taskId > 0) {
+                    if (taskId && taskId !== 'undefined' && taskId !== 'null') {
                         updates.push({
                             id: taskId,
                             position: index + 1
                         });
                     } else {
-                        console.warn('Invalid or zero task ID found, skipping:', item.dataset.taskId);
+                        console.warn('Invalid task ID found, skipping:', item.dataset.taskId);
                     }
                 });
                 
@@ -4496,8 +4495,8 @@ Current Supabase limits:
                     populateForm(task);
                 } else {
                     clearForm();
-                    // Load users for initial individual view
-                    loadIndividualUsers();
+                    // For new tasks, load user groups for the default user group view
+                    loadUserGroups();
                 }
             }, 100);
             
@@ -4642,12 +4641,28 @@ Current Supabase limits:
         async function saveTask(event) {
             event.preventDefault();
             
+            // Clear any previous field errors
+            clearFieldErrors();
+            
             if (!quillEditor) {
                 showError('Editor not initialized. Please try again.');
                 return;
             }
 
             try {
+                // Validate required fields
+                const title = document.getElementById('title').value.trim();
+                if (!title) {
+                    showFieldError('title', 'Task title is required');
+                    return;
+                }
+
+                const description = document.getElementById('description').value.trim();
+                if (!description) {
+                    showFieldError('description', 'Task description is required');
+                    return;
+                }
+
                 const showTaskTo = document.getElementById('showTaskTo').value;
                 let targetType, targetGroups, targetUsers, taskGroupId, dueDate;
                 
@@ -4655,7 +4670,7 @@ Current Supabase limits:
                     // Individual user task
                     const individualUserId = document.getElementById('individualUserSelect').value;
                     if (!individualUserId) {
-                        showError('Please select a user for this task');
+                        showFieldError('individualUserSelect', 'Please select a user for this task');
                         return;
                     }
                     
@@ -4672,7 +4687,7 @@ Current Supabase limits:
                     // User group task
                     const userGroupId = document.getElementById('userGroupSelect').value;
                     if (!userGroupId) {
-                        showError('Please select a user group');
+                        showFieldError('userGroupSelect', 'Please select a user group');
                         return;
                     }
                     
@@ -4860,6 +4875,7 @@ Current Supabase limits:
                 }
 
                 console.log('Task deleted successfully');
+                showSuccess('Task deleted successfully!');
                 
                 // Remove from local array and re-render
                 tasks = tasks.filter(t => t.id !== taskId);
@@ -4894,6 +4910,37 @@ Current Supabase limits:
             document.getElementById('messageArea').innerHTML = '';
         }
 
+        // Show field validation error
+        function showFieldError(fieldId, message) {
+            const field = document.getElementById(fieldId);
+            if (!field) return;
+            
+            // Remove any existing error styling
+            clearFieldErrors();
+            
+            // Add error styling to field
+            field.style.borderColor = '#ef4444';
+            field.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+            
+            // Show error message
+            showError(message);
+            
+            // Focus on the field
+            field.focus();
+            
+            // Scroll field into view
+            field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Clear field validation errors
+        function clearFieldErrors() {
+            const fields = document.querySelectorAll('input, select, textarea');
+            fields.forEach(field => {
+                field.style.borderColor = '';
+                field.style.boxShadow = '';
+            });
+        }
+
 
         // Initialize application
         async function init() {
@@ -4918,6 +4965,16 @@ Current Supabase limits:
                 
                 // Add form submit handler
                 document.getElementById('taskForm').addEventListener('submit', saveTask);
+                
+                // Add field event listeners to clear validation errors on input
+                const fieldsToWatch = ['title', 'description', 'individualUserSelect', 'userGroupSelect'];
+                fieldsToWatch.forEach(fieldId => {
+                    const field = document.getElementById(fieldId);
+                    if (field) {
+                        field.addEventListener('input', clearFieldErrors);
+                        field.addEventListener('change', clearFieldErrors);
+                    }
+                });
                 
                 console.log('Admin panel initialized successfully');
             } catch (error) {
@@ -5487,12 +5544,22 @@ Current Supabase limits:
         async function saveTaskGroupFromEditPanel(e) {
             e.preventDefault();
             
+            // Clear any previous field errors
+            clearFieldErrors();
+            
             try {
                 const groupId = document.getElementById('editTaskGroupId').value;
                 const userGroupId = document.getElementById('editTaskGroupUserGroup').value;
+                const groupName = document.getElementById('editTaskGroupName').value.trim();
                 
+                // Validate required fields
                 if (!userGroupId) {
-                    showError('Please select a user group. Task groups must belong to a user group.');
+                    showFieldError('editTaskGroupUserGroup', 'Please select a user group. Task groups must belong to a user group.');
+                    return;
+                }
+                
+                if (!groupName) {
+                    showFieldError('editTaskGroupName', 'Task group name is required');
                     return;
                 }
                 
@@ -8437,8 +8504,31 @@ Current Supabase limits:
         }
         
         // Edit task in group
-        function editTaskInGroup(taskId) {
-            showError('Task editing feature coming soon! For now, you can manage task assignments and order.');
+        async function editTaskInGroup(taskId) {
+            try {
+                // Load the task data
+                const { data: task, error } = await supabaseClient
+                    .from('onboarding_tasks')
+                    .select('*')
+                    .eq('id', taskId)
+                    .single();
+                
+                if (error) throw error;
+                if (!task) {
+                    showError('Task not found');
+                    return;
+                }
+                
+                // Close the manage tasks modal
+                cancelTaskGroupForm();
+                
+                // Open the task editing modal
+                showTaskModal(task);
+                
+            } catch (error) {
+                console.error('Error loading task for editing:', error);
+                showError('Failed to load task: ' + error.message);
+            }
         }
         
         // Reorder tasks alphabetically
@@ -8667,6 +8757,7 @@ Current Supabase limits:
             const url = atob(encodedUrl);
             navigator.clipboard.writeText(url).then(() => {
                 // Show success feedback
+                showSuccess('User group URL copied to clipboard!');
                 event.target.textContent = 'Copied!';
                 event.target.style.background = '#10b981';
                 setTimeout(() => {
@@ -8683,6 +8774,7 @@ Current Supabase limits:
                 textArea.select();
                 try {
                     document.execCommand('copy');
+                    showSuccess('User group URL copied to clipboard!');
                     event.target.textContent = 'Copied!';
                     event.target.style.background = '#10b981';
                     setTimeout(() => {
@@ -8691,7 +8783,7 @@ Current Supabase limits:
                     }, 2000);
                 } catch (err) {
                     console.error('Failed to copy URL:', err);
-                    alert('Failed to copy URL. Please copy manually.');
+                    showError('Failed to copy URL. Please copy manually.');
                 }
                 document.body.removeChild(textArea);
             });
