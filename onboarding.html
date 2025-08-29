@@ -3085,18 +3085,27 @@
         
         // Expand video to full modal
         function expandVideo(taskId) {
-            const task = currentChecklist.find(t => t.id === taskId);
-            if (!task) return;
+            try {
+                console.log('expandVideo called with taskId:', taskId);
+                
+                const task = currentChecklist.find(t => t.id === taskId);
+                if (!task) {
+                    console.error('Task not found for ID:', taskId);
+                    return;
+                }
+                
+                const videoElement = document.getElementById(`task-video-${taskId}`);
+                if (!videoElement) {
+                    console.error('Video element not found for ID:', `task-video-${taskId}`);
+                    return;
+                }
             
-            const videoElement = document.getElementById(`task-video-${taskId}`);
-            if (!videoElement) return;
+            // Store whether original video was playing (only for VIDEO elements)
+            const wasPlaying = videoElement.tagName === 'VIDEO' ? !videoElement.paused : false;
+            const currentTime = videoElement.tagName === 'VIDEO' ? videoElement.currentTime : 0;
             
-            // Store whether original video was playing
-            const wasPlaying = !videoElement.paused;
-            const currentTime = videoElement.currentTime;
-            
-            // Pause the original video
-            if (wasPlaying) {
+            // Pause the original video (only for VIDEO elements)
+            if (wasPlaying && videoElement.tagName === 'VIDEO') {
                 videoElement.pause();
             }
             
@@ -3167,6 +3176,9 @@
             }
             
             document.body.appendChild(expandedContainer);
+            } catch (error) {
+                console.error('Error expanding video:', error);
+            }
         }
         
         // Exit expanded video mode
