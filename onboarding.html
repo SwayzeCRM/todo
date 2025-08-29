@@ -4404,6 +4404,14 @@
             setTimeout(() => checkMilestones(), 500);
         }
 
+        // Make functions globally accessible for onclick handlers
+        window.expandVideo = expandVideo;
+        window.exitExpandedVideo = exitExpandedVideo;
+        window.toggleVideoPlay = toggleVideoPlay;
+        window.showInstructions = showInstructions;
+        window.completeTask = completeTask;
+        window.navigateTask = navigateTask;
+
         // Start the application
         document.addEventListener('DOMContentLoaded', () => {
             init();
