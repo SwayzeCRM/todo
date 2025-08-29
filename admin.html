@@ -4567,11 +4567,14 @@ Current Supabase limits:
                 position: data.position,
                 is_active: data.is_active !== undefined ? data.is_active : true,
                 target_type: data.target_type || 'all',
-                target_groups: data.target_groups || [],
-                target_locations: data.target_locations || [],
-                target_users: data.target_users || [],
                 due_date: data.due_date || null
             };
+            
+            // Add JSONB columns with proper defaults
+            // These should be arrays, not undefined
+            cleaned.target_groups = data.target_groups || [];
+            cleaned.target_users = data.target_users || [];
+            cleaned.target_locations = data.target_locations || [];
             
             // Only add task_group_id if it exists
             if (data.task_group_id !== undefined) {
