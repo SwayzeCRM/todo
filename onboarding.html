@@ -2685,33 +2685,39 @@
                 
                 console.log('Opening task by deep link:', customPath);
                 
-                // Find the task associated with this deep link
-                const { data, error } = await supabaseClient
+                // First, check if this deep link exists (for tracking)
+                const { data: deepLink, error: linkError } = await supabaseClient
                     .from('deep_links')
-                    .select('task_id')
+                    .select('id, title, description')
                     .eq('custom_path', customPath)
                     .eq('is_active', true)
                     .single();
                 
-                if (error || !data) {
-                    console.error('Deep link not found or inactive:', customPath);
+                if (linkError || !deepLink) {
+                    console.log('Deep link not found in database:', customPath);
                     return false;
                 }
                 
-                const taskId = data.task_id;
+                // Now find any task that contains this deep link in its instructions
+                // We'll search through current checklist for tasks containing this link
+                const deepLinkUrl = `${window.location.origin}/v2/location/${locationId}/${customPath}`;
+                const matchingTask = currentChecklist.find(task => {
+                    return task.instructions && (
+                        task.instructions.includes(customPath) || 
+                        task.instructions.includes(deepLinkUrl)
+                    );
+                });
                 
-                // Find the task in the current checklist
-                const task = currentChecklist.find(t => t.id === taskId);
-                if (task) {
+                if (matchingTask) {
                     // Open the task instructions
-                    showInstructions(taskId);
+                    showInstructions(matchingTask.id);
                     
                     // Track deep link click
                     trackDeepLinkClick(customPath);
                     
                     return true;
                 } else {
-                    console.error('Task not found in current checklist:', taskId);
+                    console.log('No task found containing this deep link');
                     return false;
                 }
             } catch (error) {
@@ -2723,10 +2729,10 @@
         // Track deep link click
         async function trackDeepLinkClick(customPath) {
             try {
-                // Increment click count using the SQL function
+                // Increment click count using the SQL function (updated to use path instead of id)
                 const { error } = await supabaseClient
                     .rpc('increment_deep_link_clicks', {
-                        link_id: customPath
+                        link_path: customPath
                     });
                 
                 if (error) {
@@ -3587,6 +3593,58 @@
             
             // Set the new content
             instructionsContent.innerHTML = instructionsHtml;
+            
+            // Add click event delegation for deep links within instructions
+            instructionsContent.addEventListener('click', async (e) => {
+                // Check if the clicked element is a link
+                const link = e.target.closest('a');
+                if (!link) return;
+                
+                const href = link.getAttribute('href');
+                if (!href) return;
+                
+                // Check if this is a deep link (contains /v2/location/)
+                if (href.includes('/v2/location/')) {
+                    e.preventDefault(); // Prevent default navigation
+                    
+                    // Extract the custom path from the URL
+                    const urlParts = href.split('/v2/location/');
+                    if (urlParts.length > 1) {
+                        // Get everything after the location ID
+                        const pathAfterLocation = urlParts[1];
+                        const pathParts = pathAfterLocation.split('/');
+                        
+                        // Remove the location ID to get the custom path
+                        if (pathParts.length > 1) {
+                            const customPath = pathParts.slice(1).join('/');
+                            console.log('Deep link clicked in instructions:', customPath);
+                            
+                            // Track the click
+                            try {
+                                await supabaseClient.rpc('increment_deep_link_clicks', {
+                                    link_path: customPath
+                                });
+                            } catch (err) {
+                                console.error('Error tracking deep link click:', err);
+                            }
+                            
+                            // Open the associated task
+                            const opened = await openTaskByDeepLink(customPath);
+                            if (!opened) {
+                                // If no task found, open the link in a new tab as fallback
+                                window.open(href, '_blank');
+                            }
+                        }
+                    }
+                } else if (href.startsWith('http://') || href.startsWith('https://')) {
+                    // External links open in new tab
+                    e.preventDefault();
+                    window.open(href, '_blank');
+                } else if (href.startsWith('#')) {
+                    // Internal anchors - let them work normally
+                    return;
+                }
+            });
             
             // Enable form functionality for any forms in the content
             enableInstructionForms();

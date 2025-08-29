@@ -1861,10 +1861,22 @@
 
                 <div class="form-group">
                     <label>Instruction Content (Rich Text Editor)</label>
+                    <div style="margin-bottom: 10px; display: flex; gap: 10px; align-items: center;">
+                        <label style="font-weight: normal; font-size: 14px;">Insert Deep Link:</label>
+                        <select id="deepLinkSelect" style="padding: 6px; border: 1px solid #e5e7eb; border-radius: 4px; flex: 1; max-width: 300px;">
+                            <option value="">Select a deep link to insert...</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary" onclick="insertDeepLinkToEditor()" style="padding: 6px 12px;">
+                            Insert Link
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="refreshDeepLinksList()" style="padding: 6px 12px;">
+                            Refresh
+                        </button>
+                    </div>
                     <div class="quill-container">
                         <div id="quillEditor"></div>
                     </div>
-                    <small style="color: #6B7280; display: block; margin-top: 5px;">Use the editor above to create detailed instructions with formatting, lists, and images</small>
+                    <small style="color: #6B7280; display: block; margin-top: 5px;">Use the editor above to create detailed instructions with formatting, lists, and images. You can insert deep links that will open specific content.</small>
                 </div>
 
                 <div class="form-group">
@@ -2045,7 +2057,7 @@
                 <table class="deep-links-table" id="deepLinksTable">
                     <thead>
                         <tr>
-                            <th>Task Name</th>
+                            <th>Title</th>
                             <th>Custom Path</th>
                             <th>Full URL</th>
                             <th>Status</th>
@@ -2071,11 +2083,11 @@
                     <input type="hidden" id="deepLinkId">
                     
                     <div class="form-group">
-                        <label for="deepLinkTask">Select Task</label>
-                        <select id="deepLinkTask" required onchange="suggestDeepLinkPath()">
-                            <option value="">Choose a task...</option>
-                        </select>
-                        <small>Select the task this deep link will open</small>
+                        <label for="deepLinkTitle">Title</label>
+                        <input type="text" id="deepLinkTitle" 
+                               placeholder="e.g., Welcome Video, Getting Started Guide" 
+                               required>
+                        <small>A descriptive title for this deep link</small>
                     </div>
                     
                     <div class="form-group">
@@ -2083,15 +2095,23 @@
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: #6B7280; font-family: monospace;">/</span>
                             <input type="text" id="deepLinkPath" 
-                                   placeholder="e.g., task/onboarding-video" 
+                                   placeholder="e.g., welcome-video, getting-started" 
                                    pattern="[a-z0-9\-/]+"
                                    required
                                    style="flex: 1;">
-                            <button type="button" class="btn btn-secondary" onclick="suggestDeepLinkPath()">
+                            <button type="button" class="btn btn-secondary" onclick="generatePathFromTitle()">
                                 Auto-Generate
                             </button>
                         </div>
                         <small>URL-friendly path (lowercase letters, numbers, hyphens, and slashes only)</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="deepLinkDescription">Description (Optional)</label>
+                        <textarea id="deepLinkDescription" 
+                                  placeholder="What does this deep link open? Any special notes?"
+                                  rows="3"></textarea>
+                        <small>Optional description to help remember what this link is for</small>
                     </div>
                     
                     <div class="form-group">
@@ -3997,11 +4017,94 @@ Current Supabase limits:
             
             // Add custom link handler
             setupCustomLinkHandler();
+            
+            // Load deep links for dropdown
+            loadDeepLinksForEditor();
 
             // Update preview on content change - removed as updatePreview is not needed
             // quillEditor.on('text-change', updatePreview);
             
             console.log('Quill editor initialized');
+        }
+        
+        // Load deep links into the editor dropdown
+        async function loadDeepLinksForEditor() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('deep_links')
+                    .select('id, title, custom_path')
+                    .eq('is_active', true)
+                    .order('title');
+                
+                if (error) throw error;
+                
+                const select = document.getElementById('deepLinkSelect');
+                select.innerHTML = '<option value="">Select a deep link to insert...</option>';
+                
+                if (data && data.length > 0) {
+                    data.forEach(link => {
+                        const option = document.createElement('option');
+                        option.value = JSON.stringify({
+                            id: link.id,
+                            title: link.title,
+                            path: link.custom_path
+                        });
+                        option.textContent = link.title;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading deep links for editor:', error);
+            }
+        }
+        
+        // Refresh deep links list
+        async function refreshDeepLinksList() {
+            await loadDeepLinksForEditor();
+            showMessage('Deep links list refreshed', 'success');
+        }
+        
+        // Insert selected deep link into editor
+        function insertDeepLinkToEditor() {
+            const select = document.getElementById('deepLinkSelect');
+            if (!select.value) {
+                showMessage('Please select a deep link to insert', 'error');
+                return;
+            }
+            
+            if (!quillEditor) {
+                showMessage('Editor not initialized', 'error');
+                return;
+            }
+            
+            try {
+                const linkData = JSON.parse(select.value);
+                const baseUrl = highLevelEnvironment.detected ? 
+                    `${highLevelEnvironment.baseUrl}/v2/location/${highLevelEnvironment.locationId}` : 
+                    'https://your-highlevel-url/v2/location/YOUR_LOCATION_ID';
+                
+                const fullUrl = `${baseUrl}/${linkData.path}`;
+                
+                // Get current selection or cursor position
+                const range = quillEditor.getSelection();
+                if (range) {
+                    // Insert link with title as text
+                    quillEditor.insertText(range.index, linkData.title, 'link', fullUrl);
+                    
+                    // Move cursor after the inserted link
+                    quillEditor.setSelection(range.index + linkData.title.length + 1);
+                    
+                    showMessage(`Deep link "${linkData.title}" inserted`, 'success');
+                    
+                    // Reset dropdown
+                    select.value = '';
+                } else {
+                    showMessage('Please place cursor in the editor where you want to insert the link', 'error');
+                }
+            } catch (error) {
+                console.error('Error inserting deep link:', error);
+                showMessage('Failed to insert deep link', 'error');
+            }
         }
 
         // Setup custom link handler for Quill
@@ -5250,7 +5353,7 @@ Current Supabase limits:
             document.getElementById('deepLinksPanel').style.display = 'block';
             detectHighLevelEnvironment();
             await loadDeepLinks();
-            await loadTasksForDeepLinks();
+            // No longer loading tasks since deep links are independent
         }
         
         // Close Deep Links Panel
@@ -5277,29 +5380,18 @@ Current Supabase limits:
             }
         }
         
-        // Load tasks for deep link dropdown
-        async function loadTasksForDeepLinks() {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('onboarding_tasks')
-                    .select('id, title')
-                    .order('position');
+        // Generate path from title
+        function generatePathFromTitle() {
+            const title = document.getElementById('deepLinkTitle').value;
+            if (title) {
+                const path = title.toLowerCase()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-')
+                    .trim();
                 
-                if (error) throw error;
-                
-                const select = document.getElementById('deepLinkTask');
-                select.innerHTML = '<option value="">Choose a task...</option>';
-                
-                // Add tasks to dropdown (no grouping since we don't have categories)
-                data.forEach(task => {
-                    const option = document.createElement('option');
-                    option.value = task.id;
-                    option.textContent = task.title;
-                    option.dataset.title = task.title;
-                    select.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Error loading tasks for deep links:', error);
+                document.getElementById('deepLinkPath').value = path;
+                updateDeepLinkPreview();
             }
         }
         
@@ -5326,7 +5418,10 @@ Current Supabase limits:
                 
                 return `
                     <tr>
-                        <td>${link.task_title || 'Unknown Task'}</td>
+                        <td>
+                            <strong>${link.title || 'Untitled'}</strong>
+                            ${link.description ? `<br><small style="color: #6B7280;">${link.description}</small>` : ''}
+                        </td>
                         <td><code>/${link.custom_path}</code></td>
                         <td>
                             <span class="deep-link-url">${fullUrl}</span>
@@ -5366,8 +5461,9 @@ Current Supabase limits:
             document.getElementById('deepLinkForm').style.display = 'block';
             document.getElementById('deepLinkFormTitle').textContent = 'Create Deep Link';
             document.getElementById('deepLinkId').value = '';
-            document.getElementById('deepLinkTask').value = '';
+            document.getElementById('deepLinkTitle').value = '';
             document.getElementById('deepLinkPath').value = '';
+            document.getElementById('deepLinkDescription').value = '';
             document.getElementById('deepLinkActive').checked = true;
             document.getElementById('deleteDeepLinkBtn').style.display = 'none';
             updateDeepLinkPreview();
@@ -5382,30 +5478,14 @@ Current Supabase limits:
             document.getElementById('deepLinkForm').style.display = 'block';
             document.getElementById('deepLinkFormTitle').textContent = 'Edit Deep Link';
             document.getElementById('deepLinkId').value = link.id;
-            document.getElementById('deepLinkTask').value = link.task_id;
+            document.getElementById('deepLinkTitle').value = link.title || '';
             document.getElementById('deepLinkPath').value = link.custom_path;
+            document.getElementById('deepLinkDescription').value = link.description || '';
             document.getElementById('deepLinkActive').checked = link.is_active;
             document.getElementById('deleteDeepLinkBtn').style.display = 'inline-block';
             updateDeepLinkPreview();
         }
         
-        // Suggest deep link path based on task title
-        function suggestDeepLinkPath() {
-            const select = document.getElementById('deepLinkTask');
-            const selectedOption = select.options[select.selectedIndex];
-            
-            if (selectedOption && selectedOption.dataset.title) {
-                const title = selectedOption.dataset.title;
-                const path = 'task/' + title.toLowerCase()
-                    .replace(/[^a-z0-9\s-]/g, '')
-                    .replace(/\s+/g, '-')
-                    .replace(/-+/g, '-')
-                    .trim();
-                
-                document.getElementById('deepLinkPath').value = path;
-                updateDeepLinkPreview();
-            }
-        }
         
         // Update deep link preview
         function updateDeepLinkPreview() {
@@ -5507,8 +5587,9 @@ Current Supabase limits:
             e.preventDefault();
             
             const linkId = document.getElementById('deepLinkId').value;
-            const taskId = document.getElementById('deepLinkTask').value;
+            const title = document.getElementById('deepLinkTitle').value;
             const customPath = document.getElementById('deepLinkPath').value.replace(/^\/+/, '');
+            const description = document.getElementById('deepLinkDescription').value;
             const isActive = document.getElementById('deepLinkActive').checked;
             
             // Validate path format
@@ -5523,8 +5604,9 @@ Current Supabase limits:
                     const { error } = await supabaseClient
                         .from('deep_links')
                         .update({
-                            task_id: taskId,
+                            title: title,
                             custom_path: customPath,
+                            description: description,
                             is_active: isActive,
                             updated_at: new Date().toISOString()
                         })
@@ -5537,11 +5619,12 @@ Current Supabase limits:
                     const { error } = await supabaseClient
                         .from('deep_links')
                         .insert({
-                            task_id: taskId,
+                            title: title,
                             custom_path: customPath,
+                            description: description,
                             is_active: isActive,
                             created_by: 'admin'
-                        });
+                        });}
                     
                     if (error) throw error;
                     showMessage('Deep link created successfully', 'success');
