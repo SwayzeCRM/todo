@@ -1757,15 +1757,8 @@
 
         // Filter tasks based on user targeting
         function filterTasksForUser(tasks, user) {
-            console.log('Filtering tasks for user:', user.email, user.location_id);
-            console.log('User full object:', user);
-            console.log('User group ID:', user.user_group_id);
-            console.log('User groups array:', user.user_groups);
-            
             return tasks.filter(task => {
                 const targetType = task.target_type || 'all';
-                
-                console.log(`Task "${task.title}" - Target type: ${targetType}`);
                 
                 // Show to all users
                 if (targetType === 'all') {
@@ -1787,13 +1780,10 @@
                         userGroupIds = user.user_groups.map(g => String(g));
                     }
                     
-                    console.log(`Task target groups: ${JSON.stringify(taskGroups)}, User group IDs: ${JSON.stringify(userGroupIds)}`);
-                    
                     // Check if user belongs to any of the target groups
                     // Convert both to strings for comparison to handle type mismatches
                     const taskGroupStrings = taskGroups.map(g => String(g));
                     const hasMatchingGroup = taskGroupStrings.some(groupId => userGroupIds.includes(groupId));
-                    console.log(`Has matching group: ${hasMatchingGroup}`);
                     
                     return hasMatchingGroup;
                 }
@@ -1802,11 +1792,8 @@
                 if (targetType === 'locations') {
                     const taskLocations = Array.isArray(task.target_locations) ? task.target_locations : [];
                     
-                    console.log(`Task locations: ${taskLocations}, User location: ${user.location_id}`);
-                    
                     // Check if user's location matches any target locations
                     const hasMatchingLocation = taskLocations.includes(user.location_id);
-                    console.log(`Has matching location: ${hasMatchingLocation}`);
                     
                     return hasMatchingLocation;
                 }
@@ -1815,11 +1802,8 @@
                 if (targetType === 'individuals') {
                     const targetUsers = Array.isArray(task.target_users) ? task.target_users : [];
                     
-                    console.log(`Task target users: ${targetUsers}, Current user ID: ${user.id}`);
-                    
                     // Check if user's ID matches any target users
                     const hasMatchingUser = targetUsers.includes(user.id);
-                    console.log(`Has matching user: ${hasMatchingUser}`);
                     
                     return hasMatchingUser;
                 }
@@ -1948,28 +1932,23 @@
                     // Don't throw - sequences are optional
                 }
 
-                console.log('Tasks loaded:', tasks);
-                console.log('Sequences loaded:', sequences);
+                console.log('Tasks loaded:', tasks?.length || 0);
+                console.log('Sequences loaded:', sequences?.length || 0);
 
                 // Use fallback if no tasks in database
                 let activeTasks = (tasks && tasks.length > 0) ? tasks : fallbackTasks;
                 
-                console.log('Active tasks before filtering:', activeTasks);
-                
                 // Filter tasks based on targeting
                 activeTasks = filterTasksForUser(activeTasks, currentUser);
                 
-                console.log('Active tasks after filtering:', activeTasks);
+                console.log('Active tasks after filtering:', activeTasks.length);
                 
                 // Apply group-based sequencing
                 activeTasks = await applyGroupSequencing(activeTasks, sequences || []);
                 
-                console.log('Active tasks after sequencing:', activeTasks);
-                
                 // Build task instructions object
                 taskInstructions = {};
                 activeTasks.forEach(task => {
-                    console.log('Building instructions for task:', task.task_id, task);
                     taskInstructions[task.task_id] = {
                         title: task.instruction_title,
                         content: task.instruction_content,
@@ -2569,26 +2548,11 @@
 
         // Show instructions
         function showInstructions(taskId) {
-            console.log('Showing instructions for task:', taskId);
-            console.log('Available instructions:', Object.keys(taskInstructions));
-            console.log('Full taskInstructions object:', taskInstructions);
-            
             const instructions = taskInstructions[taskId];
             if (!instructions) {
                 console.error('No instructions found for task:', taskId);
-                console.error('Available task IDs:', Object.keys(taskInstructions));
-                
-                // Try to find if the task exists with a different key
-                const possibleTask = Object.entries(taskInstructions).find(([key, value]) => 
-                    key === taskId || key === String(taskId)
-                );
-                if (possibleTask) {
-                    console.log('Found task with different key format:', possibleTask[0]);
-                }
                 return;
             }
-            
-            console.log('Instructions object:', instructions);
 
             // If this is the same task that's already open, do nothing
             if (currentOpenTaskId === taskId) {
@@ -2694,7 +2658,7 @@
             currentOpenTaskId = taskId;
             
             // Re-render the task list to update the current task highlighting
-            renderTaskList();
+            renderTasks();
             
             // Get the task object
             const task = currentChecklist.find(t => t.id === taskId);
