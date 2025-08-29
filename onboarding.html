@@ -893,39 +893,35 @@
             left: 0;
             right: 0;
             bottom: 0;
-            display: flex !important;
+            display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.2);
             border-radius: 12px;
             cursor: pointer;
             transition: opacity 0.3s ease;
             z-index: 10;
-            opacity: 1;
+            pointer-events: none;
         }
 
         .video-play-overlay:hover {
-            background: rgba(0, 0, 0, 0.4);
+            background: rgba(0, 0, 0, 0.3);
         }
 
-        .video-play-overlay.hidden {
+        .video-play-overlay.playing {
             opacity: 0;
-            pointer-events: none;
-            display: none;
         }
 
         .play-button {
             width: 80px;
             height: 80px;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.9);
             border-radius: 50%;
-            display: flex !important;
+            display: flex;
             align-items: center;
             justify-content: center;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
             transition: transform 0.2s;
-            z-index: 11;
-            position: relative;
         }
 
         .video-play-overlay:hover .play-button {
@@ -2871,13 +2867,16 @@
         // Toggle video play/pause
         function toggleVideoPlay(taskId) {
             const video = document.getElementById(`task-video-${taskId}`);
+            const overlay = document.getElementById(`play-overlay-${taskId}`);
             
             if (!video) return;
             
             if (video.paused) {
                 video.play();
+                if (overlay) overlay.classList.add('playing');
             } else {
                 video.pause();
+                if (overlay) overlay.classList.remove('playing');
             }
         }
         
@@ -2960,6 +2959,13 @@
                 expandedContainer.innerHTML = `
                     <div class="video-expanded-content">
                         ${videoClone.outerHTML}
+                        <div class="video-play-overlay" id="play-overlay-expanded">
+                            <div class="play-button">
+                                <svg viewBox="0 0 24 24" fill="white">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                            </div>
+                        </div>
                         <div class="video-controls-overlay">
                             <div class="video-task-info">
                                 <div class="video-task-title">${task.title}</div>
@@ -2983,9 +2989,27 @@
                     // Copy current time from original video
                     expandedVideo.currentTime = videoElement.currentTime;
                     
+                    // Setup play/pause event listeners for overlay
+                    expandedVideo.addEventListener('play', () => {
+                        const overlay = document.getElementById('play-overlay-expanded');
+                        if (overlay) overlay.classList.add('playing');
+                    });
+                    
+                    expandedVideo.addEventListener('pause', () => {
+                        const overlay = document.getElementById('play-overlay-expanded');
+                        if (overlay) overlay.classList.remove('playing');
+                    });
+                    
+                    expandedVideo.addEventListener('ended', () => {
+                        const overlay = document.getElementById('play-overlay-expanded');
+                        if (overlay) overlay.classList.remove('playing');
+                    });
+                    
                     // Auto-play if original was playing
                     if (!videoElement.paused) {
                         expandedVideo.play();
+                        const overlay = document.getElementById('play-overlay-expanded');
+                        if (overlay) overlay.classList.add('playing');
                     }
                 }
             } else {
@@ -3075,6 +3099,22 @@
                 if (video) {
                     // Video now has native controls and click to play/pause
                     video.style.cursor = 'pointer';
+                    
+                    // Add event listeners for play/pause to update overlay
+                    video.addEventListener('play', () => {
+                        const overlay = document.getElementById(`play-overlay-${taskId}`);
+                        if (overlay) overlay.classList.add('playing');
+                    });
+                    
+                    video.addEventListener('pause', () => {
+                        const overlay = document.getElementById(`play-overlay-${taskId}`);
+                        if (overlay) overlay.classList.remove('playing');
+                    });
+                    
+                    video.addEventListener('ended', () => {
+                        const overlay = document.getElementById(`play-overlay-${taskId}`);
+                        if (overlay) overlay.classList.remove('playing');
+                    });
                 }
             }, 100);
             
@@ -3106,7 +3146,7 @@
                 
                 // Check if this is an uploaded video (from Supabase storage)
                 if (videoType === 'upload') {
-                    // For uploaded videos, use HTML5 video player with click to play/pause
+                    // For uploaded videos, use HTML5 video player with click to play/pause and overlay
                     videoHtml = `
                         <div class="video-wrapper">
                             <div class="video-container" id="video-container-${taskId}">
@@ -3117,6 +3157,13 @@
                                     <source src="${videoUrl}" type="video/mp4">
                                     Your browser does not support the video tag.
                                 </video>
+                                <div class="video-play-overlay" id="play-overlay-${taskId}">
+                                    <div class="play-button">
+                                        <svg viewBox="0 0 24 24" fill="white">
+                                            <path d="M8 5v14l11-7z"/>
+                                        </svg>
+                                    </div>
+                                </div>
                             </div>
                             <div class="video-controls">
                                 <button class="expand-video-btn" onclick="expandVideo('${taskId}')">
