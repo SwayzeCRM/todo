@@ -627,6 +627,18 @@
             border-color: #1E3A8A;
             color: #FFFFFF;
         }
+        .create-group-btn:disabled, .manage-groups-btn:disabled, .export-users-btn:disabled, .manage-users-btn:disabled, .export-groups-btn:disabled {
+            background: #F9FAFB;
+            border-color: #E5E7EB;
+            color: #9CA3AF;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .create-group-btn:disabled:hover, .manage-groups-btn:disabled:hover, .export-users-btn:disabled:hover, .manage-users-btn:disabled:hover, .export-groups-btn:disabled:hover {
+            background: #F9FAFB;
+            border-color: #E5E7EB;
+            color: #9CA3AF;
+        }
 
         .btn-sm {
             padding: 4px 8px;
@@ -1524,8 +1536,8 @@
                 tasksContainer.innerHTML = allTasks.map(task => {
                     const isCompleted = completedTasks.includes(task.id);
                     return `
-                        <label>
-                            <input type="checkbox" value="${task.id}" ${isCompleted ? 'checked' : ''}>
+                        <label for="task_${task.id}" style="cursor: pointer;">
+                            <input type="checkbox" id="task_${task.id}" value="${task.id}" ${isCompleted ? 'checked' : ''}>
                             ${task.title}
                         </label>
                     `;
@@ -2304,7 +2316,7 @@
             document.querySelector('.action-buttons').innerHTML = `
                 <button class="create-group-btn" onclick="openCreateGroupModal()">+ Create Group</button>
                 <button class="manage-users-btn" onclick="switchToUsersPage()">Manage Users</button>
-                <button class="export-groups-btn" onclick="exportGroups()">Export Groups</button>
+                <button class="export-groups-btn" disabled title="Coming soon">Export Groups</button>
             `;
             
             // Replace main content with groups management
@@ -3155,15 +3167,15 @@
                     <h3>Settings</h3>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="editUserProfileCompleted">
-                                Profile Completed
+                            <label for="editUserProfileCompleted" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="editUserProfileCompleted" style="width: 16px; height: 16px;">
+                                <span>Profile Completed</span>
                             </label>
                         </div>
                         <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="editUserNotifications">
-                                Notifications Enabled
+                            <label for="editUserNotifications" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="editUserNotifications" style="width: 16px; height: 16px;">
+                                <span>Notifications Enabled</span>
                             </label>
                         </div>
                     </div>

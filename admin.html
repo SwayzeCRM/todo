@@ -1559,7 +1559,6 @@
                     <select id="taskFilter" class="task-filter" onchange="handleFilterChange()">
                         <option value="all">All Tasks</option>
                         <option value="groups">Groups</option>
-                        <option value="locations">Locations</option>
                         <option value="individuals">Individuals</option>
                     </select>
                     
@@ -3454,6 +3453,9 @@ Current Supabase limits:
             const userFilter = document.getElementById('usersFilter')?.value || '';
             const searchTerm = document.getElementById('taskSearchInput')?.value?.toLowerCase() || '';
             
+            // Clear any existing messages when filters change
+            clearMessages();
+            
             // Filter tasks based on selected filter
             let filteredTasks = tasks;
             
@@ -3474,7 +3476,6 @@ Current Supabase limits:
                     // First filter by target type
                     let matchesTargetType = false;
                     if (filterValue === 'groups') matchesTargetType = targetType === 'groups';
-                    else if (filterValue === 'locations') matchesTargetType = targetType === 'locations';  
                     else if (filterValue === 'individuals') matchesTargetType = targetType === 'individuals';
                     else matchesTargetType = true;
                     
@@ -9070,6 +9071,21 @@ Current Supabase limits:
             document.getElementById('editTaskGroupColor').value = color;
             document.getElementById('editTaskGroupColorText').value = color;
             document.getElementById('colorPreview').style.background = color;
+            
+            // Add visual feedback - highlight selected color button
+            const colorButtons = document.querySelectorAll('[onclick^="setGroupColor"]');
+            colorButtons.forEach(button => {
+                // Remove existing selection styling
+                button.style.border = '1px solid #ccc';
+                button.style.boxShadow = 'none';
+            });
+            
+            // Add selection styling to clicked button
+            const selectedButton = document.querySelector(`[onclick="setGroupColor('${color}')"]`);
+            if (selectedButton) {
+                selectedButton.style.border = '2px solid #2563eb';
+                selectedButton.style.boxShadow = '0 0 0 2px rgba(37, 99, 235, 0.2)';
+            }
         }
 
         // Add color picker event listener for task groups
@@ -9077,6 +9093,21 @@ Current Supabase limits:
             if (e.target.id === 'editTaskGroupColor') {
                 document.getElementById('editTaskGroupColorText').value = e.target.value;
                 document.getElementById('colorPreview').style.background = e.target.value;
+                
+                // Update visual feedback for color buttons
+                const colorButtons = document.querySelectorAll('[onclick^="setGroupColor"]');
+                colorButtons.forEach(button => {
+                    // Remove existing selection styling
+                    button.style.border = '1px solid #ccc';
+                    button.style.boxShadow = 'none';
+                });
+                
+                // Highlight matching preset color if selected
+                const selectedButton = document.querySelector(`[onclick="setGroupColor('${e.target.value}')"]`);
+                if (selectedButton) {
+                    selectedButton.style.border = '2px solid #2563eb';
+                    selectedButton.style.boxShadow = '0 0 0 2px rgba(37, 99, 235, 0.2)';
+                }
             }
         });
 
