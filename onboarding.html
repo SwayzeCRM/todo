@@ -2871,27 +2871,13 @@
         // Toggle video play/pause
         function toggleVideoPlay(taskId) {
             const video = document.getElementById(`task-video-${taskId}`);
-            const overlay = document.getElementById(`play-overlay-${taskId}`);
-            const controls = document.getElementById(`video-controls-${taskId}`);
             
             if (!video) return;
             
             if (video.paused) {
                 video.play();
-                overlay.classList.add('hidden');
-                controls.classList.add('visible');
-                
-                // Setup video progress tracking
-                setupVideoProgress(taskId);
             } else {
                 video.pause();
-                overlay.classList.remove('hidden');
-                
-                // Update play button to show play icon
-                const playButton = overlay.querySelector('.play-button svg');
-                if (playButton) {
-                    playButton.innerHTML = '<path d="M8 5v14l11-7z"/>';
-                }
             }
         }
         
@@ -2969,18 +2955,11 @@
             const currentIndex = currentChecklist.findIndex(t => t.id === taskId);
             const totalTasks = currentChecklist.length;
             
-            // For regular videos, add custom controls to expanded view
+            // For regular videos, add simple controls to expanded view
             if (videoElement.tagName === 'VIDEO') {
                 expandedContainer.innerHTML = `
-                    <div class="video-expanded-content" onclick="toggleVideoPlay('expanded')">
+                    <div class="video-expanded-content">
                         ${videoClone.outerHTML}
-                        <div class="video-play-overlay" id="play-overlay-expanded" style="display: flex;">
-                            <div class="play-button">
-                                <svg viewBox="0 0 24 24" fill="#1F2937">
-                                    <path d="M8 5v14l11-7z" fill="#1F2937"/>
-                                </svg>
-                            </div>
-                        </div>
                         <div class="video-controls-overlay">
                             <div class="video-task-info">
                                 <div class="video-task-title">${task.title}</div>
@@ -2997,6 +2976,9 @@
                 const expandedVideo = expandedContainer.querySelector('video');
                 if (expandedVideo) {
                     expandedVideo.id = 'task-video-expanded';
+                    expandedVideo.controls = true;
+                    expandedVideo.style.cursor = 'pointer';
+                    expandedVideo.onclick = () => toggleVideoPlay('expanded');
                     
                     // Copy current time from original video
                     expandedVideo.currentTime = videoElement.currentTime;
@@ -3004,8 +2986,6 @@
                     // Auto-play if original was playing
                     if (!videoElement.paused) {
                         expandedVideo.play();
-                        const overlay = expandedContainer.querySelector('#play-overlay-expanded');
-                        if (overlay) overlay.classList.add('hidden');
                     }
                 }
             } else {
@@ -3093,26 +3073,8 @@
             setTimeout(() => {
                 const video = document.getElementById(`task-video-${taskId}`);
                 if (video) {
-                    // Ensure video doesn't have native controls
-                    video.removeAttribute('controls');
-                    
-                    // Make sure overlay is visible initially
-                    const overlay = document.getElementById(`play-overlay-${taskId}`);
-                    if (overlay) {
-                        overlay.classList.remove('hidden');
-                    }
-                    
-                    // Setup click handler on container
-                    const container = document.getElementById(`video-container-${taskId}`);
-                    if (container && !container.hasAttribute('data-initialized')) {
-                        container.setAttribute('data-initialized', 'true');
-                        
-                        // Add click event to video itself as well
-                        video.addEventListener('click', function(e) {
-                            e.stopPropagation();
-                            toggleVideoPlay(taskId);
-                        });
-                    }
+                    // Video now has native controls and click to play/pause
+                    video.style.cursor = 'pointer';
                 }
             }, 100);
             
@@ -3144,27 +3106,17 @@
                 
                 // Check if this is an uploaded video (from Supabase storage)
                 if (videoType === 'upload') {
-                    // For uploaded videos, use HTML5 video player with custom controls
+                    // For uploaded videos, use HTML5 video player with click to play/pause
                     videoHtml = `
                         <div class="video-wrapper">
                             <div class="video-container" id="video-container-${taskId}">
-                                <video id="task-video-${taskId}" style="width: 100%; height: 100%; display: block; position: relative; z-index: 1;">
+                                <video id="task-video-${taskId}" 
+                                       style="width: 100%; height: 100%; display: block; cursor: pointer;"
+                                       onclick="toggleVideoPlay('${taskId}')"
+                                       controls>
                                     <source src="${videoUrl}" type="video/mp4">
                                     Your browser does not support the video tag.
                                 </video>
-                                <div class="video-play-overlay" id="play-overlay-${taskId}" style="display: flex;" onclick="toggleVideoPlay('${taskId}')">
-                                    <div class="play-button">
-                                        <svg viewBox="0 0 24 24" fill="#1F2937">
-                                            <path d="M8 5v14l11-7z" fill="#1F2937"/>
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div class="video-custom-controls" id="video-controls-${taskId}">
-                                    <div class="video-progress-bar" onclick="seekVideo(event, '${taskId}')">
-                                        <div class="video-progress" id="video-progress-${taskId}"></div>
-                                    </div>
-                                    <div class="video-time" id="video-time-${taskId}">0:00 / 0:00</div>
-                                </div>
                             </div>
                             <div class="video-controls">
                                 <button class="expand-video-btn" onclick="expandVideo('${taskId}')">
