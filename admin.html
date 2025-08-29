@@ -5219,6 +5219,9 @@ Current Supabase limits:
                 // Load tasks (which also loads task groups)
                 await loadTasks();
                 
+                // Load deep links
+                await loadDeepLinks();
+                
                 // Ensure task groups are loaded for form population
                 if (!allTaskGroupsData || allTaskGroupsData.length === 0) {
                     console.log('Loading task groups for form population...');
@@ -5624,7 +5627,7 @@ Current Supabase limits:
                             description: description,
                             is_active: isActive,
                             created_by: 'admin'
-                        });}
+                        });
                     
                     if (error) throw error;
                     showMessage('Deep link created successfully', 'success');
