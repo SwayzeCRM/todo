@@ -1758,6 +1758,9 @@
         // Filter tasks based on user targeting
         function filterTasksForUser(tasks, user) {
             console.log('Filtering tasks for user:', user.email, user.location_id);
+            console.log('User full object:', user);
+            console.log('User group ID:', user.user_group_id);
+            console.log('User groups array:', user.user_groups);
             
             return tasks.filter(task => {
                 const targetType = task.target_type || 'all';
@@ -1772,12 +1775,24 @@
                 // Group-based targeting
                 if (targetType === 'groups') {
                     const taskGroups = Array.isArray(task.target_groups) ? task.target_groups : [];
-                    const userGroups = Array.isArray(user.user_groups) ? user.user_groups : [];
                     
-                    console.log(`Task groups: ${taskGroups}, User groups: ${userGroups}`);
+                    // User can have either user_groups array or user_group_id
+                    let userGroupIds = [];
+                    if (user.user_group_id) {
+                        // Single group ID
+                        userGroupIds = [String(user.user_group_id)];
+                    }
+                    if (Array.isArray(user.user_groups) && user.user_groups.length > 0) {
+                        // Array of groups (legacy support)
+                        userGroupIds = user.user_groups.map(g => String(g));
+                    }
+                    
+                    console.log(`Task target groups: ${JSON.stringify(taskGroups)}, User group IDs: ${JSON.stringify(userGroupIds)}`);
                     
                     // Check if user belongs to any of the target groups
-                    const hasMatchingGroup = taskGroups.some(groupId => userGroups.includes(groupId));
+                    // Convert both to strings for comparison to handle type mismatches
+                    const taskGroupStrings = taskGroups.map(g => String(g));
+                    const hasMatchingGroup = taskGroupStrings.some(groupId => userGroupIds.includes(groupId));
                     console.log(`Has matching group: ${hasMatchingGroup}`);
                     
                     return hasMatchingGroup;
@@ -1939,15 +1954,22 @@
                 // Use fallback if no tasks in database
                 let activeTasks = (tasks && tasks.length > 0) ? tasks : fallbackTasks;
                 
+                console.log('Active tasks before filtering:', activeTasks);
+                
                 // Filter tasks based on targeting
                 activeTasks = filterTasksForUser(activeTasks, currentUser);
+                
+                console.log('Active tasks after filtering:', activeTasks);
                 
                 // Apply group-based sequencing
                 activeTasks = await applyGroupSequencing(activeTasks, sequences || []);
                 
+                console.log('Active tasks after sequencing:', activeTasks);
+                
                 // Build task instructions object
                 taskInstructions = {};
                 activeTasks.forEach(task => {
+                    console.log('Building instructions for task:', task.task_id, task);
                     taskInstructions[task.task_id] = {
                         title: task.instruction_title,
                         content: task.instruction_content,
@@ -2548,10 +2570,21 @@
         // Show instructions
         function showInstructions(taskId) {
             console.log('Showing instructions for task:', taskId);
+            console.log('Available instructions:', Object.keys(taskInstructions));
+            console.log('Full taskInstructions object:', taskInstructions);
             
             const instructions = taskInstructions[taskId];
             if (!instructions) {
                 console.error('No instructions found for task:', taskId);
+                console.error('Available task IDs:', Object.keys(taskInstructions));
+                
+                // Try to find if the task exists with a different key
+                const possibleTask = Object.entries(taskInstructions).find(([key, value]) => 
+                    key === taskId || key === String(taskId)
+                );
+                if (possibleTask) {
+                    console.log('Found task with different key format:', possibleTask[0]);
+                }
                 return;
             }
             
