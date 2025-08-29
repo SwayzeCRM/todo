@@ -2907,16 +2907,13 @@
         // Toggle video play/pause
         function toggleVideoPlay(taskId) {
             const video = document.getElementById(`task-video-${taskId}`);
-            const overlay = document.getElementById(`play-overlay-${taskId}`);
             
             if (!video) return;
             
             if (video.paused) {
                 video.play();
-                if (overlay) overlay.classList.add('playing');
             } else {
                 video.pause();
-                if (overlay) overlay.classList.remove('playing');
             }
         }
         
@@ -3008,13 +3005,6 @@
                 expandedContainer.innerHTML = `
                     <div class="video-expanded-content">
                         ${videoClone.outerHTML}
-                        <div class="video-play-overlay" id="play-overlay-expanded">
-                            <div class="play-button">
-                                <svg viewBox="0 0 24 24" fill="white">
-                                    <path d="M8 5v14l11-7z"/>
-                                </svg>
-                            </div>
-                        </div>
                         <div class="video-controls-overlay">
                             <div class="video-task-info">
                                 <div class="video-task-title">${task.title}</div>
@@ -3038,28 +3028,10 @@
                     // Copy current time from original video
                     expandedVideo.currentTime = currentTime;
                     
-                    // Setup play/pause event listeners for overlay
-                    expandedVideo.addEventListener('play', () => {
-                        const overlay = document.getElementById('play-overlay-expanded');
-                        if (overlay) overlay.classList.add('playing');
-                    });
-                    
-                    expandedVideo.addEventListener('pause', () => {
-                        const overlay = document.getElementById('play-overlay-expanded');
-                        if (overlay) overlay.classList.remove('playing');
-                    });
-                    
-                    expandedVideo.addEventListener('ended', () => {
-                        const overlay = document.getElementById('play-overlay-expanded');
-                        if (overlay) overlay.classList.remove('playing');
-                    });
-                    
                     // Auto-play if original was playing
                     if (wasPlaying) {
                         setTimeout(() => {
                             expandedVideo.play();
-                            const overlay = document.getElementById('play-overlay-expanded');
-                            if (overlay) overlay.classList.add('playing');
                         }, 100);
                     }
                 }
@@ -3174,22 +3146,6 @@
                 if (video) {
                     // Video now has native controls and click to play/pause
                     video.style.cursor = 'pointer';
-                    
-                    // Add event listeners for play/pause to update overlay
-                    video.addEventListener('play', () => {
-                        const overlay = document.getElementById(`play-overlay-${taskId}`);
-                        if (overlay) overlay.classList.add('playing');
-                    });
-                    
-                    video.addEventListener('pause', () => {
-                        const overlay = document.getElementById(`play-overlay-${taskId}`);
-                        if (overlay) overlay.classList.remove('playing');
-                    });
-                    
-                    video.addEventListener('ended', () => {
-                        const overlay = document.getElementById(`play-overlay-${taskId}`);
-                        if (overlay) overlay.classList.remove('playing');
-                    });
                 }
             }, 100);
             
@@ -3221,7 +3177,7 @@
                 
                 // Check if this is an uploaded video (from Supabase storage)
                 if (videoType === 'upload') {
-                    // For uploaded videos, use HTML5 video player with click to play/pause and overlay
+                    // For uploaded videos, use HTML5 video player with click to play/pause
                     videoHtml = `
                         <div class="video-wrapper">
                             <div class="video-container" id="video-container-${taskId}">
@@ -3232,13 +3188,6 @@
                                     <source src="${videoUrl}" type="video/mp4">
                                     Your browser does not support the video tag.
                                 </video>
-                                <div class="video-play-overlay" id="play-overlay-${taskId}">
-                                    <div class="play-button">
-                                        <svg viewBox="0 0 24 24" fill="white">
-                                            <path d="M8 5v14l11-7z"/>
-                                        </svg>
-                                    </div>
-                                </div>
                             </div>
                             <div class="video-controls">
                                 <button class="expand-video-btn" onclick="expandVideo('${taskId}')">
