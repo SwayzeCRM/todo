@@ -1052,6 +1052,45 @@
             border: none;
             border-radius: 0;
         }
+        
+        /* Play overlay specific to expanded view */
+        .video-expanded-content .video-play-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            pointer-events: none;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        
+        .video-expanded-content .video-play-overlay.playing {
+            opacity: 0;
+        }
+        
+        .video-expanded-content .play-button {
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+        
+        .video-expanded-content .play-button svg {
+            width: 40px;
+            height: 40px;
+            fill: #1F2937;
+            margin-left: 5px;
+        }
 
         .video-controls-overlay {
             position: absolute;
