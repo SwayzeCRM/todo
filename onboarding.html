@@ -850,13 +850,7 @@
             color: #4B5563;
         }
 
-        .video-container {
-            margin: 0 0 20px 0;
-            border-radius: 12px;
-            overflow: hidden;
-            background: transparent;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
+        /* Removed duplicate .video-container rule - merged below */
         
         .video-section {
             margin-top: 20px;
@@ -871,17 +865,25 @@
 
         .video-container {
             position: relative;
+            margin: 0 0 20px 0;
+            border-radius: 12px;
+            overflow: visible;
+            background: transparent;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             cursor: pointer;
         }
 
         .video-container iframe,
         .video-container video {
+            position: relative;
             width: 100%;
             aspect-ratio: 16 / 9;
             max-height: 70vh;
             border: none;
             border-radius: 12px;
             background: #000;
+            display: block;
+            z-index: 1;
         }
 
         /* Custom Play Overlay */
@@ -891,13 +893,15 @@
             left: 0;
             right: 0;
             bottom: 0;
-            display: flex;
+            display: flex !important;
             align-items: center;
             justify-content: center;
             background: rgba(0, 0, 0, 0.3);
             border-radius: 12px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: opacity 0.3s ease;
+            z-index: 10;
+            opacity: 1;
         }
 
         .video-play-overlay:hover {
@@ -907,6 +911,7 @@
         .video-play-overlay.hidden {
             opacity: 0;
             pointer-events: none;
+            display: none;
         }
 
         .play-button {
@@ -914,11 +919,13 @@
             height: 80px;
             background: rgba(255, 255, 255, 0.95);
             border-radius: 50%;
-            display: flex;
+            display: flex !important;
             align-items: center;
             justify-content: center;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
             transition: transform 0.2s;
+            z-index: 11;
+            position: relative;
         }
 
         .video-play-overlay:hover .play-button {
@@ -2967,10 +2974,10 @@
                 expandedContainer.innerHTML = `
                     <div class="video-expanded-content" onclick="toggleVideoPlay('expanded')">
                         ${videoClone.outerHTML}
-                        <div class="video-play-overlay" id="play-overlay-expanded">
+                        <div class="video-play-overlay" id="play-overlay-expanded" style="display: flex;">
                             <div class="play-button">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M8 5v14l11-7z"/>
+                                <svg viewBox="0 0 24 24" fill="#1F2937">
+                                    <path d="M8 5v14l11-7z" fill="#1F2937"/>
                                 </svg>
                             </div>
                         </div>
@@ -3082,6 +3089,33 @@
             // Re-render the task list to update the current task highlighting
             renderTasks();
             
+            // Initialize video if present
+            setTimeout(() => {
+                const video = document.getElementById(`task-video-${taskId}`);
+                if (video) {
+                    // Ensure video doesn't have native controls
+                    video.removeAttribute('controls');
+                    
+                    // Make sure overlay is visible initially
+                    const overlay = document.getElementById(`play-overlay-${taskId}`);
+                    if (overlay) {
+                        overlay.classList.remove('hidden');
+                    }
+                    
+                    // Setup click handler on container
+                    const container = document.getElementById(`video-container-${taskId}`);
+                    if (container && !container.hasAttribute('data-initialized')) {
+                        container.setAttribute('data-initialized', 'true');
+                        
+                        // Add click event to video itself as well
+                        video.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            toggleVideoPlay(taskId);
+                        });
+                    }
+                }
+            }, 100);
+            
             // Get the task object
             const task = currentChecklist.find(t => t.id === taskId);
             if (!task) {
@@ -3113,15 +3147,15 @@
                     // For uploaded videos, use HTML5 video player with custom controls
                     videoHtml = `
                         <div class="video-wrapper">
-                            <div class="video-container" onclick="toggleVideoPlay('${taskId}')">
-                                <video id="task-video-${taskId}" style="width: 100%; height: 100%;">
+                            <div class="video-container" id="video-container-${taskId}">
+                                <video id="task-video-${taskId}" style="width: 100%; height: 100%; display: block; position: relative; z-index: 1;">
                                     <source src="${videoUrl}" type="video/mp4">
                                     Your browser does not support the video tag.
                                 </video>
-                                <div class="video-play-overlay" id="play-overlay-${taskId}">
+                                <div class="video-play-overlay" id="play-overlay-${taskId}" style="display: flex;" onclick="toggleVideoPlay('${taskId}')">
                                     <div class="play-button">
-                                        <svg viewBox="0 0 24 24">
-                                            <path d="M8 5v14l11-7z"/>
+                                        <svg viewBox="0 0 24 24" fill="#1F2937">
+                                            <path d="M8 5v14l11-7z" fill="#1F2937"/>
                                         </svg>
                                     </div>
                                 </div>
