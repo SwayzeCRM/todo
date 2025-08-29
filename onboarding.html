@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DFY CRM - Welcome Setup</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✓</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2941,6 +2942,15 @@
             const videoElement = document.getElementById(`task-video-${taskId}`);
             if (!videoElement) return;
             
+            // Store whether original video was playing
+            const wasPlaying = !videoElement.paused;
+            const currentTime = videoElement.currentTime;
+            
+            // Pause the original video
+            if (wasPlaying) {
+                videoElement.pause();
+            }
+            
             // Create expanded video container
             const expandedContainer = document.createElement('div');
             expandedContainer.className = 'video-expanded active';
@@ -2987,7 +2997,7 @@
                     expandedVideo.onclick = () => toggleVideoPlay('expanded');
                     
                     // Copy current time from original video
-                    expandedVideo.currentTime = videoElement.currentTime;
+                    expandedVideo.currentTime = currentTime;
                     
                     // Setup play/pause event listeners for overlay
                     expandedVideo.addEventListener('play', () => {
@@ -3006,10 +3016,12 @@
                     });
                     
                     // Auto-play if original was playing
-                    if (!videoElement.paused) {
-                        expandedVideo.play();
-                        const overlay = document.getElementById('play-overlay-expanded');
-                        if (overlay) overlay.classList.add('playing');
+                    if (wasPlaying) {
+                        setTimeout(() => {
+                            expandedVideo.play();
+                            const overlay = document.getElementById('play-overlay-expanded');
+                            if (overlay) overlay.classList.add('playing');
+                        }, 100);
                     }
                 }
             } else {
@@ -3036,9 +3048,33 @@
         // Exit expanded video mode
         function exitExpandedVideo() {
             const expandedContainer = document.getElementById('expanded-video-container');
-            if (expandedContainer) {
-                expandedContainer.remove();
+            if (!expandedContainer) return;
+            
+            // Get the expanded video and its state
+            const expandedVideo = document.getElementById('task-video-expanded');
+            if (expandedVideo) {
+                const wasPlaying = !expandedVideo.paused;
+                const currentTime = expandedVideo.currentTime;
+                
+                // Find the original video (assuming it's the current open task)
+                const originalVideo = document.querySelector('.instructions-panel video[id^="task-video-"]:not(#task-video-expanded)');
+                if (originalVideo) {
+                    // Transfer the time position back
+                    originalVideo.currentTime = currentTime;
+                    
+                    // Resume playback in original if it was playing in expanded
+                    if (wasPlaying) {
+                        setTimeout(() => {
+                            originalVideo.play();
+                        }, 100);
+                    }
+                }
+                
+                // Pause the expanded video before removing
+                expandedVideo.pause();
             }
+            
+            expandedContainer.remove();
         }
         
         // Handle escape key to exit expanded video
