@@ -1890,7 +1890,7 @@
         <!-- Task Panel (Left Sidebar) -->
         <aside class="task-panel" id="taskPanel">
             <div class="panel-header">
-                <h3>Your Tasks</h3>
+                <h3 id="taskPanelTitle">All Tasks</h3>
                 <button class="panel-close" onclick="toggleTaskPanel()">×</button>
             </div>
             <div class="task-controls">
@@ -2904,28 +2904,11 @@
 
             let html = '';
             
-            // Sort and render grouped tasks first with headers
+            // Sort and render grouped tasks first
             Object.values(taskGroups)
                 .sort((a, b) => (a.info.display_order || 0) - (b.info.display_order || 0))
                 .forEach(group => {
-                    const completedCount = group.tasks.filter(t => t.completed).length;
-                    const totalCount = group.tasks.length;
-                    const isCompleted = completedCount === totalCount;
-                    
-                    // Always show group header first
-                    html += `
-                        <div class="task-group-header ${isCompleted ? 'completed' : ''}">
-                            <div class="task-group-title">
-                                <span class="group-icon">${isCompleted ? '✅' : '📋'}</span>
-                                ${group.info.name}
-                            </div>
-                            <div class="task-group-progress">
-                                ${completedCount}/${totalCount} completed
-                            </div>
-                        </div>
-                    `;
-                    
-                    // Then render all tasks in this group
+                    // Simply render all tasks in this group without the header
                     html += group.tasks.map(task => renderTaskItem(task)).join('');
                 });
             
@@ -3293,6 +3276,15 @@
         function showInstructionsContent(taskId, instructions) {
             // Set the current open task
             currentOpenTaskId = taskId;
+            
+            // Update the panel header with the current task's group name
+            const groupInfo = getTaskGroupInfo(taskId);
+            const panelTitle = document.getElementById('taskPanelTitle');
+            if (groupInfo && groupInfo.name) {
+                panelTitle.textContent = groupInfo.name;
+            } else {
+                panelTitle.textContent = 'All Tasks';
+            }
             
             // Re-render the task list to update the current task highlighting
             renderTasks();
@@ -3757,6 +3749,9 @@
         function closeInstructions() {
             // Clear the current open task
             currentOpenTaskId = null;
+            
+            // Reset the panel title
+            document.getElementById('taskPanelTitle').textContent = 'All Tasks';
             
             // Show empty state and hide content
             document.getElementById('emptyState').style.display = 'block';
