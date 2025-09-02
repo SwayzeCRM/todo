@@ -1708,21 +1708,22 @@
 
                 <!-- User Group Selection -->
                 <div class="form-group" id="userGroupSection" style="display: none;">
-                    <label for="userGroupSelect">Select User Group</label>
-                    <select id="userGroupSelect" class="filter-select" onchange="updateTaskGroupsForUserGroup()">
+                    <label for="userGroupSelect">Select User Group <span style="color: red;">*</span></label>
+                    <select id="userGroupSelect" class="filter-select" onchange="updateTaskGroupsForUserGroup()" required>
                         <option value="">Select a user group...</option>
                         <!-- User groups will be loaded here dynamically -->
                     </select>
+                    <small style="color: #6B7280;">Required: All tasks must be assigned to a user group</small>
                 </div>
 
                 <!-- Task Groups for Selected User Group -->
                 <div class="form-group" id="taskGroupSection" style="display: none;">
-                    <label for="taskGroupSelect">Select Task Group</label>
-                    <select id="taskGroupSelect" class="filter-select">
+                    <label for="taskGroupSelect">Select Task Group <span style="color: red;">*</span></label>
+                    <select id="taskGroupSelect" class="filter-select" required>
                         <option value="">Select a task group...</option>
                         <!-- Task groups will be loaded here dynamically -->
                     </select>
-                    <small style="color: #6B7280;">Tasks will be organized within this task group</small>
+                    <small style="color: #6B7280;">Required: All tasks must belong to a task group</small>
                 </div>
 
                 <!-- Due Date (shown for individual tasks) -->
@@ -1885,7 +1886,7 @@
                         <select id="firingRulesSelect" onchange="handleFiringRulesChange()" multiple style="height: 120px; width: 100%;" required>
                             <!-- Groups will be populated here -->
                         </select>
-                        <small>Hold Ctrl (Cmd on Mac) to select multiple groups, or select "All Users" for everyone</small>
+                        <small>Hold Ctrl (Cmd on Mac) to select multiple groups (Required)</small>
                     </div>
                     <div class="form-group">
                         <label for="webhookActive">Status</label>
@@ -2042,7 +2043,7 @@
                         <select id="sequenceAppliesTo" multiple style="height: 120px;" onchange="handleSequenceAppliesToChange()" required>
                             <!-- User groups will be populated here -->
                         </select>
-                        <small>Hold Ctrl (Cmd on Mac) to select multiple user groups, or select "All Users" for everyone</small>
+                        <small>Hold Ctrl (Cmd on Mac) to select multiple user groups (Required)</small>
                     </div>
                     <div class="form-group">
                         <label for="sequenceActive">Status</label>
@@ -3360,16 +3361,33 @@ Current Supabase limits:
             try {
                 console.log('Loading tasks from database...');
                 
+                // Check if supabaseClient exists
+                if (!supabaseClient) {
+                    console.error('Supabase client is not initialized!');
+                    showError('Database connection not initialized. Please refresh the page.');
+                    return;
+                }
+                
                 // Load tasks
+                console.log('Fetching tasks from onboarding_tasks table...');
                 const { data: tasksData, error: tasksError } = await supabaseClient
                     .from('onboarding_tasks')
                     .select('*')
                     .order('position');
 
                 if (tasksError) {
-                    console.error('Database error:', tasksError);
+                    console.error('Database error loading tasks:', tasksError);
+                    console.error('Error details:', {
+                        message: tasksError.message,
+                        details: tasksError.details,
+                        hint: tasksError.hint,
+                        code: tasksError.code
+                    });
+                    showError('Failed to load tasks: ' + tasksError.message);
                     throw tasksError;
                 }
+                
+                console.log('Tasks loaded successfully:', tasksData?.length || 0, 'tasks');
                 
                 // Also load task groups for reference
                 const { data: groupsData, error: groupsError } = await supabaseClient
@@ -3385,11 +3403,21 @@ Current Supabase limits:
                 tasks = tasksData || [];
                 allTaskGroupsData = groupsData || [];
                 
-                console.log('Tasks loaded:', tasks.length, 'Task groups loaded:', allTaskGroupsData.length);
+                console.log('Data loaded - Tasks:', tasks.length, 'Task groups:', allTaskGroupsData.length);
+                
+                // Check if tasksList element exists
+                const tasksList = document.getElementById('tasksList');
+                if (!tasksList) {
+                    console.error('tasksList element not found in DOM!');
+                    showError('UI element missing. Please refresh the page.');
+                    return;
+                }
+                
                 renderTasks();
             } catch (error) {
-                console.error('Error loading tasks:', error);
-                showError('Failed to load tasks from database.');
+                console.error('Error in loadTasks:', error);
+                console.error('Stack trace:', error.stack);
+                showError('Failed to load tasks: ' + (error.message || 'Unknown error'));
             }
         }
 
@@ -3447,14 +3475,30 @@ Current Supabase limits:
         }
 
         function renderTasks() {
-            const tasksList = document.getElementById('tasksList');
-            const filterValue = document.getElementById('taskFilter')?.value || 'all';
-            const taskGroupFilter = document.getElementById('taskGroupsFilter')?.value || '';
-            const userFilter = document.getElementById('usersFilter')?.value || '';
-            const searchTerm = document.getElementById('taskSearchInput')?.value?.toLowerCase() || '';
-            
-            // Clear any existing messages when filters change
-            clearMessages();
+            try {
+                console.log('Starting renderTasks...');
+                const tasksList = document.getElementById('tasksList');
+                
+                if (!tasksList) {
+                    console.error('tasksList element not found!');
+                    return;
+                }
+                
+                const filterValue = document.getElementById('taskFilter')?.value || 'all';
+                const taskGroupFilter = document.getElementById('taskGroupsFilter')?.value || '';
+                const userFilter = document.getElementById('usersFilter')?.value || '';
+                const searchTerm = document.getElementById('taskSearchInput')?.value?.toLowerCase() || '';
+                
+                console.log('Rendering with filters:', {
+                    filter: filterValue,
+                    taskGroup: taskGroupFilter,
+                    user: userFilter,
+                    search: searchTerm,
+                    totalTasks: tasks.length
+                });
+                
+                // Clear any existing messages when filters change
+                clearMessages();
             
             // Filter tasks based on selected filter
             let filteredTasks = tasks;
@@ -3551,6 +3595,13 @@ Current Supabase limits:
                 </div>
                 `;
             }).join('');
+            
+            console.log('Rendered', filteredTasks.length, 'tasks successfully');
+            } catch (error) {
+                console.error('Error in renderTasks:', error);
+                console.error('Stack trace:', error.stack);
+                showError('Failed to render tasks: ' + error.message);
+            }
         }
 
         // Load task groups for dropdown in Add/Edit Task form
@@ -4688,11 +4739,16 @@ Current Supabase limits:
                     // User group task
                     const userGroupId = document.getElementById('userGroupSelect').value;
                     if (!userGroupId) {
-                        showFieldError('userGroupSelect', 'Please select a user group');
+                        showFieldError('userGroupSelect', 'User group is required. All tasks must be assigned to a user group.');
                         return;
                     }
                     
                     taskGroupId = document.getElementById('taskGroupSelect').value;
+                    if (!taskGroupId) {
+                        showFieldError('taskGroupSelect', 'Task group is required. All tasks must belong to a task group.');
+                        return;
+                    }
+                    
                     targetType = 'groups';
                     targetGroups = [userGroupId];
                     targetUsers = [];
@@ -4946,6 +5002,24 @@ Current Supabase limits:
         // Initialize application
         async function init() {
             try {
+                console.log('Starting application initialization...');
+                
+                // Check if Supabase library is loaded
+                if (!window.supabase) {
+                    console.error('Supabase library not loaded!');
+                    showError('Failed to load Supabase library. Please refresh the page.');
+                    return;
+                }
+                
+                // Check if Supabase client is initialized
+                if (!supabaseClient) {
+                    console.error('Supabase client not initialized!');
+                    showError('Failed to initialize Supabase client. Please check configuration.');
+                    return;
+                }
+                
+                console.log('Supabase client initialized, loading tasks...');
+                
                 // Load tasks (which also loads task groups)
                 await loadTasks();
                 
@@ -4961,8 +5035,12 @@ Current Supabase limits:
                     if (!groupsError) {
                         allTaskGroupsData = groupsData || [];
                         console.log('Task groups loaded:', allTaskGroupsData.length);
+                    } else {
+                        console.error('Error loading task groups:', groupsError);
                     }
                 }
+                
+                console.log('Application initialization complete')
                 
                 // Add form submit handler
                 document.getElementById('taskForm').addEventListener('submit', saveTask);
@@ -6448,7 +6526,7 @@ Current Supabase limits:
 
                 const select = document.getElementById('sequenceAppliesTo');
                 
-                // Keep "All Users" option and add user groups
+                // Add user groups to the dropdown
                 if (userGroups && userGroups.length > 0) {
                     userGroups.forEach(group => {
                         const option = document.createElement('option');
@@ -6513,11 +6591,9 @@ Current Supabase limits:
             const select = document.getElementById('sequenceAppliesTo');
             const selectedValues = Array.from(select.selectedOptions).map(option => option.value);
             
-            // If "All Users" is selected with other options, keep only "All Users"
-            if (selectedValues.includes('all') && selectedValues.length > 1) {
-                Array.from(select.options).forEach(option => {
-                    option.selected = option.value === 'all';
-                });
+            // Ensure at least one group is selected
+            if (selectedValues.length === 0) {
+                showError('Please select at least one user group');
             }
         }
 
@@ -6775,10 +6851,10 @@ Current Supabase limits:
             // Load groups for rules dropdown
             await loadGroupsForRulesDropdown();
             
-            // Reset dropdown to "All Users"
+            // Reset dropdown - clear selection
             const select = document.getElementById('firingRulesSelect');
             Array.from(select.options).forEach(option => {
-                option.selected = option.value === 'all';
+                option.selected = false;
             });
 
             document.getElementById('webhookFormTitle').textContent = 'Create New Webhook';
@@ -6817,18 +6893,14 @@ Current Supabase limits:
             const select = document.getElementById('firingRulesSelect');
             
             if (rules.type === 'groups' && rules.groups) {
-                // Deselect "All Users" and select the specific groups
+                // Select the specific groups
                 Array.from(select.options).forEach(option => {
-                    if (option.value === 'all') {
-                        option.selected = false;
-                    } else {
-                        option.selected = rules.groups.includes(parseInt(option.value));
-                    }
+                    option.selected = rules.groups.includes(parseInt(option.value));
                 });
             } else {
-                // Select "All Users" and deselect everything else
+                // No specific groups selected - clear selection
                 Array.from(select.options).forEach(option => {
-                    option.selected = option.value === 'all';
+                    option.selected = false;
                 });
             }
 
@@ -6869,12 +6941,9 @@ Current Supabase limits:
             const select = document.getElementById('firingRulesSelect');
             const selectedValues = Array.from(select.selectedOptions).map(option => option.value);
             
-            // If "All Users" is selected with other options, keep only "All Users"
-            if (selectedValues.includes('all') && selectedValues.length > 1) {
-                // Deselect everything except "All Users"
-                Array.from(select.options).forEach(option => {
-                    option.selected = option.value === 'all';
-                });
+            // Ensure at least one group is selected
+            if (selectedValues.length === 0) {
+                showError('Please select at least one user group');
             }
         }
 
@@ -6927,10 +6996,10 @@ Current Supabase limits:
         function cancelWebhookEdit() {
             document.getElementById('webhookForm').style.display = 'none';
             document.getElementById('webhookEditForm').reset();
-            // Reset dropdown to "All Users"
+            // Reset dropdown - clear selection
             const select = document.getElementById('firingRulesSelect');
             Array.from(select.options).forEach(option => {
-                option.selected = option.value === 'all';
+                option.selected = false;
             });
         }
 
@@ -9017,9 +9086,15 @@ Current Supabase limits:
 
             const group = allUserGroupsData.find(g => g.id === parseInt(groupId));
             
-            // Prevent deletion of "All Users" group
-            if (group.group_name.toLowerCase() === 'all users') {
-                showError('The "All Users" group cannot be deleted as it is the default group.');
+            // Check if group is being used by any users
+            const { data: usersInGroup } = await supabaseClient
+                .from('onboarding_users')
+                .select('id')
+                .eq('user_group_id', groupId)
+                .limit(1);
+            
+            if (usersInGroup && usersInGroup.length > 0) {
+                showError('Cannot delete group with assigned users. Please reassign users first.');
                 return;
             }
             

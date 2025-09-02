@@ -9,7 +9,9 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(open /Users/timjames/Documents/Projects/todo/admin-modern.html)"
+      "Bash(open /Users/timjames/Documents/Projects/todo/admin-modern.html)",
+      "Bash(rm:*)",
+      "Bash(open /Users/timjames/Documents/Projects/todo/test-supabase.html)"
     ],
     "deny": [],
     "ask": []

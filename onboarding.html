@@ -742,6 +742,33 @@
             flex-shrink: 0;
         }
         
+        .header-complete-btn {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-right: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .header-complete-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+        
+        .header-complete-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
         .task-nav-btn {
             background: #3B82F6;
             border: none;
@@ -1746,8 +1773,8 @@
             background: linear-gradient(90deg, #F9FAFB 0%, #F3F4F6 100%);
             border: 1px solid #E5E7EB;
             border-radius: 8px;
-            padding: 16px 20px;
-            margin: 0 20px 12px 20px;
+            padding: 10px 20px;
+            margin: 0 20px 8px 20px;
             font-weight: 600;
             color: #374151;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -1763,17 +1790,22 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 16px;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .group-icon {
-            font-size: 18px;
+            font-size: 16px;
+            flex-shrink: 0;
         }
 
         .task-group-progress {
-            font-size: 13px;
+            font-size: 12px;
             color: #6B7280;
             font-weight: 500;
+            white-space: nowrap;
         }
 
         .task-group-header.completed .task-group-progress {
@@ -3379,26 +3411,33 @@
             const instructionsHtml = `
                 <div class="instructions-header">
                     <h2 class="instructions-title">${instructions.title}</h2>
-                    <div class="task-navigation">
-                        <button class="task-nav-btn" onclick="navigateTask('prev')" ${!hasPrev ? 'disabled' : ''} title="Previous task">
-                            ←
-                        </button>
-                        <span class="task-counter">${currentIndex + 1} / ${totalTasks}</span>
-                        <button class="task-nav-btn" onclick="navigateTask('next')" ${!hasNext ? 'disabled' : ''} title="Next task">
-                            →
-                        </button>
+                    <div style="display: flex; align-items: center;">
+                        ${!task.completed ? `
+                            <button class="header-complete-btn" onclick="completeAndAdvance()">
+                                ✓ Complete
+                            </button>
+                        ` : ''}
+                        <div class="task-navigation">
+                            <button class="task-nav-btn" onclick="navigateTask('prev')" ${!hasPrev ? 'disabled' : ''} title="Previous task">
+                                ←
+                            </button>
+                            <span class="task-counter">${currentIndex + 1} / ${totalTasks}</span>
+                            <button class="task-nav-btn" onclick="navigateTask('next')" ${!hasNext ? 'disabled' : ''} title="Next task">
+                                →
+                            </button>
+                        </div>
                     </div>
                 </div>
                 ${videoHtml ? `<div class="video-section" style="background: transparent; padding: 20px;">${videoHtml}</div>` : ''}
-                ${!task.completed ? `
-                    <div class="complete-task-section">
-                        <button class="complete-task-btn" onclick="completeAndAdvance()">
-                            ✓ Complete Task
-                        </button>
-                    </div>
-                ` : ''}
                 <div class="instructions-body" style="overflow-y: auto; background: white; padding: 20px; margin: 20px;">
                     ${cleanContent}
+                    ${!task.completed ? `
+                        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #E5E7EB; text-align: center;">
+                            <button class="complete-task-btn" onclick="completeAndAdvance()">
+                                ✓ Complete Task
+                            </button>
+                        </div>
+                    ` : ''}
                     ${formEmbedHtml}
                 </div>
             `;

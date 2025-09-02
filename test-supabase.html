@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Supabase Connection</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Supabase Connection Test</h1>
+    <div id="status">Testing connection...</div>
+    <pre id="output"></pre>
+
+    <script>
+        const SUPABASE_URL = 'https://vvtzalcisnpibnlunqgn.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2dHphbGNpc25waWJubHVucWduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU5NTk4MzMsImV4cCI6MjA3MTUzNTgzM30.LJqY5AjAuwH5k65XY9cxfuqiuNNtjYo5k210IAg0PCk';
+        
+        async function testConnection() {
+            const status = document.getElementById('status');
+            const output = document.getElementById('output');
+            
+            try {
+                // Check if Supabase library loaded
+                if (!window.supabase) {
+                    throw new Error('Supabase library not loaded');
+                }
+                
+                // Initialize client
+                const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                
+                if (!supabaseClient) {
+                    throw new Error('Failed to create Supabase client');
+                }
+                
+                status.textContent = 'Supabase client created. Testing database connection...';
+                
+                // Test database connection
+                console.log('Testing database connection...');
+                const { data, error } = await supabaseClient
+                    .from('onboarding_tasks')
+                    .select('*')
+                    .limit(5);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                status.textContent = `Connection successful! Found ${data?.length || 0} tasks.`;
+                status.style.color = 'green';
+                
+                output.textContent = JSON.stringify(data, null, 2);
+                
+                console.log('Connection test successful:', data);
+                
+            } catch (error) {
+                status.textContent = 'Connection failed!';
+                status.style.color = 'red';
+                
+                output.textContent = `Error: ${error.message}\n\nDetails:\n${JSON.stringify(error, null, 2)}`;
+                
+                console.error('Connection test failed:', error);
+            }
+        }
+        
+        // Run test when page loads
+        window.addEventListener('DOMContentLoaded', testConnection);
+    </script>
+</body>
+</html>
