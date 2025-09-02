@@ -3259,17 +3259,25 @@
         
         // Complete current task and advance
         function completeAndAdvance() {
-            if (!currentOpenTaskId) return;
+            if (!currentOpenTaskId) {
+                console.error('No task currently open');
+                return;
+            }
             
             const task = currentChecklist.find(t => t.id === currentOpenTaskId);
-            if (!task || task.completed) return;
+            if (!task) {
+                console.error('Task not found:', currentOpenTaskId);
+                return;
+            }
             
-            // Show confirmation
-            pendingTaskComplete = { taskId: currentOpenTaskId, task, autoAdvance: true };
-            document.getElementById('taskCompleteTitle').textContent = 'Complete Task?';
-            document.getElementById('taskCompleteMessage').textContent = 
-                `Mark "${task.title}" as completed and move to the next task?`;
-            document.getElementById('taskCompleteOverlay').style.display = 'flex';
+            if (task.completed) {
+                console.log('Task already completed');
+                return;
+            }
+            
+            // Use the same toggleTask function that works with the checkbox
+            // This will show the confirmation dialog
+            toggleTask(currentOpenTaskId, true);
         }
         
         // Show instructions content (separated for reuse)
