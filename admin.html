@@ -3031,8 +3031,9 @@ Current Supabase limits:
                 
                 // Add user groups to dropdown (excluding "All users")
                 data.forEach(group => {
-                    // Skip "All users" group
-                    if (group.group_name && group.group_name.toLowerCase() === 'all users') {
+                    // Skip "All users" and "Default Group"
+                    const groupNameLower = group.group_name ? group.group_name.toLowerCase() : '';
+                    if (groupNameLower === 'all users' || groupNameLower === 'default group') {
                         return;
                     }
                     const option = document.createElement('option');
@@ -6222,8 +6223,9 @@ Current Supabase limits:
                 
                 // Add user groups to dropdown (excluding "All users")
                 data.forEach(group => {
-                    // Skip "All users" group
-                    if (group.group_name && group.group_name.toLowerCase() === 'all users') {
+                    // Skip "All users" and "Default Group"
+                    const groupNameLower = group.group_name ? group.group_name.toLowerCase() : '';
+                    if (groupNameLower === 'all users' || groupNameLower === 'default group') {
                         return;
                     }
                     const option = document.createElement('option');
@@ -7804,10 +7806,13 @@ Current Supabase limits:
                         });
                     }
                     
-                    // Populate user group dropdown (excluding "All users")
+                    // Populate user group dropdown (excluding "All users" and "Default Group")
                     if (userGroupsResult.data) {
                         const userGroupOptions = userGroupsResult.data
-                            .filter(group => group.group_name.toLowerCase() !== 'all users')
+                            .filter(group => {
+                                const nameLower = group.group_name.toLowerCase();
+                                return nameLower !== 'all users' && nameLower !== 'default group';
+                            })
                             .map(group => 
                                 `<option value="${group.id}">${group.group_name}${group.group_description ? ' - ' + group.group_description : ''}</option>`
                             ).join('');
@@ -9018,8 +9023,8 @@ Current Supabase limits:
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Save User Group</button>
                     <button type="button" class="btn btn-secondary" onclick="cancelUserGroupForm()">Cancel</button>
-                    ${group && group.group_name.toLowerCase() !== 'all users' ? '<button type="button" class="btn btn-danger" onclick="deleteUserGroupMain()">Delete</button>' : ''}
-                    ${group && group.group_name.toLowerCase() === 'all users' ? '<button type="button" class="btn" style="background: #E5E7EB; color: #9CA3AF; cursor: not-allowed;" disabled>Protected Group</button>' : ''}
+                    ${group && !['all users', 'default group'].includes(group.group_name.toLowerCase()) ? '<button type="button" class="btn btn-danger" onclick="deleteUserGroupMain()">Delete</button>' : ''}
+                    ${group && ['all users', 'default group'].includes(group.group_name.toLowerCase()) ? '<button type="button" class="btn" style="background: #E5E7EB; color: #9CA3AF; cursor: not-allowed;" disabled>Protected Group</button>' : ''}
                 </div>
             `;
             
