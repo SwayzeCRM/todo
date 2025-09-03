@@ -2110,11 +2110,11 @@
         // Filter tasks based on user targeting
         function filterTasksForUser(tasks, user) {
             return tasks.filter(task => {
-                const targetType = task.target_type || 'all';
+                const targetType = task.target_type;
                 
-                // Show to all users
-                if (targetType === 'all') {
-                    return true;
+                // Tasks must have a target type
+                if (!targetType) {
+                    return false;
                 }
                 
                 // Group-based targeting
@@ -2484,12 +2484,8 @@
                     return matchingGroup;
                 }
                 
-                // If no slug match, check for "All Users" group
-                const allUsersGroup = groups.find(group => 
-                    group.group_name.toLowerCase() === 'all users'
-                );
-                
-                return allUsersGroup || null;
+                // If no slug match, return null
+                return null;
             } catch (error) {
                 console.error('Error finding group:', error);
                 return null;
@@ -2546,10 +2542,17 @@
                 if (groupSlug) {
                     groupToAssign = await findGroupBySlug(groupSlug);
                     console.log('Group to assign:', groupToAssign);
+                    
+                    if (!groupToAssign) {
+                        console.log('No valid group found for parameter:', urlGroup);
+                        showError('Invalid or missing user group. Please contact your administrator.');
+                        return;
+                    }
                 } else {
-                    // Default to "All Users" group if no group parameter
-                    groupToAssign = await findGroupBySlug('all_users');
-                    console.log('Defaulting to All Users group:', groupToAssign);
+                    // No group parameter provided
+                    console.log('No group parameter provided');
+                    showError('No user group specified. Please contact your administrator for the correct link.');
+                    return;
                 }
                 
                 const tasks = await loadTasks();

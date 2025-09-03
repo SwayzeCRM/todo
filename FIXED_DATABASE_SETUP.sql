@@ -273,12 +273,11 @@ CREATE TRIGGER update_onboarding_users_updated_at
 -- 7. INSERT DEFAULT DATA (Optional)
 -- ============================================
 
--- Insert default user groups
-INSERT INTO user_groups (group_name, description) VALUES 
-    ('Default', 'Default user group for all users'),
-    ('Premium', 'Premium users with additional features'),
-    ('Beta Testers', 'Users testing new features')
-ON CONFLICT (group_name) DO NOTHING;
+-- Insert sample user groups (optional - remove if not needed)
+-- INSERT INTO user_groups (group_name, description) VALUES 
+--     ('Premium', 'Premium users with additional features'),
+--     ('Beta Testers', 'Users testing new features')
+-- ON CONFLICT (group_name) DO NOTHING;
 
 -- Insert default task groups
 INSERT INTO task_groups (group_name, description, display_order) VALUES 
