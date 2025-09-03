@@ -7579,6 +7579,13 @@ Current Supabase limits:
                     label: 'Users',
                     activePatterns: ['analytics.html', 'analytics']
                 },
+                {
+                    file: '#',
+                    iconClass: 'eye',
+                    label: 'Preview',
+                    onclick: 'openPreviewModal()',
+                    isPreview: true
+                },
                 { 
                     file: 'test', 
                     iconClass: 'test', 
@@ -9296,6 +9303,142 @@ Current Supabase limits:
             // Initialize Lucide icons
             lucide.createIcons();
         });
+        
+        // User Preview Modal Functions
+        async function openPreviewModal() {
+            const modal = document.getElementById('userPreviewModal');
+            modal.style.display = 'flex';
+            
+            // Load users for the dropdown
+            await loadUsersForPreview();
+        }
+        
+        function closePreviewModal() {
+            const modal = document.getElementById('userPreviewModal');
+            modal.style.display = 'none';
+            
+            // Reset the form
+            document.getElementById('previewUserSelect').value = '';
+            document.getElementById('previewUserInfo').style.display = 'none';
+            document.getElementById('launchPreviewBtn').disabled = true;
+        }
+        
+        async function loadUsersForPreview() {
+            try {
+                const selectElement = document.getElementById('previewUserSelect');
+                selectElement.innerHTML = '<option value="">Loading users...</option>';
+                
+                // Fetch all users
+                const { data: users, error } = await supabaseClient
+                    .from('onboarding_users')
+                    .select('*, user_groups(group_name)')
+                    .eq('is_active', true)
+                    .order('full_name');
+                
+                if (error) throw error;
+                
+                // Populate the dropdown
+                selectElement.innerHTML = '<option value="">Select a user...</option>';
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.dataset.userId = user.id;
+                    option.dataset.userEmail = user.email || '';
+                    option.dataset.userName = user.full_name || '';
+                    option.dataset.userGroup = user.user_groups?.group_name || 'No Group';
+                    option.textContent = `${user.full_name || 'Unnamed'} (${user.email || 'No Email'}) - ${user.user_groups?.group_name || 'No Group'}`;
+                    selectElement.appendChild(option);
+                });
+                
+                // Add change event listener
+                selectElement.onchange = handlePreviewUserSelect;
+                
+            } catch (error) {
+                console.error('Error loading users for preview:', error);
+                showError('Failed to load users: ' + error.message);
+            }
+        }
+        
+        function handlePreviewUserSelect() {
+            const selectElement = document.getElementById('previewUserSelect');
+            const selectedOption = selectElement.options[selectElement.selectedIndex];
+            const previewInfo = document.getElementById('previewUserInfo');
+            const previewDetails = document.getElementById('previewUserDetails');
+            const launchBtn = document.getElementById('launchPreviewBtn');
+            
+            if (selectElement.value) {
+                // Show user details
+                const userId = selectedOption.dataset.userId;
+                const userName = selectedOption.dataset.userName;
+                const userEmail = selectedOption.dataset.userEmail;
+                const userGroup = selectedOption.dataset.userGroup;
+                
+                previewDetails.innerHTML = `
+                    <p><strong>Name:</strong> ${userName || 'Not set'}</p>
+                    <p><strong>Email:</strong> ${userEmail || 'Not set'}</p>
+                    <p><strong>Group:</strong> ${userGroup}</p>
+                    <p style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #E5E7EB;">
+                        <strong>Preview URL:</strong><br>
+                        <code style="background: #F3F4F6; padding: 4px 8px; border-radius: 4px; font-size: 12px; word-break: break-all;">
+                            ${window.location.origin}/onboarding.html?user_id=${userId}
+                        </code>
+                    </p>
+                `;
+                
+                previewInfo.style.display = 'block';
+                launchBtn.disabled = false;
+            } else {
+                previewInfo.style.display = 'none';
+                launchBtn.disabled = true;
+            }
+        }
+        
+        function launchPreview() {
+            const selectElement = document.getElementById('previewUserSelect');
+            const userId = selectElement.value;
+            
+            if (userId) {
+                // Open the onboarding page with the user's ID as a parameter
+                const previewUrl = `${window.location.origin}/onboarding.html?user_id=${userId}`;
+                window.open(previewUrl, '_blank');
+                
+                // Optionally close the modal
+                closePreviewModal();
+            }
+        }
     </script>
+    <!-- User Preview Modal -->
+    <div id="userPreviewModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>Preview Onboarding As User</h2>
+                <button class="close-btn" onclick="closePreviewModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="previewUserSelect">Select User to Preview As:</label>
+                    <select id="previewUserSelect" class="form-control" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                        <option value="">Loading users...</option>
+                    </select>
+                    <small style="color: #6B7280; display: block; margin-top: 8px;">
+                        Select a user to preview their onboarding experience with their specific parameters and assigned tasks.
+                    </small>
+                </div>
+                
+                <div id="previewUserInfo" style="display: none; margin-top: 20px; padding: 15px; background: #F3F4F6; border-radius: 8px;">
+                    <h4 style="margin-top: 0;">User Details:</h4>
+                    <div id="previewUserDetails"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closePreviewModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="launchPreview()" id="launchPreviewBtn" disabled>
+                    <i data-lucide="external-link" style="width: 16px; height: 16px; display: inline-block; margin-right: 4px;"></i>
+                    Launch Preview
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
