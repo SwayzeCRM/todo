@@ -699,8 +699,8 @@
         }
 
         .actions-cell {
-            width: 180px;
-            min-width: 180px;
+            width: 220px;
+            min-width: 220px;
             text-align: center;
             padding: 8px !important;
         }
@@ -1470,6 +1470,248 @@
             }
         }
         
+        // View user progress function
+        async function viewUserProgress(userId, userEmail) {
+            try {
+                // Fetch user details with checklist
+                const { data: user, error: userError } = await supabaseClient
+                    .from('onboarding_users')
+                    .select('*')
+                    .eq('id', userId)
+                    .single();
+                
+                if (userError) throw userError;
+                
+                // Fetch all tasks
+                const { data: allTasks, error: tasksError } = await supabaseClient
+                    .from('onboarding_tasks')
+                    .select('*')
+                    .order('position');
+                
+                if (tasksError) throw tasksError;
+                
+                // Fetch video progress for this user
+                const { data: videoProgress, error: videoError } = await supabaseClient
+                    .from('video_progress')
+                    .select('*')
+                    .eq('user_id', userId);
+                
+                if (videoError) throw videoError;
+                
+                // Create a map of video progress by task ID
+                const videoProgressMap = {};
+                (videoProgress || []).forEach(vp => {
+                    videoProgressMap[vp.task_id] = vp;
+                });
+                
+                // Parse checklist
+                let checklist = [];
+                try {
+                    checklist = user.checklist ? (typeof user.checklist === 'string' ? JSON.parse(user.checklist) : user.checklist) : [];
+                } catch (e) {
+                    console.error('Error parsing checklist:', e);
+                }
+                
+                // Create task map
+                const taskMap = {};
+                allTasks.forEach(task => {
+                    taskMap[task.task_id] = task;
+                });
+                
+                // Categorize tasks
+                const completedTasks = [];
+                const currentTask = { task: null, index: -1 };
+                const upcomingTasks = [];
+                
+                checklist.forEach((item, index) => {
+                    const task = taskMap[item.id];
+                    if (!task) return;
+                    
+                    const taskWithProgress = {
+                        ...task,
+                        completed: item.completed,
+                        videoProgress: videoProgressMap[task.id] || null
+                    };
+                    
+                    if (item.completed) {
+                        completedTasks.push(taskWithProgress);
+                    } else if (currentTask.task === null) {
+                        currentTask.task = taskWithProgress;
+                        currentTask.index = index + 1;
+                    } else {
+                        upcomingTasks.push(taskWithProgress);
+                    }
+                });
+                
+                // Create modal HTML
+                const modalHtml = `
+                    <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+                        <div class="modal-header" style="border-bottom: 2px solid #E5E7EB; padding-bottom: 16px; margin-bottom: 24px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h2 style="font-size: 24px; font-weight: 700; color: #1F2937;">User Progress: ${userEmail}</h2>
+                                <button onclick="closeProgressModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6B7280;">&times;</button>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px;">
+                                <div style="background: #F0FDF4; padding: 12px; border-radius: 8px; border: 1px solid #BBF7D0;">
+                                    <div style="color: #166534; font-size: 12px; font-weight: 500;">Completed</div>
+                                    <div style="color: #166534; font-size: 20px; font-weight: 700;">${completedTasks.length}</div>
+                                </div>
+                                <div style="background: #EFF6FF; padding: 12px; border-radius: 8px; border: 1px solid #BFDBFE;">
+                                    <div style="color: #1E40AF; font-size: 12px; font-weight: 500;">Current Task</div>
+                                    <div style="color: #1E40AF; font-size: 20px; font-weight: 700;">${currentTask.task ? `#${currentTask.index}` : 'None'}</div>
+                                </div>
+                                <div style="background: #FEF3C7; padding: 12px; border-radius: 8px; border: 1px solid #FDE68A;">
+                                    <div style="color: #92400E; font-size: 12px; font-weight: 500;">Remaining</div>
+                                    <div style="color: #92400E; font-size: 20px; font-weight: 700;">${upcomingTasks.length}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${currentTask.task ? `
+                            <div style="margin-bottom: 32px;">
+                                <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1F2937;">Current Task</h3>
+                                <div style="background: #EFF6FF; border: 2px solid #3B82F6; border-radius: 8px; padding: 16px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                                        <div style="flex: 1;">
+                                            <h4 style="font-size: 16px; font-weight: 600; color: #1E40AF; margin-bottom: 8px;">
+                                                ${currentTask.task.title}
+                                            </h4>
+                                            <p style="color: #6B7280; font-size: 14px; margin-bottom: 12px;">${currentTask.task.description || ''}</p>
+                                            ${currentTask.task.video_url ? `
+                                                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #DBEAFE;">
+                                                    ${renderVideoProgress(currentTask.task.videoProgress, currentTask.task.require_video_completion)}
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <div style="margin-bottom: 32px;">
+                            <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1F2937;">Completed Tasks (${completedTasks.length})</h3>
+                            <div style="display: grid; gap: 8px;">
+                                ${completedTasks.map(task => `
+                                    <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 6px; padding: 12px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <div style="color: #10B981; font-size: 20px;">✓</div>
+                                                <div>
+                                                    <div style="font-weight: 500; color: #374151;">${task.title}</div>
+                                                    ${task.video_url && task.videoProgress ? `
+                                                        <div style="font-size: 12px; color: #6B7280; margin-top: 4px;">
+                                                            Video: ${Math.round(task.videoProgress.watch_percentage || 0)}% watched
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('') || '<div style="color: #6B7280;">No completed tasks yet</div>'}
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1F2937;">Upcoming Tasks (${upcomingTasks.length})</h3>
+                            <div style="display: grid; gap: 8px;">
+                                ${upcomingTasks.slice(0, 5).map(task => `
+                                    <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 6px; padding: 12px; opacity: 0.7;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div style="color: #9CA3AF; font-size: 20px;">○</div>
+                                            <div>
+                                                <div style="font-weight: 500; color: #6B7280;">${task.title}</div>
+                                                ${task.require_video_completion ? `
+                                                    <div style="font-size: 11px; color: #EF4444; margin-top: 2px;">
+                                                        ⚠ Video completion required
+                                                    </div>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('') || '<div style="color: #6B7280;">No upcoming tasks</div>'}
+                                ${upcomingTasks.length > 5 ? `
+                                    <div style="color: #6B7280; font-size: 14px; text-align: center; padding: 8px;">
+                                        ... and ${upcomingTasks.length - 5} more tasks
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Create and show modal
+                const modal = document.createElement('div');
+                modal.id = 'userProgressModal';
+                modal.className = 'modal-overlay';
+                modal.innerHTML = modalHtml;
+                modal.style.display = 'flex';
+                document.body.appendChild(modal);
+                
+                // Close on background click
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        closeProgressModal();
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Error viewing user progress:', error);
+                alert('Failed to load user progress: ' + error.message);
+            }
+        }
+        
+        // Helper function to render video progress
+        function renderVideoProgress(videoProgress, requireCompletion) {
+            if (!videoProgress) {
+                return `
+                    <div style="color: #6B7280; font-size: 14px;">
+                        <div style="margin-bottom: 4px;">📹 Video not started</div>
+                        ${requireCompletion ? '<div style="color: #EF4444; font-size: 12px;">⚠ Must complete video to proceed</div>' : ''}
+                    </div>
+                `;
+            }
+            
+            const percentage = Math.round(videoProgress.watch_percentage || 0);
+            const isCompleted = videoProgress.completed || percentage >= 95;
+            
+            return `
+                <div>
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                        <div style="color: #374151; font-size: 14px;">📹 Video Progress</div>
+                        <div style="font-weight: 600; color: ${isCompleted ? '#10B981' : '#3B82F6'};">
+                            ${percentage}% watched
+                        </div>
+                    </div>
+                    <div style="background: #E5E7EB; height: 8px; border-radius: 4px; overflow: hidden;">
+                        <div style="background: ${isCompleted ? '#10B981' : '#3B82F6'}; height: 100%; width: ${percentage}%; transition: width 0.3s;"></div>
+                    </div>
+                    ${videoProgress.last_watched_at ? `
+                        <div style="color: #6B7280; font-size: 12px; margin-top: 4px;">
+                            Last watched: ${new Date(videoProgress.last_watched_at).toLocaleDateString()}
+                        </div>
+                    ` : ''}
+                    ${requireCompletion && !isCompleted ? `
+                        <div style="color: #EF4444; font-size: 12px; margin-top: 4px;">
+                            ⚠ Must complete video (95%) to proceed
+                        </div>
+                    ` : ''}
+                    ${isCompleted ? `
+                        <div style="color: #10B981; font-size: 12px; margin-top: 4px;">
+                            ✓ Video completed
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+        
+        // Close progress modal
+        function closeProgressModal() {
+            const modal = document.getElementById('userProgressModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
         // Delete user function
         async function deleteUser(userId, userEmail) {
             // Show confirmation dialog
@@ -1671,6 +1913,16 @@
             
             // Add event delegation for action buttons
             document.addEventListener('click', function(e) {
+                // Handle view progress button
+                if (e.target.closest('.view-progress-btn')) {
+                    const button = e.target.closest('.view-progress-btn');
+                    const userId = button.getAttribute('data-user-id');
+                    const userEmail = button.getAttribute('data-user-email');
+                    if (userId) {
+                        viewUserProgress(userId, userEmail);
+                    }
+                }
+                
                 // Handle edit user button
                 if (e.target.closest('.edit-user-btn')) {
                     const button = e.target.closest('.edit-user-btn');
@@ -1986,6 +2238,9 @@
                         <td class="date-cell">${createdDate}</td>
                         <td class="actions-cell">
                             <div class="quick-actions">
+                                <button class="action-btn view-progress-btn" data-user-id="${user.id}" data-user-email="${escapedEmail}" title="View detailed progress and video tracking" style="background: #E0E7FF; color: #4338CA;">
+                                    <i data-lucide="bar-chart-2" style="width: 14px; height: 14px;"></i>
+                                </button>
                                 <button class="action-btn edit-user-btn" data-user-id="${user.id}" title="Edit user details and assignments">
                                     <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
                                 </button>

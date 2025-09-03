@@ -2769,8 +2769,33 @@
                 return;
             }
             
-            // If completing a task, show confirmation
+            // If completing a task, check video requirement
             if (completed) {
+                // Check if video completion is required
+                if (task.require_video_completion && videoProgressTracker) {
+                    const isVideoCompleted = await videoProgressTracker.isVideoCompleted(taskId);
+                    if (!isVideoCompleted) {
+                        const progress = await videoProgressTracker.getProgress(taskId);
+                        const percentage = progress?.watch_percentage || 0;
+                        
+                        alert(`Please complete the video before marking this task as complete.\n\nVideo progress: ${Math.round(percentage)}% (95% required)`);
+                        
+                        // Reset checkbox
+                        const checkbox = document.querySelector(`input[type="checkbox"][onclick*="${taskId}"]`);
+                        if (checkbox) checkbox.checked = false;
+                        
+                        // Reset complete buttons
+                        const completeButtons = document.querySelectorAll('.header-complete-btn, .complete-task-btn');
+                        completeButtons.forEach(btn => {
+                            if (btn.dataset.taskId === taskId) {
+                                btn.textContent = btn.textContent.includes('Complete Task') ? '✓ Complete Task' : '✓ Complete';
+                            }
+                        });
+                        
+                        return;
+                    }
+                }
+                
                 pendingTaskComplete = { taskId, task };
                 document.getElementById('taskCompleteTitle').textContent = 'Complete Task?';
                 document.getElementById('taskCompleteMessage').textContent = 
@@ -4479,6 +4504,96 @@
         document.addEventListener('DOMContentLoaded', () => {
             init();
             initializeGamification();
+        });
+    </script>
+    
+    <!-- Video Progress Tracking -->
+    <script src="video-progress-tracker.js"></script>
+    <script>
+        // Initialize video progress tracker
+        let videoProgressTracker = null;
+        
+        // Initialize tracker when user is authenticated
+        function initVideoProgressTracker() {
+            if (currentUser && window.VideoProgressTracker) {
+                videoProgressTracker = new VideoProgressTracker(supabase, currentUser);
+                console.log('Video progress tracker initialized');
+            }
+        }
+        
+        // Track video for current task
+        function trackTaskVideo(taskId) {
+            if (!videoProgressTracker) return;
+            
+            const videoElement = document.getElementById(`task-video-${taskId}`);
+            if (videoElement && videoElement.tagName === 'VIDEO') {
+                // Set requirement flag if task requires video completion
+                const task = allTasks.find(t => t.id === taskId);
+                if (task) {
+                    videoProgressTracker.setVideoRequirement(taskId, task.require_video_completion);
+                }
+                
+                // Initialize tracking for this video
+                videoProgressTracker.initializeVideo(taskId, videoElement);
+            }
+        }
+        
+        // Check if user can proceed to next task (video gating)
+        async function canProceedToNextTask(currentTaskId) {
+            if (!currentUser || !currentTaskId) return true;
+            
+            try {
+                const { data, error } = await supabase.rpc('can_proceed_to_next_task', {
+                    p_user_id: currentUser.id,
+                    p_current_task_id: currentTaskId
+                });
+                
+                if (error) {
+                    console.error('Error checking task progression:', error);
+                    return true; // Allow progression on error
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('Error checking task progression:', error);
+                return true;
+            }
+        }
+        
+        // Override showTask to include video tracking
+        const originalShowTask = window.showTask;
+        window.showTask = async function(taskId) {
+            // Check if user can proceed from previous task (video gating)
+            const currentTaskElement = document.querySelector('.task-item.active');
+            if (currentTaskElement) {
+                const currentTaskId = currentTaskElement.dataset.taskId;
+                const currentTask = allTasks.find(t => t.id === currentTaskId);
+                
+                if (currentTask && currentTask.gate_next_task_on_video) {
+                    const canProceed = await canProceedToNextTask(currentTaskId);
+                    if (!canProceed) {
+                        // Check video progress for more specific feedback
+                        const progress = await videoProgressTracker?.getProgress(currentTaskId);
+                        const percentage = progress?.watch_percentage || 0;
+                        
+                        alert(`Please complete the video in the current task before proceeding.\n\nVideo progress: ${Math.round(percentage)}% (95% required)`);
+                        return;
+                    }
+                }
+            }
+            
+            // Call original showTask
+            originalShowTask(taskId);
+            
+            // Initialize video tracking for new task
+            setTimeout(() => trackTaskVideo(taskId), 100);
+        };
+        
+        // Initialize tracker when auth state changes
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (session?.user) {
+                setTimeout(initVideoProgressTracker, 500);
+            }
         });
     </script>
 </body>

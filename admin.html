@@ -1795,6 +1795,18 @@
                                 </small>
                             </div>
                         </label>
+                        
+                        <!-- Video Gating for Next Task -->
+                        <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; margin-top: 12px; padding-top: 12px; border-top: 1px solid #E5E7EB;">
+                            <input type="checkbox" id="gateNextTaskOnVideo" style="width: 18px; height: 18px; margin-top: 2px;">
+                            <div>
+                                <span style="font-weight: 500; color: #1F2937;">Gate Next Task Until Video Complete</span>
+                                <small style="display: block; color: #6B7280; margin-top: 4px;">
+                                    When enabled, users cannot proceed to the next task until they watch at least 95% of this video. 
+                                    This creates a hard stop in the onboarding flow.
+                                </small>
+                            </div>
+                        </label>
                     </div>
                 </div>
 
@@ -4166,6 +4178,12 @@ Current Supabase limits:
                 requireVideoCheckbox.checked = task.require_video_completion || false;
             }
             
+            // Set video gating requirement
+            const gateNextTaskCheckbox = document.getElementById('gateNextTaskOnVideo');
+            if (gateNextTaskCheckbox) {
+                gateNextTaskCheckbox.checked = task.gate_next_task_on_video || false;
+            }
+            
             // Handle video based on type
             if (task.video_type === 'upload' && task.video_url) {
                 // Uploaded video
@@ -4399,6 +4417,12 @@ Current Supabase limits:
             const requireVideoCheckbox = document.getElementById('requireVideoCompletion');
             if (requireVideoCheckbox) {
                 requireVideoCheckbox.checked = false;
+            }
+            
+            // Reset video gating checkbox
+            const gateNextTaskCheckbox = document.getElementById('gateNextTaskOnVideo');
+            if (gateNextTaskCheckbox) {
+                gateNextTaskCheckbox.checked = false;
             }
             // Remove any video preview
             const uploadInput = document.getElementById('videoUploadInput');
@@ -4827,6 +4851,7 @@ Current Supabase limits:
                     video_type: videoType,
                     video_storage_path: videoStoragePath,
                     require_video_completion: document.getElementById('requireVideoCompletion')?.checked || false,
+                    gate_next_task_on_video: document.getElementById('gateNextTaskOnVideo')?.checked || false,
                     form_embed_code: document.getElementById('hasFormEmbed').checked ? document.getElementById('formEmbedCode').value.trim() : null,
                     task_group_id: taskGroupId ? parseInt(taskGroupId) : null,
                     position: position,
