@@ -1780,11 +1780,11 @@
                     </div>
                     
                     <div id="videoUrlInput" style="display: none;">
-                        <input type="url" id="videoUrl" placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..." style="width: 100%;">
+                        <input type="url" id="videoUrl" placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..." style="width: 100%;" oninput="updateVideoCompletionOptionsVisibility()">
                     </div>
                     
                     <!-- Video Completion Requirement -->
-                    <div id="videoCompletionOption" style="margin-top: 15px; padding: 12px; background: #F3F4F6; border-radius: 6px;">
+                    <div id="videoCompletionOption" style="display: none; margin-top: 15px; padding: 12px; background: #F3F4F6; border-radius: 6px;">
                         <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
                             <input type="checkbox" id="requireVideoCompletion" style="width: 18px; height: 18px; margin-top: 2px;">
                             <div>
@@ -2414,6 +2414,27 @@
                 const urlPreview = urlInput.querySelector('.video-preview-container');
                 if (urlPreview) urlPreview.remove();
             }
+            
+            // Check if we should show/hide video completion options
+            updateVideoCompletionOptionsVisibility();
+        }
+        
+        // Function to show/hide video completion options based on whether there's a video
+        function updateVideoCompletionOptionsVisibility() {
+            const videoFile = document.getElementById('videoFile').files.length > 0;
+            const videoUrl = document.getElementById('videoUrl').value.trim();
+            const hasUploadedVideo = uploadedVideoUrl || uploadedVideoPath;
+            const videoCompletionOption = document.getElementById('videoCompletionOption');
+            
+            // Show options if there's any video (file, URL, or previously uploaded)
+            if (videoFile || videoUrl || hasUploadedVideo) {
+                videoCompletionOption.style.display = 'block';
+            } else {
+                videoCompletionOption.style.display = 'none';
+                // Reset checkboxes when hiding
+                document.getElementById('requireVideoCompletion').checked = false;
+                document.getElementById('gateNextTaskOnVideo').checked = false;
+            }
         }
         
         // Handle video file selection
@@ -2425,6 +2446,7 @@
             const file = event.target.files[0];
             if (!file) {
                 selectedVideoFile = null;
+                updateVideoCompletionOptionsVisibility();
                 return;
             }
             
@@ -2442,6 +2464,9 @@
             
             selectedVideoFile = file;
             console.log('Video file selected:', file.name, 'Size:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
+            
+            // Show video completion options
+            updateVideoCompletionOptionsVisibility();
             
             // Immediately upload the video
             const uploadResult = await uploadVideoToStorage(file);
@@ -4292,6 +4317,9 @@ Current Supabase limits:
                 document.getElementById('formEmbedCode').value = '';
                 document.getElementById('formEmbedGroup').style.display = 'none';
             }
+            
+            // Update video completion options visibility
+            updateVideoCompletionOptionsVisibility();
 
             // Determine if it's individual or group task
             if (task.target_type === 'individuals' && task.target_users && task.target_users.length > 0) {
@@ -4424,6 +4452,10 @@ Current Supabase limits:
             if (gateNextTaskCheckbox) {
                 gateNextTaskCheckbox.checked = false;
             }
+            
+            // Hide video completion options
+            updateVideoCompletionOptionsVisibility();
+            
             // Remove any video preview
             const uploadInput = document.getElementById('videoUploadInput');
             if (uploadInput) {
