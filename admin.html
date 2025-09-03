@@ -1558,8 +1558,8 @@
                     <label for="taskFilter" class="filter-label">Filter:</label>
                     <select id="taskFilter" class="task-filter" onchange="handleFilterChange()">
                         <option value="all">All Tasks</option>
-                        <option value="groups">Groups</option>
-                        <option value="individuals">Individuals</option>
+                        <option value="groups">By User Groups</option>
+                        <option value="individuals">By Individuals</option>
                     </select>
                     
                     <!-- Task Groups Dropdown (shown when Groups is selected) -->
@@ -1686,10 +1686,10 @@
 
                 <!-- Simplified Show Task To Selection -->
                 <div class="form-group">
-                    <label for="showTaskTo">Show Task To</label>
+                    <label for="showTaskTo">Assign Task To</label>
                     <select id="showTaskTo" class="filter-select" onchange="updateShowTaskTo()">
-                        <option value="usergroup">User Group</option>
-                        <option value="individual">Individual User</option>
+                        <option value="usergroup">User Group → Task Group</option>
+                        <option value="individual">Individual User (Direct)</option>
                     </select>
                 </div>
 
@@ -3515,7 +3515,7 @@ Current Supabase limits:
             // Then apply category filters
             if (filterValue !== 'all') {
                 filteredTasks = filteredTasks.filter(task => {
-                    const targetType = task.target_type || 'all';
+                    const targetType = task.target_type || 'groups';
                     
                     // First filter by target type
                     let matchesTargetType = false;
@@ -3573,7 +3573,7 @@ Current Supabase limits:
             }
 
             tasksList.innerHTML = filteredTasks.map(task => {
-                const targetType = task.target_type || 'all';
+                const targetType = task.target_type || 'groups';
                 const indicator = getTaskIndicator(targetType, task);
                 
                 return `
@@ -3688,9 +3688,9 @@ Current Supabase limits:
 
         // Check if a task applies to a specific user
         function doesTaskApplyToUser(task, userId) {
-            // If task targets everyone, it applies to all users
-            if (!task.target_type || task.target_type === 'all') {
-                return true;
+            // Tasks must have a target type
+            if (!task.target_type) {
+                return false;
             }
 
             // If task targets individuals, check if this user is in the target list
@@ -4643,7 +4643,7 @@ Current Supabase limits:
                 form_embed_code: data.form_embed_code || null,
                 position: data.position,
                 is_active: data.is_active !== undefined ? data.is_active : true,
-                target_type: data.target_type || 'all',
+                target_type: data.target_type || 'groups',
                 due_date: data.due_date || null
             };
             
@@ -6803,7 +6803,7 @@ Current Supabase limits:
                     </div>`;
                 } else {
                     rulesDisplay = `<div class="webhook-rules" style="font-size: 12px; color: #666; margin-top: 4px;">
-                        🌍 Rules: Fires for all users
+                        ⚠️ Rules: No specific rules configured
                     </div>`;
                 }
                 
