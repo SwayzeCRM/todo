@@ -3029,8 +3029,12 @@ Current Supabase limits:
                     return;
                 }
                 
-                // Add user groups to dropdown
+                // Add user groups to dropdown (excluding "All users")
                 data.forEach(group => {
+                    // Skip "All users" group
+                    if (group.group_name && group.group_name.toLowerCase() === 'all users') {
+                        return;
+                    }
                     const option = document.createElement('option');
                     option.value = group.id;
                     option.textContent = group.group_name;
@@ -6216,8 +6220,12 @@ Current Supabase limits:
                     selectElement.remove(1);
                 }
                 
-                // Add user groups to dropdown
+                // Add user groups to dropdown (excluding "All users")
                 data.forEach(group => {
+                    // Skip "All users" group
+                    if (group.group_name && group.group_name.toLowerCase() === 'all users') {
+                        return;
+                    }
                     const option = document.createElement('option');
                     option.value = group.id;
                     option.textContent = group.group_name;
@@ -6526,9 +6534,13 @@ Current Supabase limits:
 
                 const select = document.getElementById('sequenceAppliesTo');
                 
-                // Add user groups to the dropdown
+                // Add user groups to the dropdown (excluding "All users")
                 if (userGroups && userGroups.length > 0) {
                     userGroups.forEach(group => {
+                        // Skip "All users" group
+                        if (group.group_name && group.group_name.toLowerCase() === 'all users') {
+                            return;
+                        }
                         const option = document.createElement('option');
                         option.value = group.id;
                         option.textContent = group.group_name;
@@ -7792,11 +7804,13 @@ Current Supabase limits:
                         });
                     }
                     
-                    // Populate user group dropdown
+                    // Populate user group dropdown (excluding "All users")
                     if (userGroupsResult.data) {
-                        const userGroupOptions = userGroupsResult.data.map(group => 
-                            `<option value="${group.id}">${group.group_name}${group.group_description ? ' - ' + group.group_description : ''}</option>`
-                        ).join('');
+                        const userGroupOptions = userGroupsResult.data
+                            .filter(group => group.group_name.toLowerCase() !== 'all users')
+                            .map(group => 
+                                `<option value="${group.id}">${group.group_name}${group.group_description ? ' - ' + group.group_description : ''}</option>`
+                            ).join('');
                         
                         document.getElementById('editUserGroup').innerHTML = '<option value="">Select user group...</option>' + userGroupOptions;
                         document.getElementById('graduationGroup').innerHTML = '<option value="">Select graduation group...</option>' + userGroupOptions;
