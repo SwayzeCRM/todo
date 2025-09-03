@@ -1782,6 +1782,20 @@
                     <div id="videoUrlInput" style="display: none;">
                         <input type="url" id="videoUrl" placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..." style="width: 100%;">
                     </div>
+                    
+                    <!-- Video Completion Requirement -->
+                    <div id="videoCompletionOption" style="margin-top: 15px; padding: 12px; background: #F3F4F6; border-radius: 6px;">
+                        <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="requireVideoCompletion" style="width: 18px; height: 18px; margin-top: 2px;">
+                            <div>
+                                <span style="font-weight: 500; color: #1F2937;">Require Video Completion</span>
+                                <small style="display: block; color: #6B7280; margin-top: 4px;">
+                                    When enabled, users must watch at least 95% of the video before they can mark this task as complete. 
+                                    Progress is saved automatically.
+                                </small>
+                            </div>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -4146,6 +4160,12 @@ Current Supabase limits:
             document.getElementById('description').value = task.description;
             document.getElementById('instructionTitle').value = task.instruction_title;
             
+            // Set video completion requirement
+            const requireVideoCheckbox = document.getElementById('requireVideoCompletion');
+            if (requireVideoCheckbox) {
+                requireVideoCheckbox.checked = task.require_video_completion || false;
+            }
+            
             // Handle video based on type
             if (task.video_type === 'upload' && task.video_url) {
                 // Uploaded video
@@ -4374,6 +4394,12 @@ Current Supabase limits:
             uploadedVideoPath = null;
             document.getElementById('videoFile').value = '';
             document.getElementById('videoUrl').value = '';
+            
+            // Reset video completion checkbox
+            const requireVideoCheckbox = document.getElementById('requireVideoCompletion');
+            if (requireVideoCheckbox) {
+                requireVideoCheckbox.checked = false;
+            }
             // Remove any video preview
             const uploadInput = document.getElementById('videoUploadInput');
             if (uploadInput) {
@@ -4800,6 +4826,7 @@ Current Supabase limits:
                     video_url: videoUrl,
                     video_type: videoType,
                     video_storage_path: videoStoragePath,
+                    require_video_completion: document.getElementById('requireVideoCompletion')?.checked || false,
                     form_embed_code: document.getElementById('hasFormEmbed').checked ? document.getElementById('formEmbedCode').value.trim() : null,
                     task_group_id: taskGroupId ? parseInt(taskGroupId) : null,
                     position: position,
