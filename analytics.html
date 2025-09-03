@@ -387,19 +387,20 @@
 
         .users-table th {
             background: #F9FAFB;
-            padding: 16px 24px;
+            padding: 12px 16px;
             text-align: left;
             font-weight: 600;
             color: #374151;
-            font-size: 14px;
+            font-size: 13px;
             white-space: nowrap;
             border-bottom: 1px solid #E5E7EB;
         }
 
         .users-table td {
-            padding: 16px 24px;
+            padding: 12px 16px;
             border-bottom: 1px solid #F3F4F6;
             vertical-align: middle;
+            font-size: 14px;
         }
 
         .users-table tr:hover {
@@ -526,6 +527,31 @@
             .metrics-grid {
                 grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
                 gap: 16px;
+            }
+            
+            /* Table adjustments for tablets */
+            .users-table {
+                font-size: 13px;
+            }
+            
+            .users-table th,
+            .users-table td {
+                padding: 10px 12px;
+            }
+            
+            .actions-cell {
+                width: 160px;
+                min-width: 160px;
+            }
+            
+            .action-btn {
+                width: 28px;
+                height: 28px;
+                min-width: 28px;
+            }
+            
+            .quick-actions {
+                gap: 3px;
             }
 
             .header-content {
@@ -673,20 +699,24 @@
         }
 
         .actions-cell {
-            width: 120px;
+            width: 180px;
+            min-width: 180px;
             text-align: center;
+            padding: 8px !important;
         }
 
         .quick-actions {
             display: flex;
-            gap: 8px;
+            gap: 4px;
             justify-content: center;
             align-items: center;
+            flex-wrap: nowrap;
         }
 
         .action-btn {
-            width: 32px;
-            height: 32px;
+            width: 30px;
+            height: 30px;
+            min-width: 30px;
             border-radius: 6px;
             border: 1px solid #D1D5DB;
             background: #FFFFFF;
@@ -695,9 +725,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
             transition: all 0.2s ease;
+            flex-shrink: 0;
         }
 
         .create-task-btn:hover {
@@ -1306,7 +1337,7 @@
                             <th>Status</th>
                             <th>Last Activity</th>
                             <th>Created</th>
-                            <th>Quick Actions</th>
+                            <th style="width: 180px; text-align: center;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="usersTableBody">
@@ -1956,16 +1987,16 @@
                         <td class="actions-cell">
                             <div class="quick-actions">
                                 <button class="action-btn edit-user-btn" data-user-id="${user.id}" title="Edit user details and assignments">
-                                    <i data-lucide="edit" style="width: 16px; height: 16px;"></i>
+                                    <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
                                 </button>
                                 <button class="action-btn create-task-btn" data-email="${escapedEmail}" data-location="${escapedLocationId}" title="Create specific task for this user">
-                                    <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                                    <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
                                 </button>
                                 <button class="action-btn crm-link-btn" data-location="${escapedLocationId}" title="Open user's CRM account">
-                                    <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
+                                    <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
                                 </button>
                                 <button class="action-btn delete-user-btn" data-user-id="${user.id}" data-user-email="${escapedEmail}" title="Delete user" style="background: #FEE2E2; color: #DC2626;">
-                                    <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                                    <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
                                 </button>
                             </div>
                         </td>
