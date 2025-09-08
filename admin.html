@@ -79,6 +79,12 @@
             flex-wrap: wrap;
         }
 
+        .btn-logout:hover {
+            background: rgba(255, 255, 255, 0.3) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
         .admin-nav {
             display: flex;
             background: rgba(255, 255, 255, 0.08);
@@ -1532,6 +1538,20 @@
             <div class="admin-nav" id="adminNav">
                 <!-- Navigation links will be populated by JavaScript -->
             </div>
+            <div class="user-info" id="userInfo" style="display: flex; align-items: center; gap: 16px; margin-left: auto;">
+                <span id="userEmail" style="color: rgba(255, 255, 255, 0.9); font-size: 14px;"></span>
+                <button onclick="logout()" class="btn-logout" style="
+                    background: rgba(255, 255, 255, 0.2);
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 500;
+                    transition: all 0.3s ease;
+                ">Logout</button>
+            </div>
             <!-- Dark Mode Toggle -->
             <button id="themeToggle" class="theme-toggle" title="Toggle dark mode (Ctrl+Shift+D)">
                 <i data-lucide="sun" class="theme-icon-light"></i>
@@ -2379,6 +2399,74 @@
         let allGroups = [];
         let allLocations = [];
         let allUsers = [];
+        let currentUser = null;
+
+        // Authentication check
+        async function checkAuth() {
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                
+                if (!session) {
+                    // No session, redirect to login
+                    window.location.href = 'admin-login.html';
+                    return false;
+                }
+                
+                // Check if email domain is allowed
+                const userEmail = session.user.email;
+                const allowedDomains = ['@swayzecrm.com', '@dfycrm.com'];
+                const emailDomain = userEmail.substring(userEmail.indexOf('@'));
+                
+                if (!allowedDomains.includes(emailDomain)) {
+                    // Invalid domain, sign out and redirect
+                    await supabaseClient.auth.signOut();
+                    window.location.href = 'admin-login.html';
+                    return false;
+                }
+                
+                // Check if email is verified
+                if (!session.user.email_confirmed_at) {
+                    // Email not verified, sign out and redirect
+                    await supabaseClient.auth.signOut();
+                    window.location.href = 'admin-login.html';
+                    return false;
+                }
+                
+                currentUser = session.user;
+                
+                // Display user email in header
+                const userEmailElement = document.getElementById('userEmail');
+                if (userEmailElement) {
+                    userEmailElement.textContent = currentUser.email;
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('Auth check error:', error);
+                window.location.href = 'admin-login.html';
+                return false;
+            }
+        }
+
+        // Logout function
+        async function logout() {
+            try {
+                const { error } = await supabaseClient.auth.signOut();
+                if (error) throw error;
+                window.location.href = 'admin-login.html';
+            } catch (error) {
+                console.error('Logout error:', error);
+                // Force redirect even if error
+                window.location.href = 'admin-login.html';
+            }
+        }
+
+        // Listen for auth state changes
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT') {
+                window.location.href = 'admin-login.html';
+            }
+        });
 
         // Toggle form embed visibility
         function toggleFormEmbed() {
@@ -5107,7 +5195,37 @@ Current Supabase limits:
                     return;
                 }
                 
+                // Check authentication first
+                console.log('Checking authentication...');
+                const isAuthenticated = await checkAuth();
+                if (!isAuthenticated) {
+                    console.log('User not authenticated, redirecting to login...');
+                    return; // checkAuth will handle redirect
+                }
+                
+                console.log('User authenticated:', currentUser.email);
                 console.log('Supabase client initialized, loading tasks...');
+                
+                // Check if the tasksList element exists
+                const tasksList = document.getElementById('tasksList');
+                if (!tasksList) {
+                    console.error('tasksList element not found during init!');
+                    // Wait a bit and retry
+                    setTimeout(async () => {
+                        console.log('Retrying to find tasksList element...');
+                        const retryTasksList = document.getElementById('tasksList');
+                        if (retryTasksList) {
+                            console.log('tasksList found on retry, loading tasks...');
+                            await loadTasks();
+                        } else {
+                            console.error('tasksList still not found after retry');
+                            showError('UI elements not loaded properly. Please refresh the page.');
+                        }
+                    }, 100);
+                    return;
+                }
+                
+                console.log('tasksList element found, proceeding to load tasks...');
                 
                 // Load tasks (which also loads task groups)
                 await loadTasks();
@@ -7549,6 +7667,17 @@ Current Supabase limits:
 
         // Enhanced Global Admin Navigation System
         function initAdminNavigation() {
+            console.log('Initializing admin navigation...');
+            
+            // Check if nav container exists
+            const navContainer = document.getElementById('adminNav');
+            if (!navContainer) {
+                console.error('adminNav element not found!');
+                return;
+            }
+            
+            console.log('adminNav element found, building navigation...');
+            
             // Get current page for active state detection
             const currentPath = window.location.pathname;
             const pathParts = currentPath.split('/').filter(p => p);
@@ -7584,6 +7713,7 @@ Current Supabase limits:
                     iconClass: 'eye',
                     label: 'Preview',
                     onclick: 'openPreviewModal()',
+                    activePatterns: [],
                     isPreview: true
                 },
                 { 
@@ -7605,11 +7735,11 @@ Current Supabase limits:
             const navHtml = navItems.map(item => {
                 // Smart active state detection
                 const isActive = item.isActive !== undefined ? item.isActive : 
-                    item.activePatterns.some(pattern => {
+                    (item.activePatterns && item.activePatterns.some(pattern => {
                         const cleanPattern = pattern.replace('.html', '');
                         return currentFile === cleanPattern || 
                                (cleanPattern === '' && (currentFile === 'admin' || currentFile === 'index'));
-                    });
+                    }));
                 
                 const activeClass = isActive ? ' active' : '';
                 const href = item.onclick ? 'javascript:void(0)' : getCleanUrl(item.file);
@@ -7623,9 +7753,10 @@ Current Supabase limits:
             }).join('');
             
             // Insert navigation with fade-in effect
-            const navContainer = document.getElementById('adminNav');
+            console.log('Generated navigation HTML:', navHtml);
             navContainer.style.opacity = '0';
             navContainer.innerHTML = navHtml;
+            console.log('Navigation HTML inserted successfully');
             
             // Animate in
             setTimeout(() => {
