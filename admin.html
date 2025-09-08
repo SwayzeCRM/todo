@@ -2448,6 +2448,47 @@
             }
         }
 
+        // Hash routing handler
+        function handleHashChange() {
+            const hash = window.location.hash || '#task-groups';
+            console.log('Hash changed to:', hash);
+            
+            switch(hash) {
+                case '#task-groups':
+                    openTaskGroups();
+                    break;
+                case '#task-sequences':
+                    openTaskSequences();
+                    break;
+                default:
+                    // Default to task groups
+                    window.location.hash = '#task-groups';
+                    openTaskGroups();
+                    break;
+            }
+            
+            // Update navigation active state
+            updateNavActiveState();
+        }
+        
+        // Update navigation active state based on current hash
+        function updateNavActiveState() {
+            const hash = window.location.hash || '#task-groups';
+            const navLinks = document.querySelectorAll('.admin-nav .nav-link');
+            
+            navLinks.forEach(link => {
+                const linkHref = link.getAttribute('href');
+                if (linkHref && linkHref.includes(hash)) {
+                    link.classList.add('active');
+                } else if (linkHref && linkHref.includes('#')) {
+                    link.classList.remove('active');
+                }
+            });
+        }
+        
+        // Listen for hash changes
+        window.addEventListener('hashchange', handleHashChange);
+
         // Logout function
         async function logout() {
             try {
@@ -5206,6 +5247,14 @@ Current Supabase limits:
                 console.log('User authenticated:', currentUser.email);
                 console.log('Supabase client initialized, loading tasks...');
                 
+                // Set default hash if none present
+                if (!window.location.hash) {
+                    window.location.hash = '#task-groups';
+                }
+                
+                // Handle initial hash routing
+                handleHashChange();
+                
                 // Check if the tasksList element exists
                 const tasksList = document.getElementById('tasksList');
                 if (!tasksList) {
@@ -5278,6 +5327,12 @@ Current Supabase limits:
         
         // Open task groups management panel (replace main view)
         async function openTaskGroups() {
+            // Update URL hash if not already set
+            if (window.location.hash !== '#task-groups') {
+                window.location.hash = '#task-groups';
+                return; // The hashchange event will call this function again
+            }
+            
             // Hide all panels
             document.getElementById('tasksPanel').style.display = 'none';
             document.getElementById('taskGroupsMainPanel').style.display = 'none';
@@ -5302,6 +5357,12 @@ Current Supabase limits:
         }
 
         async function openTaskSequences() {
+            // Update URL hash if not already set
+            if (window.location.hash !== '#task-sequences') {
+                window.location.hash = '#task-sequences';
+                return; // The hashchange event will call this function again
+            }
+            
             // Hide all panels
             document.getElementById('tasksPanel').style.display = 'none';
             document.getElementById('taskGroupsMainPanel').style.display = 'none';
@@ -7687,20 +7748,18 @@ Current Supabase limits:
             // Navigation configuration with smart active detection
             const navItems = [
                 { 
-                    file: 'admin', 
+                    file: 'admin#task-groups', 
                     iconClass: 'tasks', 
                     label: 'Task Groups',
-                    activePatterns: ['admin.html', 'admin', ''],
-                    onclick: 'openTaskGroups()',
-                    isActive: currentFile === 'admin' || currentFile === ''
+                    hash: '#task-groups',
+                    isActive: window.location.hash === '#task-groups' || (!window.location.hash && (currentFile === 'admin' || currentFile === ''))
                 },
                 { 
-                    file: 'admin', 
+                    file: 'admin#task-sequences', 
                     iconClass: 'workflow', 
                     label: 'Task Sequences',
-                    activePatterns: ['admin.html', 'admin', ''],
-                    onclick: 'openTaskSequences()',
-                    isActive: false // Will be set programmatically based on current view
+                    hash: '#task-sequences',
+                    isActive: window.location.hash === '#task-sequences'
                 },
                 { 
                     file: 'analytics', 
