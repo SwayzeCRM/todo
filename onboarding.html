@@ -3148,16 +3148,15 @@
             const currentTime = videoElement.tagName === 'VIDEO' ? videoElement.currentTime : 0;
             const wasMuted = videoElement.tagName === 'VIDEO' ? videoElement.muted : false;
             
-            // ALWAYS pause and mute the original video when expanding (only for VIDEO elements)
+            // Store original parent and next sibling for restoration
+            const originalParent = videoElement.parentNode;
+            const originalNextSibling = videoElement.nextSibling;
+            videoElement.setAttribute('data-original-parent-id', originalParent.id || '');
+            
+            // Store the original states
             if (videoElement.tagName === 'VIDEO') {
-                // Store the original states BEFORE modifying
                 videoElement.setAttribute('data-was-playing', wasPlaying);
                 videoElement.setAttribute('data-was-muted', wasMuted);
-                
-                // Now pause and mute
-                videoElement.pause();
-                // Also mute it as a safety measure to prevent any audio bleed
-                videoElement.muted = true;
             }
             
             // Create expanded video container
@@ -3165,9 +3164,11 @@
             expandedContainer.className = 'video-expanded active';
             expandedContainer.id = 'expanded-video-container';
             
-            // Clone the video element
-            const videoClone = videoElement.cloneNode(true);
-            videoClone.id = 'expanded-video';
+            // Create a placeholder to mark the original position
+            const placeholder = document.createElement('div');
+            placeholder.id = 'video-placeholder-' + taskId;
+            placeholder.style.display = 'none';
+            originalParent.insertBefore(placeholder, videoElement);
             
             // Get current task index for progress display
             const currentIndex = currentChecklist.findIndex(t => t.id === taskId);
@@ -3179,13 +3180,12 @@
                 const contentDiv = document.createElement('div');
                 contentDiv.className = 'video-expanded-content';
                 
-                // Clone and configure the video
-                videoClone.id = 'task-video-expanded';
-                videoClone.controls = true;
-                videoClone.style.cursor = 'pointer';
-                
-                // IMPORTANT: Set the current time before appending to DOM
-                videoClone.currentTime = currentTime;
+                // Store original ID and update it
+                const originalId = videoElement.id;
+                videoElement.setAttribute('data-original-id', originalId);
+                videoElement.id = 'task-video-expanded';
+                videoElement.controls = true;
+                videoElement.style.cursor = 'pointer';
                 
                 // Create controls overlay
                 const controlsDiv = document.createElement('div');
@@ -3200,50 +3200,45 @@
                     </button>
                 `;
                 
-                // Append elements in order
-                contentDiv.appendChild(videoClone);
+                // MOVE the actual video element (not clone)
+                contentDiv.appendChild(videoElement);
                 contentDiv.appendChild(controlsDiv);
                 expandedContainer.appendChild(contentDiv);
                 
                 // Set click handler
-                videoClone.onclick = () => toggleVideoPlay('expanded');
+                videoElement.onclick = () => toggleVideoPlay('expanded');
                 
-                // Auto-play if original was playing - with longer delay to ensure video is ready
+                // Continue playing if it was playing
                 if (wasPlaying) {
-                    // Wait for video to be ready with the correct time
-                    videoClone.addEventListener('loadedmetadata', () => {
-                        videoClone.currentTime = currentTime;
-                        videoClone.play().catch(e => console.log('Auto-play failed:', e));
-                    }, { once: true });
-                    
-                    // Fallback if metadata already loaded
-                    if (videoClone.readyState >= 1) {
-                        setTimeout(() => {
-                            videoClone.currentTime = currentTime;
-                            videoClone.play().catch(e => console.log('Auto-play failed:', e));
-                        }, 100);
-                    }
+                    videoElement.muted = wasMuted; // Restore original mute state
+                    videoElement.play().catch(e => console.log('Auto-play failed:', e));
                 }
             } else {
-                // For iframes (YouTube, Vimeo, etc.), hide the original to prevent double playback
-                videoElement.style.visibility = 'hidden';
-                videoElement.setAttribute('data-expanded', 'true');
+                // For iframes (YouTube, Vimeo, etc.), MOVE the element
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'video-expanded-content';
                 
-                // For iframes, use standard controls
-                expandedContainer.innerHTML = `
-                    <div class="video-expanded-content">
-                        ${videoClone.outerHTML}
-                        <div class="video-controls-overlay">
-                            <div class="video-task-info">
-                                <div class="video-task-title">${task.title}</div>
-                                <div class="video-task-progress">Task ${currentIndex + 1} of ${totalTasks}</div>
-                            </div>
-                            <button class="exit-expand-btn" onclick="exitExpandedVideo()">
-                                ← Back to Instructions
-                            </button>
-                        </div>
+                // Store original ID
+                const originalId = videoElement.id;
+                videoElement.setAttribute('data-original-id', originalId);
+                
+                // Create controls overlay
+                const controlsDiv = document.createElement('div');
+                controlsDiv.className = 'video-controls-overlay';
+                controlsDiv.innerHTML = `
+                    <div class="video-task-info">
+                        <div class="video-task-title">${task.title}</div>
+                        <div class="video-task-progress">Task ${currentIndex + 1} of ${totalTasks}</div>
                     </div>
+                    <button class="exit-expand-btn" onclick="exitExpandedVideo()">
+                        ← Back to Instructions
+                    </button>
                 `;
+                
+                // MOVE the iframe (not clone)
+                contentDiv.appendChild(videoElement);
+                contentDiv.appendChild(controlsDiv);
+                expandedContainer.appendChild(contentDiv);
             }
             
             document.body.appendChild(expandedContainer);
@@ -3257,46 +3252,64 @@
             const expandedContainer = document.getElementById('expanded-video-container');
             if (!expandedContainer) return;
             
-            // Get the expanded video and its state
-            const expandedVideo = document.getElementById('task-video-expanded');
-            if (expandedVideo) {
-                const wasPlaying = !expandedVideo.paused;
-                const currentTime = expandedVideo.currentTime;
+            // Find the video/iframe element in the expanded view
+            const videoElement = expandedContainer.querySelector('video, iframe');
+            if (videoElement) {
+                // Get current state before moving
+                const wasPlaying = videoElement.tagName === 'VIDEO' ? !videoElement.paused : false;
+                const currentTime = videoElement.tagName === 'VIDEO' ? videoElement.currentTime : 0;
                 
-                // Find the original video (assuming it's the current open task)
-                const originalVideo = document.querySelector('.instructions-panel video[id^="task-video-"]:not(#task-video-expanded)');
-                if (originalVideo) {
-                    // Transfer the time position back
-                    originalVideo.currentTime = currentTime;
-                    
-                    // Restore mute state
-                    const wasMuted = originalVideo.getAttribute('data-was-muted') === 'true';
-                    originalVideo.muted = wasMuted;
-                    
-                    // Check if the original video should resume playing
-                    const shouldResume = originalVideo.getAttribute('data-was-playing') === 'true';
-                    
-                    // Only resume if it was originally playing before expansion
-                    if (shouldResume && wasPlaying) {
-                        setTimeout(() => {
-                            originalVideo.play();
-                        }, 100);
-                    }
-                    
-                    // Clean up the data attributes
-                    originalVideo.removeAttribute('data-was-playing');
-                    originalVideo.removeAttribute('data-was-muted');
+                // Pause video if playing
+                if (videoElement.tagName === 'VIDEO' && wasPlaying) {
+                    videoElement.pause();
                 }
                 
-                // Pause the expanded video before removing
-                expandedVideo.pause();
-            }
-            
-            // Restore visibility of any hidden iframes
-            const hiddenIframe = document.querySelector('iframe[data-expanded="true"]');
-            if (hiddenIframe) {
-                hiddenIframe.style.visibility = 'visible';
-                hiddenIframe.removeAttribute('data-expanded');
+                // Find the placeholder
+                const originalId = videoElement.getAttribute('data-original-id');
+                const taskId = originalId ? originalId.replace('task-video-', '') : '';
+                const placeholder = document.getElementById('video-placeholder-' + taskId);
+                
+                if (placeholder && placeholder.parentNode) {
+                    // Restore original ID
+                    if (originalId) {
+                        videoElement.id = originalId;
+                    }
+                    
+                    // Move video back to original position
+                    placeholder.parentNode.insertBefore(videoElement, placeholder);
+                    placeholder.remove();
+                    
+                    // Restore video state for HTML5 videos
+                    if (videoElement.tagName === 'VIDEO') {
+                        // Restore mute state
+                        const wasMuted = videoElement.getAttribute('data-was-muted') === 'true';
+                        videoElement.muted = wasMuted;
+                        
+                        // Set time
+                        videoElement.currentTime = currentTime;
+                        
+                        // Check if should resume playing
+                        const shouldResume = videoElement.getAttribute('data-was-playing') === 'true';
+                        if (shouldResume && wasPlaying) {
+                            setTimeout(() => {
+                                videoElement.play().catch(e => console.log('Resume play failed:', e));
+                            }, 100);
+                        }
+                    }
+                    
+                    // Clean up attributes
+                    videoElement.removeAttribute('data-original-id');
+                    videoElement.removeAttribute('data-was-playing');
+                    videoElement.removeAttribute('data-was-muted');
+                    videoElement.removeAttribute('data-expanded');
+                    
+                    // Reset controls and click handler
+                    if (videoElement.tagName === 'VIDEO') {
+                        videoElement.controls = true;
+                        videoElement.style.cursor = 'default';
+                        videoElement.onclick = null;
+                    }
+                }
             }
             
             expandedContainer.remove();
