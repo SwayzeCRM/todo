@@ -2993,30 +2993,33 @@
 
         // Show instructions
         function showInstructions(taskId) {
-            const instructions = taskInstructions[taskId];
+            // Convert taskId to number if it's a string (comes from onclick handlers)
+            const numericTaskId = typeof taskId === 'string' ? parseInt(taskId, 10) : taskId;
+            
+            const instructions = taskInstructions[numericTaskId];
             if (!instructions) {
-                console.error('No instructions found for task:', taskId);
+                console.error('No instructions found for task:', numericTaskId);
                 return;
             }
 
             // If this is the same task that's already open, do nothing
-            if (currentOpenTaskId === taskId) {
+            if (currentOpenTaskId === numericTaskId) {
                 return;
             }
 
             // If a different task is open, close it first
-            if (currentOpenTaskId && currentOpenTaskId !== taskId) {
+            if (currentOpenTaskId && currentOpenTaskId !== numericTaskId) {
                 closeInstructions();
                 // Small delay to ensure smooth transition
                 setTimeout(() => {
-                    showInstructionsContent(taskId, instructions);
+                    showInstructionsContent(numericTaskId, instructions);
                 }, 100);
                 return;
             }
 
             // Set the current open task
-            currentOpenTaskId = taskId;
-            showInstructionsContent(taskId, instructions);
+            currentOpenTaskId = numericTaskId;
+            showInstructionsContent(numericTaskId, instructions);
         }
 
         // Clean Quill editor artifacts from content
@@ -3129,11 +3132,14 @@
         // Expand video to full modal
         function expandVideo(taskId) {
             try {
-                console.log('expandVideo called with taskId:', taskId);
+                console.log('expandVideo called with taskId:', taskId, 'type:', typeof taskId);
                 
-                const task = currentChecklist.find(t => t.id === taskId);
+                // Convert taskId to number if it's a string
+                const numericTaskId = typeof taskId === 'string' ? parseInt(taskId, 10) : taskId;
+                
+                const task = currentChecklist.find(t => t.id === numericTaskId);
                 if (!task) {
-                    console.error('Task not found for ID:', taskId);
+                    console.error('Task not found for ID:', numericTaskId, 'Original:', taskId);
                     return;
                 }
                 
@@ -3171,7 +3177,7 @@
             originalParent.insertBefore(placeholder, videoElement);
             
             // Get current task index for progress display
-            const currentIndex = currentChecklist.findIndex(t => t.id === taskId);
+            const currentIndex = currentChecklist.findIndex(t => t.id === numericTaskId);
             const totalTasks = currentChecklist.length;
             
             // For regular videos, add simple controls to expanded view
