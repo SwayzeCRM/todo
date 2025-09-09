@@ -3146,12 +3146,18 @@
             // Store whether original video was playing (only for VIDEO elements)
             const wasPlaying = videoElement.tagName === 'VIDEO' ? !videoElement.paused : false;
             const currentTime = videoElement.tagName === 'VIDEO' ? videoElement.currentTime : 0;
+            const wasMuted = videoElement.tagName === 'VIDEO' ? videoElement.muted : false;
             
-            // ALWAYS pause the original video when expanding (only for VIDEO elements)
+            // ALWAYS pause and mute the original video when expanding (only for VIDEO elements)
             if (videoElement.tagName === 'VIDEO') {
-                videoElement.pause();
-                // Store the play state in a data attribute for later restoration
+                // Store the original states BEFORE modifying
                 videoElement.setAttribute('data-was-playing', wasPlaying);
+                videoElement.setAttribute('data-was-muted', wasMuted);
+                
+                // Now pause and mute
+                videoElement.pause();
+                // Also mute it as a safety measure to prevent any audio bleed
+                videoElement.muted = true;
             }
             
             // Create expanded video container
@@ -3169,36 +3175,52 @@
             
             // For regular videos, add simple controls to expanded view
             if (videoElement.tagName === 'VIDEO') {
-                expandedContainer.innerHTML = `
-                    <div class="video-expanded-content">
-                        ${videoClone.outerHTML}
-                        <div class="video-controls-overlay">
-                            <div class="video-task-info">
-                                <div class="video-task-title">${task.title}</div>
-                                <div class="video-task-progress">Task ${currentIndex + 1} of ${totalTasks}</div>
-                            </div>
-                            <button class="exit-expand-btn" onclick="exitExpandedVideo()">
-                                ← Back to Instructions
-                            </button>
-                        </div>
+                // Create the content container
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'video-expanded-content';
+                
+                // Clone and configure the video
+                videoClone.id = 'task-video-expanded';
+                videoClone.controls = true;
+                videoClone.style.cursor = 'pointer';
+                
+                // IMPORTANT: Set the current time before appending to DOM
+                videoClone.currentTime = currentTime;
+                
+                // Create controls overlay
+                const controlsDiv = document.createElement('div');
+                controlsDiv.className = 'video-controls-overlay';
+                controlsDiv.innerHTML = `
+                    <div class="video-task-info">
+                        <div class="video-task-title">${task.title}</div>
+                        <div class="video-task-progress">Task ${currentIndex + 1} of ${totalTasks}</div>
                     </div>
+                    <button class="exit-expand-btn" onclick="exitExpandedVideo()">
+                        ← Back to Instructions
+                    </button>
                 `;
                 
-                // Update the cloned video ID
-                const expandedVideo = expandedContainer.querySelector('video');
-                if (expandedVideo) {
-                    expandedVideo.id = 'task-video-expanded';
-                    expandedVideo.controls = true;
-                    expandedVideo.style.cursor = 'pointer';
-                    expandedVideo.onclick = () => toggleVideoPlay('expanded');
+                // Append elements in order
+                contentDiv.appendChild(videoClone);
+                contentDiv.appendChild(controlsDiv);
+                expandedContainer.appendChild(contentDiv);
+                
+                // Set click handler
+                videoClone.onclick = () => toggleVideoPlay('expanded');
+                
+                // Auto-play if original was playing - with longer delay to ensure video is ready
+                if (wasPlaying) {
+                    // Wait for video to be ready with the correct time
+                    videoClone.addEventListener('loadedmetadata', () => {
+                        videoClone.currentTime = currentTime;
+                        videoClone.play().catch(e => console.log('Auto-play failed:', e));
+                    }, { once: true });
                     
-                    // Copy current time from original video
-                    expandedVideo.currentTime = currentTime;
-                    
-                    // Auto-play if original was playing
-                    if (wasPlaying) {
+                    // Fallback if metadata already loaded
+                    if (videoClone.readyState >= 1) {
                         setTimeout(() => {
-                            expandedVideo.play();
+                            videoClone.currentTime = currentTime;
+                            videoClone.play().catch(e => console.log('Auto-play failed:', e));
                         }, 100);
                     }
                 }
@@ -3247,6 +3269,10 @@
                     // Transfer the time position back
                     originalVideo.currentTime = currentTime;
                     
+                    // Restore mute state
+                    const wasMuted = originalVideo.getAttribute('data-was-muted') === 'true';
+                    originalVideo.muted = wasMuted;
+                    
                     // Check if the original video should resume playing
                     const shouldResume = originalVideo.getAttribute('data-was-playing') === 'true';
                     
@@ -3257,8 +3283,9 @@
                         }, 100);
                     }
                     
-                    // Clean up the data attribute
+                    // Clean up the data attributes
                     originalVideo.removeAttribute('data-was-playing');
+                    originalVideo.removeAttribute('data-was-muted');
                 }
                 
                 // Pause the expanded video before removing
