@@ -3220,10 +3220,32 @@
                 // Set click handler
                 videoElement.onclick = () => toggleVideoPlay('expanded');
                 
-                // Continue playing if it was playing
-                if (wasPlaying) {
-                    videoElement.muted = wasMuted; // Restore original mute state
-                    videoElement.play().catch(e => console.log('Auto-play failed:', e));
+                // CRITICAL: Restore the playback position after moving the element
+                // Moving a video element can reset its currentTime
+                
+                // Store the time we want to restore to
+                const timeToRestore = currentTime;
+                console.log('Will restore video position to:', timeToRestore);
+                
+                // Function to restore time and play state
+                const restoreVideoState = () => {
+                    videoElement.currentTime = timeToRestore;
+                    console.log('Video position restored to:', videoElement.currentTime);
+                    
+                    if (wasPlaying) {
+                        videoElement.muted = wasMuted; // Restore original mute state
+                        videoElement.play().catch(e => console.log('Auto-play failed:', e));
+                    }
+                };
+                
+                // Try to restore immediately
+                if (videoElement.readyState >= 2) { // HAVE_CURRENT_DATA or higher
+                    restoreVideoState();
+                } else {
+                    // Wait for video to be ready
+                    videoElement.addEventListener('loadeddata', restoreVideoState, { once: true });
+                    // Fallback timeout
+                    setTimeout(restoreVideoState, 100);
                 }
             } else {
                 // For iframes (YouTube, Vimeo, etc.), MOVE the element
@@ -3293,20 +3315,24 @@
                     
                     // Restore video state for HTML5 videos
                     if (videoElement.tagName === 'VIDEO') {
+                        // CRITICAL: Restore position after moving back
+                        console.log('Restoring video position on exit to:', currentTime);
+                        
                         // Restore mute state
                         const wasMuted = videoElement.getAttribute('data-was-muted') === 'true';
                         videoElement.muted = wasMuted;
                         
-                        // Set time
-                        videoElement.currentTime = currentTime;
-                        
-                        // Check if should resume playing
-                        const shouldResume = videoElement.getAttribute('data-was-playing') === 'true';
-                        if (shouldResume && wasPlaying) {
-                            setTimeout(() => {
+                        // Set time - do this after a small delay to ensure video is ready
+                        setTimeout(() => {
+                            videoElement.currentTime = currentTime;
+                            console.log('Video position restored to:', videoElement.currentTime);
+                            
+                            // Check if should resume playing
+                            const shouldResume = videoElement.getAttribute('data-was-playing') === 'true';
+                            if (shouldResume && wasPlaying) {
                                 videoElement.play().catch(e => console.log('Resume play failed:', e));
-                            }, 100);
-                        }
+                            }
+                        }, 50);
                     }
                     
                     // Clean up attributes
