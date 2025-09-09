@@ -3147,9 +3147,11 @@
             const wasPlaying = videoElement.tagName === 'VIDEO' ? !videoElement.paused : false;
             const currentTime = videoElement.tagName === 'VIDEO' ? videoElement.currentTime : 0;
             
-            // Pause the original video (only for VIDEO elements)
-            if (wasPlaying && videoElement.tagName === 'VIDEO') {
+            // ALWAYS pause the original video when expanding (only for VIDEO elements)
+            if (videoElement.tagName === 'VIDEO') {
                 videoElement.pause();
+                // Store the play state in a data attribute for later restoration
+                videoElement.setAttribute('data-was-playing', wasPlaying);
             }
             
             // Create expanded video container
@@ -3201,6 +3203,10 @@
                     }
                 }
             } else {
+                // For iframes (YouTube, Vimeo, etc.), hide the original to prevent double playback
+                videoElement.style.visibility = 'hidden';
+                videoElement.setAttribute('data-expanded', 'true');
+                
                 // For iframes, use standard controls
                 expandedContainer.innerHTML = `
                     <div class="video-expanded-content">
@@ -3241,16 +3247,29 @@
                     // Transfer the time position back
                     originalVideo.currentTime = currentTime;
                     
-                    // Resume playback in original if it was playing in expanded
-                    if (wasPlaying) {
+                    // Check if the original video should resume playing
+                    const shouldResume = originalVideo.getAttribute('data-was-playing') === 'true';
+                    
+                    // Only resume if it was originally playing before expansion
+                    if (shouldResume && wasPlaying) {
                         setTimeout(() => {
                             originalVideo.play();
                         }, 100);
                     }
+                    
+                    // Clean up the data attribute
+                    originalVideo.removeAttribute('data-was-playing');
                 }
                 
                 // Pause the expanded video before removing
                 expandedVideo.pause();
+            }
+            
+            // Restore visibility of any hidden iframes
+            const hiddenIframe = document.querySelector('iframe[data-expanded="true"]');
+            if (hiddenIframe) {
+                hiddenIframe.style.visibility = 'visible';
+                hiddenIframe.removeAttribute('data-expanded');
             }
             
             expandedContainer.remove();
