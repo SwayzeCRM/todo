@@ -3409,6 +3409,20 @@
                         e.stopPropagation();
                         expandVideo(taskId);
                     });
+                    
+                    // Ensure the expand button is on top of video controls
+                    const container = document.getElementById(`video-container-${taskId}`);
+                    if (container) {
+                        // Find the expand button
+                        const expandBtn = container.querySelector('button[title*="Expand"]');
+                        if (expandBtn) {
+                            // Ensure button is clickable and on top
+                            expandBtn.style.pointerEvents = 'auto';
+                            expandBtn.style.zIndex = '10001';
+                            // Re-append to ensure it's on top
+                            container.appendChild(expandBtn);
+                        }
+                    }
                 }
             }, 100);
             
@@ -3454,12 +3468,13 @@
                                     <source src="${videoUrl}" type="video/mp4">
                                     Your browser does not support the video tag.
                                 </video>
-                                <button onclick="expandVideo('${taskId}')" 
+                                <button type="button"
+                                        onclick="event.stopPropagation(); expandVideo('${taskId}'); return false;" 
                                         style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); 
                                                border: 2px solid white; border-radius: 6px; padding: 10px; cursor: pointer; 
                                                display: flex; align-items: center; justify-content: center;
-                                               width: 44px; height: 44px; z-index: 1000; transition: all 0.2s ease;
-                                               box-shadow: 0 2px 8px rgba(0,0,0,0.4);"
+                                               width: 44px; height: 44px; z-index: 10000; transition: all 0.2s ease;
+                                               box-shadow: 0 2px 8px rgba(0,0,0,0.4); pointer-events: auto;"
                                         onmouseover="this.style.background='rgba(255,255,255,0.9)'; this.style.transform='scale(1.1)'; this.querySelector('svg').style.stroke='#000';"
                                         onmouseout="this.style.background='rgba(0,0,0,0.8)'; this.style.transform='scale(1)'; this.querySelector('svg').style.stroke='#fff';"
                                         title="Expand Video (or double-click video)">
