@@ -3305,20 +3305,24 @@
                 
                 // Ensure video fills container properly
                 if (videoElement.tagName === 'VIDEO') {
-                    // Make video fill entire viewport - use cover to eliminate all black space
+                    // Force video to maximum size - fill entire viewport width/height
                     videoElement.style.cssText = `
                         position: absolute !important;
-                        top: 0 !important;
-                        left: 0 !important;
-                        width: 100% !important;
-                        height: 100% !important;
-                        min-width: 100% !important;
-                        min-height: 100% !important;
-                        object-fit: cover !important;
+                        top: 50% !important;
+                        left: 50% !important;
+                        transform: translate(-50%, -50%) !important;
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        max-width: none !important;
+                        max-height: none !important;
+                        min-width: 0 !important;
+                        min-height: 0 !important;
+                        object-fit: contain !important;
                         background-color: black !important;
                         border-radius: 0 !important;
                         display: block !important;
                         cursor: pointer !important;
+                        aspect-ratio: auto !important;
                     `;
                     
                     // Video doesn't need to be moved, so position is preserved!
