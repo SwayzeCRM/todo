@@ -3210,7 +3210,9 @@
                     backButton.style.transform = 'scale(1)';
                 };
                 
-                backButton.onclick = () => exitFullscreenVideo();
+                backButton.onclick = function() {
+                    exitFullscreenVideo();
+                };
                 
                 // Add elements to overlay
                 expandedOverlay.appendChild(clonedVideo);
@@ -3440,7 +3442,7 @@
                                                box-shadow: 0 2px 8px rgba(0,0,0,0.4); pointer-events: auto;"
                                         onmouseover="this.style.background='rgba(255,255,255,0.9)'; this.style.transform='scale(1.1)'; this.querySelector('svg').style.stroke='#000';"
                                         onmouseout="this.style.background='rgba(0,0,0,0.8)'; this.style.transform='scale(1)'; this.querySelector('svg').style.stroke='#fff';"
-                                        title="Picture-in-Picture (or double-click video)">
+                                        title="Expand Video (or double-click video)">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" style="width: 24px; height: 24px;">
                                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                                     </svg>
@@ -3451,7 +3453,7 @@
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                                     </svg>
-                                    Picture in Picture
+                                    Expand Video
                                 </button>
                             </div>
                         </div>
@@ -3477,7 +3479,7 @@
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                                     </svg>
-                                    Picture in Picture
+                                    Expand Video
                                 </button>
                             </div>
                         </div>
