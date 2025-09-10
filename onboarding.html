@@ -900,6 +900,48 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             cursor: pointer;
         }
+        
+        /* Fullscreen video styles */
+        .video-container:fullscreen {
+            background: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .video-container:fullscreen video {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+        }
+        
+        .video-container .back-to-instructions {
+            display: none;
+        }
+        
+        .video-container:fullscreen .back-to-instructions {
+            display: block;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 12px 24px;
+            background: white;
+            color: black;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 10000;
+        }
+        
+        .video-container:fullscreen .expand-video-btn {
+            display: none;
+        }
+        
+        .video-container:fullscreen button[title*="Expand"] {
+            display: none;
+        }
 
         .video-container iframe,
         .video-container video {
@@ -3127,136 +3169,122 @@
             return `${minutes}:${secs.toString().padStart(2, '0')}`;
         }
         
-        // Simple video expansion using CSS only - no DOM movement
-        let currentExpandedVideo = null;
-        let currentExpandedOverlay = null;
-        
+        // Video expansion using native Fullscreen API
         function expandVideo(taskId) {
             console.log('expandVideo called with taskId:', taskId);
             
             const video = document.getElementById(`task-video-${taskId}`);
-            if (!video) {
-                console.error('Video not found:', `task-video-${taskId}`);
+            const container = document.getElementById(`video-container-${taskId}`);
+            
+            if (!video || !container) {
+                console.error('Video or container not found:', `task-video-${taskId}`);
                 return;
             }
             
-            // Store current state BEFORE any changes
+            // Store current state
             const currentTime = video.currentTime;
             const wasPlaying = !video.paused;
-            console.log('Current time before expand:', currentTime, 'Playing:', wasPlaying);
+            console.log('Storing position:', currentTime, 'Playing:', wasPlaying);
             
-            // Get the video container
-            const container = video.parentElement;
+            // Hide the overlay expand button if it exists
+            const overlayBtn = container.querySelector('button[title*="Expand"]');
+            if (overlayBtn) {
+                overlayBtn.style.display = 'none';
+            }
             
-            // Store original container styles
-            const originalStyles = {
-                position: container.style.position || '',
-                top: container.style.top || '',
-                left: container.style.left || '',
-                width: container.style.width || '',
-                height: container.style.height || '',
-                zIndex: container.style.zIndex || '',
-                transform: container.style.transform || ''
-            };
-            
-            // Create black background overlay
-            const overlay = document.createElement('div');
-            overlay.id = 'video-expand-overlay';
-            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:black;z-index:999998;';
-            document.body.appendChild(overlay);
-            
-            // Expand container using CSS (no DOM movement!)
-            container.style.position = 'fixed';
-            container.style.top = '0';
-            container.style.left = '0';
-            container.style.width = '100vw';
-            container.style.height = '100vh';
-            container.style.zIndex = '999999';
-            container.style.transform = 'none';
-            
-            // Make video fill the container
-            video.style.width = '100%';
-            video.style.height = '100%';
-            video.style.objectFit = 'contain';
-            
-            // Create back button
+            // Create "Back to Instructions" button
             const backBtn = document.createElement('button');
-            backBtn.innerHTML = '← Back to Instructions';
-            backBtn.style.cssText = 'position:fixed;top:20px;left:20px;padding:12px 24px;background:white;color:black;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;z-index:1000000;';
-            document.body.appendChild(backBtn);
-            
-            // Store references
-            currentExpandedVideo = video;
-            currentExpandedOverlay = overlay;
-            
-            // Since we're not moving the video, position should be preserved
-            // But just in case, ensure it:
-            if (Math.abs(video.currentTime - currentTime) > 0.1) {
-                console.log('Position was lost, restoring to:', currentTime);
-                video.currentTime = currentTime;
-            }
-            
-            if (wasPlaying) {
-                video.play().catch(e => console.log('Play failed:', e));
-            }
-            
-            // Back button click handler
-            const closeExpanded = function() {
-                console.log('Closing expanded video');
-                
-                // Store state before closing
-                const timeBeforeClose = video.currentTime;
-                const playingBeforeClose = !video.paused;
-                
-                // Restore container styles
-                container.style.position = originalStyles.position;
-                container.style.top = originalStyles.top;
-                container.style.left = originalStyles.left;
-                container.style.width = originalStyles.width;
-                container.style.height = originalStyles.height;
-                container.style.zIndex = originalStyles.zIndex;
-                container.style.transform = originalStyles.transform;
-                
-                // Reset video styles
-                video.style.width = '100%';
-                video.style.height = '100%';
-                video.style.objectFit = '';
-                
-                // Remove overlay and button
-                if (overlay && overlay.parentNode) {
-                    overlay.remove();
+            backBtn.textContent = '← Back to Instructions';
+            backBtn.className = 'back-to-instructions';
+            backBtn.addEventListener('click', () => {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
                 }
-                if (backBtn && backBtn.parentNode) {
+            });
+            container.appendChild(backBtn);
+            
+            // Fullscreen change handler
+            const fullscreenChangeHandler = () => {
+                if (document.fullscreenElement === container) {
+                    // Entered fullscreen
+                    console.log('Entered fullscreen');
+                    
+                    // Restore video position if needed
+                    if (Math.abs(video.currentTime - currentTime) > 0.1) {
+                        console.log('Restoring position to:', currentTime);
+                        video.currentTime = currentTime;
+                    }
+                    
+                    // Resume playback if it was playing
+                    if (wasPlaying) {
+                        video.play().catch(e => console.log('Play failed:', e));
+                    }
+                } else {
+                    // Exited fullscreen
+                    console.log('Exited fullscreen');
+                    
+                    // Clean up
                     backBtn.remove();
-                }
-                
-                // Clear references
-                currentExpandedVideo = null;
-                currentExpandedOverlay = null;
-                
-                // Ensure position is maintained
-                video.currentTime = timeBeforeClose;
-                if (playingBeforeClose) {
-                    video.play().catch(e => console.log('Resume play failed:', e));
-                }
-                
-                // Remove ESC handler
-                document.removeEventListener('keydown', escHandler);
-            };
-            
-            backBtn.onclick = closeExpanded;
-            
-            // ESC key handler
-            const escHandler = function(e) {
-                if (e.key === 'Escape') {
-                    closeExpanded();
+                    if (overlayBtn) {
+                        overlayBtn.style.display = '';
+                    }
+                    
+                    // Reset video styles
+                    video.style.width = '';
+                    video.style.height = '';
+                    video.style.objectFit = '';
+                    
+                    // Remove the event listener
+                    document.removeEventListener('fullscreenchange', fullscreenChangeHandler);
+                    document.removeEventListener('webkitfullscreenchange', fullscreenChangeHandler);
+                    
+                    // Resume playback if it was playing
+                    if (wasPlaying) {
+                        video.play().catch(e => console.log('Resume play failed:', e));
+                    }
                 }
             };
-            document.addEventListener('keydown', escHandler);
+            
+            // Add fullscreen change listener
+            document.addEventListener('fullscreenchange', fullscreenChangeHandler);
+            document.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
+            
+            // Request fullscreen
+            const requestFullscreen = container.requestFullscreen ||
+                                    container.webkitRequestFullscreen ||
+                                    container.mozRequestFullScreen ||
+                                    container.msRequestFullscreen;
+            
+            if (requestFullscreen) {
+                Promise.resolve(requestFullscreen.call(container))
+                    .then(() => {
+                        console.log('Fullscreen request successful');
+                        // Set video styles for fullscreen
+                        video.style.width = '100%';
+                        video.style.height = '100%';
+                        video.style.objectFit = 'cover';
+                    })
+                    .catch(err => {
+                        console.error('Failed to enter fullscreen:', err);
+                        // Clean up on failure
+                        backBtn.remove();
+                        if (overlayBtn) {
+                            overlayBtn.style.display = '';
+                        }
+                        document.removeEventListener('fullscreenchange', fullscreenChangeHandler);
+                        document.removeEventListener('webkitfullscreenchange', fullscreenChangeHandler);
+                    });
+            } else {
+                console.error('Fullscreen API not supported');
+                backBtn.remove();
+            }
         }
         
-        // Make expandVideo globally accessible
+        // Make functions globally accessible
         window.expandVideo = expandVideo;
+        window.expandVideoCustom = expandVideoCustom;
+        window.exitExpandedVideo = exitExpandedVideo;
+        window.exitFullscreenVideo = exitFullscreenVideo;
         
         // Removed old PiP code - using simpler full-screen approach
         
@@ -3266,11 +3294,10 @@
         }
         
         function exitExpandedVideo() {
-            // Click any back button that exists
-            const backBtn = document.querySelector('button[onclick*="closeExpanded"]') || 
-                          document.querySelector('button:has-text("Back to Instructions")') ||
-                          Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Back to Instructions'));
-            if (backBtn) backBtn.click();
+            // Exit fullscreen if active
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            }
         }
         
         function exitFullscreenVideo() {
