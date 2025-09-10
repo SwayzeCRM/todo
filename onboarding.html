@@ -3171,13 +3171,31 @@
         
         // Video expansion using native Fullscreen API
         function expandVideo(taskId) {
+            console.log('=== EXPAND VIDEO DEBUG ===');
             console.log('expandVideo called with taskId:', taskId);
+            console.log('Type of taskId:', typeof taskId);
+            
+            // Log all video elements
+            const allVideos = document.querySelectorAll('[id^="task-video-"]');
+            console.log('All video elements found:', allVideos.length);
+            allVideos.forEach(v => console.log('  -', v.id));
+            
+            // Log all containers
+            const allContainers = document.querySelectorAll('[id^="video-container-"]');
+            console.log('All container elements found:', allContainers.length);
+            allContainers.forEach(c => console.log('  -', c.id));
             
             const video = document.getElementById(`task-video-${taskId}`);
             const container = document.getElementById(`video-container-${taskId}`);
             
+            console.log('Looking for video:', `task-video-${taskId}`, 'Found:', !!video);
+            console.log('Looking for container:', `video-container-${taskId}`, 'Found:', !!container);
+            
             if (!video || !container) {
-                console.error('Video or container not found:', `task-video-${taskId}`);
+                console.error('Video or container not found!');
+                console.error('Video element:', video);
+                console.error('Container element:', container);
+                alert(`Cannot expand video: ${!video ? 'Video' : 'Container'} element not found for task ${taskId}`);
                 return;
             }
             
@@ -3280,14 +3298,6 @@
             }
         }
         
-        // Make functions globally accessible
-        window.expandVideo = expandVideo;
-        window.expandVideoCustom = expandVideoCustom;
-        window.exitExpandedVideo = exitExpandedVideo;
-        window.exitFullscreenVideo = exitFullscreenVideo;
-        
-        // Removed old PiP code - using simpler full-screen approach
-        
         // Stub functions for compatibility
         function expandVideoCustom(taskId, task, videoElement) {
             expandVideo(taskId);
@@ -3303,6 +3313,12 @@
         function exitFullscreenVideo() {
             exitExpandedVideo();
         }
+        
+        // Make functions globally accessible
+        window.expandVideo = expandVideo;
+        window.expandVideoCustom = expandVideoCustom;
+        window.exitExpandedVideo = exitExpandedVideo;
+        window.exitFullscreenVideo = exitFullscreenVideo;
         
         // NOTE: All old expansion code has been removed - using new simple approach above
         // Handle escape key to exit expanded video
@@ -3447,7 +3463,7 @@
                                     Your browser does not support the video tag.
                                 </video>
                                 <button type="button"
-                                        onclick="event.stopPropagation(); expandVideo('${taskId}'); return false;" 
+                                        onclick="event.stopPropagation(); if(typeof expandVideo !== 'undefined') { expandVideo('${taskId}'); } else { console.error('expandVideo not defined yet'); alert('Please wait for page to load completely'); } return false;" 
                                         style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); 
                                                border: 2px solid white; border-radius: 6px; padding: 10px; cursor: pointer; 
                                                display: flex; align-items: center; justify-content: center;
@@ -3462,7 +3478,7 @@
                                 </button>
                             </div>
                             <div class="video-controls">
-                                <button class="expand-video-btn" onclick="expandVideo('${taskId}')">
+                                <button class="expand-video-btn" onclick="if(typeof expandVideo !== 'undefined') { expandVideo('${taskId}'); } else { console.error('expandVideo not defined yet'); alert('Please wait for page to load completely'); }">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                                     </svg>
@@ -3488,7 +3504,7 @@
                                 <iframe src="${embedUrl}" allowfullscreen id="task-video-${taskId}"></iframe>
                             </div>
                             <div class="video-controls">
-                                <button class="expand-video-btn" onclick="expandVideo('${taskId}')">
+                                <button class="expand-video-btn" onclick="if(typeof expandVideo !== 'undefined') { expandVideo('${taskId}'); } else { console.error('expandVideo not defined yet'); alert('Please wait for page to load completely'); }">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                                     </svg>
