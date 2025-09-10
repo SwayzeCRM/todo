@@ -3127,224 +3127,115 @@
             return `${minutes}:${secs.toString().padStart(2, '0')}`;
         }
         
-        // Full-screen video expansion
-        let expandedVideoElement = null;
-        let expandedOverlay = null;
-        
+        // Simple video expansion - NO cloning, just move and resize
         function expandVideo(taskId) {
-            try {
-                console.log('expandVideo called with taskId:', taskId);
-                
-                // Check if already expanded
-                if (expandedOverlay) {
-                    console.log('Already expanded, exiting');
-                    return;
-                }
-                
-                const videoElement = document.getElementById(`task-video-${taskId}`);
-                if (!videoElement) {
-                    console.error('Video element not found for ID:', `task-video-${taskId}`);
-                    return;
-                }
-                
-                // Store current playback position BEFORE pausing
-                const currentTime = videoElement.currentTime;
-                const wasPlaying = !videoElement.paused;
-                console.log('Storing video position:', currentTime, 'Was playing:', wasPlaying);
-                
-                // IMMEDIATELY pause original video to prevent background playing
-                videoElement.pause();
-                
-                // Create full-screen overlay
-                expandedOverlay = document.createElement('div');
-                expandedOverlay.id = 'fullscreen-video-overlay';
-                expandedOverlay.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    width: 100vw;
-                    height: 100vh;
-                    background: black;
-                    z-index: 999999;
-                    margin: 0;
-                    padding: 0;
-                `;
-                
-                // Clone the video to avoid DOM manipulation issues
-                const clonedVideo = videoElement.cloneNode(true); // Clone WITH children to get source elements
-                clonedVideo.id = 'expanded-video-element';
-                
-                // If video doesn't have src attribute, it uses source elements
-                if (!videoElement.src && videoElement.querySelector('source')) {
-                    // Source elements are already cloned with the video
-                    console.log('Video uses source element');
-                } else if (videoElement.src) {
-                    clonedVideo.src = videoElement.src;
-                    console.log('Video src:', videoElement.src);
-                }
-                clonedVideo.style.cssText = `
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    object-fit: contain;
-                    background: black;
-                    z-index: 1000000;
-                `;
-                
-                // Remove any onclick handlers from cloned video
-                clonedVideo.onclick = null;
-                clonedVideo.controls = true;
-                
-                // Create "Back to Instructions" button
-                const backButton = document.createElement('button');
-                backButton.id = 'back-to-instructions-btn';
-                backButton.innerHTML = '← Back to Instructions';
-                backButton.style.cssText = `
-                    position: absolute;
-                    top: 20px;
-                    left: 20px;
-                    padding: 12px 24px;
-                    background: rgba(255, 255, 255, 0.9);
-                    color: #1a1a1a;
-                    border: none;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    z-index: 1000001;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-                    transition: all 0.2s ease;
-                `;
-                
-                backButton.addEventListener('mouseover', function() {
-                    this.style.background = 'rgba(255, 255, 255, 1)';
-                    this.style.transform = 'scale(1.05)';
-                });
-                
-                backButton.addEventListener('mouseout', function() {
-                    this.style.background = 'rgba(255, 255, 255, 0.9)';
-                    this.style.transform = 'scale(1)';
-                });
-                
-                backButton.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('Back button clicked');
-                    exitFullscreenVideo();
-                });
-                
-                // Add elements to overlay
-                expandedOverlay.appendChild(clonedVideo);
-                expandedOverlay.appendChild(backButton);
-                
-                // Add overlay to body
-                document.body.appendChild(expandedOverlay);
-                
-                // Store reference for cleanup (must be before setting currentTime)
-                expandedVideoElement = clonedVideo;
-                
-                // Wait for video to be ready then restore position
-                clonedVideo.addEventListener('loadedmetadata', function() {
-                    console.log('Video metadata loaded, restoring position to:', currentTime);
-                    clonedVideo.currentTime = currentTime;
-                    if (wasPlaying) {
-                        clonedVideo.play().catch(e => console.log('Could not resume playback:', e));
-                    }
-                }, { once: true });
-                
-                // Fallback if metadata already loaded
-                if (clonedVideo.readyState >= 1) {
-                    clonedVideo.currentTime = currentTime;
-                    if (wasPlaying) {
-                        clonedVideo.play().catch(e => console.log('Could not resume playback:', e));
-                    }
-                }
-                
-                // Add ESC key handler
-                document.addEventListener('keydown', handleEscKey);
-                
-            } catch (error) {
-                console.error('Error expanding video:', error);
-            }
-        }
-        
-        function exitFullscreenVideo() {
-            console.log('exitFullscreenVideo called');
-            if (!expandedOverlay) {
-                console.log('No overlay found');
+            console.log('expandVideo called with taskId:', taskId);
+            
+            const video = document.getElementById(`task-video-${taskId}`);
+            if (!video) {
+                console.error('Video not found:', `task-video-${taskId}`);
                 return;
             }
             
-            // Get the task ID from the expanded video
-            const expandedVideo = document.getElementById('expanded-video-element');
-            if (expandedVideo) {
-                // Extract task ID from the original video
-                const allVideos = document.querySelectorAll('video[id^="task-video-"]');
-                let taskId = null;
-                
-                // Find the original video by comparing src
-                allVideos.forEach(video => {
-                    if (video.src === expandedVideo.src || 
-                        video.querySelector('source')?.src === expandedVideo.src) {
-                        taskId = video.id.replace('task-video-', '');
-                    }
-                });
-                
-                if (taskId) {
-                    const originalVideo = document.getElementById(`task-video-${taskId}`);
-                    if (originalVideo && expandedVideo) {
-                        // Sync the playback position back
-                        const currentTime = expandedVideo.currentTime;
-                        const wasPlaying = !expandedVideo.paused;
-                        
-                        console.log('Syncing back - time:', currentTime, 'playing:', wasPlaying);
-                        
-                        originalVideo.currentTime = currentTime;
-                        
-                        // Resume playback if expanded video was playing
-                        if (wasPlaying) {
-                            originalVideo.play().catch(e => console.log('Could not resume original:', e));
-                        }
-                    }
+            // Store current state
+            const currentTime = video.currentTime;
+            const wasPlaying = !video.paused;
+            
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'video-overlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:black;z-index:999999;';
+            
+            // Create back button
+            const backBtn = document.createElement('button');
+            backBtn.innerHTML = '← Back to Instructions';
+            backBtn.style.cssText = 'position:fixed;top:20px;left:20px;padding:12px 24px;background:white;color:black;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;z-index:1000000;';
+            
+            // Store original video styles
+            const originalParent = video.parentElement;
+            const originalNextSibling = video.nextSibling;
+            const originalStyles = {
+                position: video.style.position,
+                width: video.style.width,
+                height: video.style.height,
+                zIndex: video.style.zIndex,
+                top: video.style.top,
+                left: video.style.left
+            };
+            
+            // Move video to overlay and make it fullscreen
+            overlay.appendChild(video);
+            video.style.position = 'fixed';
+            video.style.top = '0';
+            video.style.left = '0';
+            video.style.width = '100vw';
+            video.style.height = '100vh';
+            video.style.zIndex = '999999';
+            video.style.objectFit = 'contain';
+            
+            // Add overlay and button to body
+            document.body.appendChild(overlay);
+            document.body.appendChild(backBtn);
+            
+            // Restore playback position
+            video.currentTime = currentTime;
+            if (wasPlaying) {
+                video.play();
+            }
+            
+            // Back button handler
+            backBtn.onclick = function() {
+                // Move video back to original position
+                if (originalNextSibling) {
+                    originalParent.insertBefore(video, originalNextSibling);
+                } else {
+                    originalParent.appendChild(video);
                 }
-            }
+                
+                // Restore original styles
+                video.style.position = originalStyles.position;
+                video.style.width = originalStyles.width;
+                video.style.height = originalStyles.height;
+                video.style.zIndex = originalStyles.zIndex;
+                video.style.top = originalStyles.top;
+                video.style.left = originalStyles.left;
+                video.style.objectFit = '';
+                
+                // Remove overlay and button
+                overlay.remove();
+                backBtn.remove();
+            };
             
-            // Remove overlay
-            if (expandedOverlay) {
-                expandedOverlay.remove();
-                expandedOverlay = null;
-            }
-            
-            // Clean up
-            expandedVideoElement = null;
-            document.removeEventListener('keydown', handleEscKey);
+            // ESC key handler
+            const escHandler = function(e) {
+                if (e.key === 'Escape') {
+                    backBtn.click();
+                    document.removeEventListener('keydown', escHandler);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
         }
         
-        // Make functions globally accessible
+        // Make expandVideo globally accessible
         window.expandVideo = expandVideo;
-        window.exitFullscreenVideo = exitFullscreenVideo;
-        
-        function handleEscKey(e) {
-            if (e.key === 'Escape') {
-                exitFullscreenVideo();
-            }
-        }
         
         // Removed old PiP code - using simpler full-screen approach
         
-        // Removed old expansion methods - using new full-screen approach
+        // Stub functions for compatibility
         function expandVideoCustom(taskId, task, videoElement) {
-            // Redirect to new expansion method
             expandVideo(taskId);
         }
         
-        // Stub for old function - redirects to new method
         function exitExpandedVideo() {
-            exitFullscreenVideo();
+            // Click the back button if it exists
+            const backBtn = document.querySelector('#video-overlay + button');
+            if (backBtn) backBtn.click();
+        }
+        
+        function exitFullscreenVideo() {
+            // Click the back button if it exists  
+            const backBtn = document.querySelector('#video-overlay + button');
+            if (backBtn) backBtn.click();
         }
         
         // NOTE: All old expansion code has been removed - using new simple approach above
