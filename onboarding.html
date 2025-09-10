@@ -3127,7 +3127,10 @@
             return `${minutes}:${secs.toString().padStart(2, '0')}`;
         }
         
-        // Expand video to full modal
+        // Use Picture-in-Picture for video expansion
+        let currentPiPVideo = null;
+        let pipOverlay = null;
+        
         function expandVideo(taskId) {
             try {
                 console.log('expandVideo called with taskId:', taskId, 'type:', typeof taskId);
@@ -3138,59 +3141,86 @@
                     return;
                 }
                 
-                // Find task - handle both string and number comparisons
-                const task = currentChecklist.find(t => {
-                    // Compare both as strings and as numbers to handle any type mismatch
-                    return t.id == taskId || t.id === taskId || 
-                           t.id === parseInt(taskId, 10) || 
-                           String(t.id) === String(taskId);
-                });
-                
-                // Try native fullscreen first (only for video elements)
-                if (videoElement.tagName === 'VIDEO') {
-                    // Enable controls to allow native fullscreen button
-                    videoElement.controls = true;
-                    
-                    // Check if we can use native fullscreen on the container
-                    const container = videoElement.closest('.video-container') || videoElement.parentElement;
-                    if (container) {
-                        if (container.requestFullscreen && document.fullscreenEnabled) {
-                            container.requestFullscreen()
-                                .then(() => {
-                                    console.log('Container fullscreen success');
-                                    // Ensure video fills fullscreen
-                                    videoElement.style.width = '100%';
-                                    videoElement.style.height = '100%';
-                                    videoElement.style.objectFit = 'contain';
-                                })
-                                .catch(err => {
-                                    console.log('Container fullscreen failed, using custom:', err);
-                                    expandVideoCustom(taskId, task, videoElement);
-                                });
-                            return;
-                        } else if (container.webkitRequestFullscreen) {
-                            try {
-                                container.webkitRequestFullscreen();
-                                videoElement.style.width = '100%';
-                                videoElement.style.height = '100%';
-                                videoElement.style.objectFit = 'contain';
-                                return;
-                            } catch (err) {
-                                console.log('Webkit fullscreen failed:', err);
-                            }
-                        }
-                    }
+                // Only works for video elements
+                if (videoElement.tagName !== 'VIDEO') {
+                    console.log('Picture-in-Picture only works with video elements');
+                    return;
                 }
                 
-                // Fallback to custom expansion
-                expandVideoCustom(taskId, task, videoElement);
+                // Check if Picture-in-Picture is supported
+                if (!document.pictureInPictureEnabled) {
+                    console.log('Picture-in-Picture is not supported');
+                    alert('Picture-in-Picture is not supported in your browser');
+                    return;
+                }
+                
+                // Enter Picture-in-Picture mode
+                if (document.pictureInPictureElement !== videoElement) {
+                    videoElement.requestPictureInPicture()
+                        .then(() => {
+                            console.log('Entered Picture-in-Picture mode');
+                            currentPiPVideo = videoElement;
+                            createPiPOverlay(taskId);
+                        })
+                        .catch(err => {
+                            console.error('Failed to enter Picture-in-Picture:', err);
+                            alert('Could not enter Picture-in-Picture mode. Please try again.');
+                        });
+                } else {
+                    // Exit PiP if already in it
+                    document.exitPictureInPicture();
+                }
                 
             } catch (error) {
-                console.error('Error expanding video:', error);
+                console.error('Error with Picture-in-Picture:', error);
             }
         }
         
-        // Custom video expansion (when native fullscreen not available)
+        // Create overlay with "Back to Task" button when in PiP mode
+        function createPiPOverlay(taskId) {
+            // Remove any existing overlay
+            if (pipOverlay) {
+                pipOverlay.remove();
+            }
+            
+            // Create overlay
+            pipOverlay = document.createElement('div');
+            pipOverlay.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 24px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                z-index: 100000;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: 600;
+                transition: transform 0.2s ease;
+            `;
+            pipOverlay.innerHTML = '← Back to Task';
+            pipOverlay.onmouseover = () => pipOverlay.style.transform = 'scale(1.05)';
+            pipOverlay.onmouseout = () => pipOverlay.style.transform = 'scale(1)';
+            pipOverlay.onclick = () => {
+                document.exitPictureInPicture();
+            };
+            
+            document.body.appendChild(pipOverlay);
+        }
+        
+        // Clean up when exiting PiP
+        document.addEventListener('leavepictureinpicture', () => {
+            console.log('Left Picture-in-Picture mode');
+            if (pipOverlay) {
+                pipOverlay.remove();
+                pipOverlay = null;
+            }
+            currentPiPVideo = null;
+        });
+        
+        // DEPRECATED - Custom video expansion (keeping for backwards compatibility)
         function expandVideoCustom(taskId, task, videoElement) {
             try {
                 // Check if already expanded
@@ -3742,7 +3772,7 @@
                                                box-shadow: 0 2px 8px rgba(0,0,0,0.4); pointer-events: auto;"
                                         onmouseover="this.style.background='rgba(255,255,255,0.9)'; this.style.transform='scale(1.1)'; this.querySelector('svg').style.stroke='#000';"
                                         onmouseout="this.style.background='rgba(0,0,0,0.8)'; this.style.transform='scale(1)'; this.querySelector('svg').style.stroke='#fff';"
-                                        title="Expand Video (or double-click video)">
+                                        title="Picture-in-Picture (or double-click video)">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" style="width: 24px; height: 24px;">
                                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                                     </svg>
@@ -3753,7 +3783,7 @@
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                                     </svg>
-                                    Expand Video
+                                    Picture in Picture
                                 </button>
                             </div>
                         </div>
@@ -3779,7 +3809,7 @@
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                                     </svg>
-                                    Expand Video
+                                    Picture in Picture
                                 </button>
                             </div>
                         </div>
