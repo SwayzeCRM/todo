@@ -3143,19 +3143,36 @@
                 
                 // Only works for video elements
                 if (videoElement.tagName !== 'VIDEO') {
-                    console.log('Picture-in-Picture only works with video elements');
+                    console.log('Not a video element, using fallback');
+                    // For non-video elements, use the old custom expansion
+                    const task = currentChecklist.find(t => String(t.id) === String(taskId));
+                    expandVideoCustom(taskId, task, videoElement);
                     return;
                 }
                 
                 // Check if Picture-in-Picture is supported
+                if (!('pictureInPictureEnabled' in document)) {
+                    console.log('Picture-in-Picture API not available, using fallback');
+                    const task = currentChecklist.find(t => String(t.id) === String(taskId));
+                    expandVideoCustom(taskId, task, videoElement);
+                    return;
+                }
+                
                 if (!document.pictureInPictureEnabled) {
-                    console.log('Picture-in-Picture is not supported');
-                    alert('Picture-in-Picture is not supported in your browser');
+                    console.log('Picture-in-Picture is disabled, using fallback');
+                    const task = currentChecklist.find(t => String(t.id) === String(taskId));
+                    expandVideoCustom(taskId, task, videoElement);
                     return;
                 }
                 
                 // Enter Picture-in-Picture mode
                 if (document.pictureInPictureElement !== videoElement) {
+                    // Ensure video is playing before PiP (some browsers require this)
+                    const wasPlaying = !videoElement.paused;
+                    if (!wasPlaying) {
+                        videoElement.play().catch(e => console.log('Could not auto-play:', e));
+                    }
+                    
                     videoElement.requestPictureInPicture()
                         .then(() => {
                             console.log('Entered Picture-in-Picture mode');
@@ -3164,7 +3181,10 @@
                         })
                         .catch(err => {
                             console.error('Failed to enter Picture-in-Picture:', err);
-                            alert('Could not enter Picture-in-Picture mode. Please try again.');
+                            // Fallback to custom expansion
+                            console.log('Falling back to custom expansion');
+                            const task = currentChecklist.find(t => String(t.id) === String(taskId));
+                            expandVideoCustom(taskId, task, videoElement);
                         });
                 } else {
                     // Exit PiP if already in it
@@ -3173,6 +3193,9 @@
                 
             } catch (error) {
                 console.error('Error with Picture-in-Picture:', error);
+                // Fallback to custom expansion
+                const task = currentChecklist.find(t => String(t.id) === String(taskId));
+                expandVideoCustom(taskId, task, videoElement);
             }
         }
         
@@ -3220,7 +3243,7 @@
             currentPiPVideo = null;
         });
         
-        // DEPRECATED - Custom video expansion (keeping for backwards compatibility)
+        // Custom video expansion (fallback when PiP not available)
         function expandVideoCustom(taskId, task, videoElement) {
             try {
                 // Check if already expanded
