@@ -3141,9 +3141,13 @@
                     return;
                 }
                 
-                // Store current playback position
+                // Store current playback position BEFORE pausing
                 const currentTime = videoElement.currentTime;
                 const wasPlaying = !videoElement.paused;
+                console.log('Storing video position:', currentTime, 'Was playing:', wasPlaying);
+                
+                // IMMEDIATELY pause original video to prevent background playing
+                videoElement.pause();
                 
                 // Create full-screen overlay
                 expandedOverlay = document.createElement('div');
@@ -3163,8 +3167,9 @@
                 `;
                 
                 // Clone the video to avoid DOM manipulation issues
-                const clonedVideo = videoElement.cloneNode(true);
+                const clonedVideo = videoElement.cloneNode(false); // Clone without children
                 clonedVideo.id = 'expanded-video-element';
+                clonedVideo.src = videoElement.src || videoElement.querySelector('source')?.src;
                 clonedVideo.style.cssText = `
                     position: absolute;
                     top: 0;
@@ -3182,6 +3187,7 @@
                 
                 // Create "Back to Instructions" button
                 const backButton = document.createElement('button');
+                backButton.id = 'back-to-instructions-btn';
                 backButton.innerHTML = '← Back to Instructions';
                 backButton.style.cssText = `
                     position: absolute;
@@ -3200,19 +3206,22 @@
                     transition: all 0.2s ease;
                 `;
                 
-                backButton.onmouseover = () => {
-                    backButton.style.background = 'rgba(255, 255, 255, 1)';
-                    backButton.style.transform = 'scale(1.05)';
-                };
+                backButton.addEventListener('mouseover', function() {
+                    this.style.background = 'rgba(255, 255, 255, 1)';
+                    this.style.transform = 'scale(1.05)';
+                });
                 
-                backButton.onmouseout = () => {
-                    backButton.style.background = 'rgba(255, 255, 255, 0.9)';
-                    backButton.style.transform = 'scale(1)';
-                };
+                backButton.addEventListener('mouseout', function() {
+                    this.style.background = 'rgba(255, 255, 255, 0.9)';
+                    this.style.transform = 'scale(1)';
+                });
                 
-                backButton.onclick = function() {
+                backButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Back button clicked');
                     exitFullscreenVideo();
-                };
+                });
                 
                 // Add elements to overlay
                 expandedOverlay.appendChild(clonedVideo);
@@ -3221,17 +3230,25 @@
                 // Add overlay to body
                 document.body.appendChild(expandedOverlay);
                 
-                // Restore video position and playback state
-                clonedVideo.currentTime = currentTime;
-                if (wasPlaying) {
-                    clonedVideo.play().catch(e => console.log('Could not resume playback:', e));
-                }
-                
-                // Pause original video
-                videoElement.pause();
-                
-                // Store reference for cleanup
+                // Store reference for cleanup (must be before setting currentTime)
                 expandedVideoElement = clonedVideo;
+                
+                // Wait for video to be ready then restore position
+                clonedVideo.addEventListener('loadedmetadata', function() {
+                    console.log('Video metadata loaded, restoring position to:', currentTime);
+                    clonedVideo.currentTime = currentTime;
+                    if (wasPlaying) {
+                        clonedVideo.play().catch(e => console.log('Could not resume playback:', e));
+                    }
+                }, { once: true });
+                
+                // Fallback if metadata already loaded
+                if (clonedVideo.readyState >= 1) {
+                    clonedVideo.currentTime = currentTime;
+                    if (wasPlaying) {
+                        clonedVideo.play().catch(e => console.log('Could not resume playback:', e));
+                    }
+                }
                 
                 // Add ESC key handler
                 document.addEventListener('keydown', handleEscKey);
@@ -3242,21 +3259,42 @@
         }
         
         function exitFullscreenVideo() {
-            if (!expandedOverlay) return;
+            console.log('exitFullscreenVideo called');
+            if (!expandedOverlay) {
+                console.log('No overlay found');
+                return;
+            }
             
-            // Get the original video element
-            const originalVideoId = expandedVideoElement.id.replace('expanded-video-element', 'task-video-');
-            const taskId = originalVideoId.match(/task-video-(.+)/)?.[1];
-            
-            if (taskId) {
-                const originalVideo = document.getElementById(`task-video-${taskId}`);
-                if (originalVideo && expandedVideoElement) {
-                    // Sync the playback position back
-                    originalVideo.currentTime = expandedVideoElement.currentTime;
-                    
-                    // Resume playback if expanded video was playing
-                    if (!expandedVideoElement.paused) {
-                        originalVideo.play().catch(e => console.log('Could not resume original:', e));
+            // Get the task ID from the expanded video
+            const expandedVideo = document.getElementById('expanded-video-element');
+            if (expandedVideo) {
+                // Extract task ID from the original video
+                const allVideos = document.querySelectorAll('video[id^="task-video-"]');
+                let taskId = null;
+                
+                // Find the original video by comparing src
+                allVideos.forEach(video => {
+                    if (video.src === expandedVideo.src || 
+                        video.querySelector('source')?.src === expandedVideo.src) {
+                        taskId = video.id.replace('task-video-', '');
+                    }
+                });
+                
+                if (taskId) {
+                    const originalVideo = document.getElementById(`task-video-${taskId}`);
+                    if (originalVideo && expandedVideo) {
+                        // Sync the playback position back
+                        const currentTime = expandedVideo.currentTime;
+                        const wasPlaying = !expandedVideo.paused;
+                        
+                        console.log('Syncing back - time:', currentTime, 'playing:', wasPlaying);
+                        
+                        originalVideo.currentTime = currentTime;
+                        
+                        // Resume playback if expanded video was playing
+                        if (wasPlaying) {
+                            originalVideo.play().catch(e => console.log('Could not resume original:', e));
+                        }
                     }
                 }
             }
@@ -3271,6 +3309,9 @@
             expandedVideoElement = null;
             document.removeEventListener('keydown', handleEscKey);
         }
+        
+        // Make function globally accessible
+        window.exitFullscreenVideo = exitFullscreenVideo;
         
         function handleEscKey(e) {
             if (e.key === 'Escape') {
