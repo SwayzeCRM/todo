@@ -3132,6 +3132,12 @@
             try {
                 console.log('expandVideo called with taskId:', taskId, 'type:', typeof taskId);
                 
+                const videoElement = document.getElementById(`task-video-${taskId}`);
+                if (!videoElement) {
+                    console.error('Video element not found for ID:', `task-video-${taskId}`);
+                    return;
+                }
+                
                 // Find task - handle both string and number comparisons
                 const task = currentChecklist.find(t => {
                     // Compare both as strings and as numbers to handle any type mismatch
@@ -3140,40 +3146,10 @@
                            String(t.id) === String(taskId);
                 });
                 
-                if (!task) {
-                    console.error('Task not found for ID:', taskId, 'in checklist:', currentChecklist.map(t => ({id: t.id, type: typeof t.id})));
-                    return;
-                }
-                
-                const videoElement = document.getElementById(`task-video-${taskId}`);
-                if (!videoElement) {
-                    console.error('Video element not found for ID:', `task-video-${taskId}`);
-                    return;
-                }
-                
-                // NEW APPROACH: Try native fullscreen first (won't reset video)
-                if (videoElement.tagName === 'VIDEO') {
-                    // Try to use native fullscreen API which preserves video state
-                    if (videoElement.requestFullscreen) {
-                        videoElement.requestFullscreen().catch(err => {
-                            console.log('Native fullscreen failed, using custom expand:', err);
-                            expandVideoCustom(taskId, task, videoElement);
-                        });
-                        return;
-                    } else if (videoElement.webkitRequestFullscreen) {
-                        videoElement.webkitRequestFullscreen();
-                        return;
-                    } else if (videoElement.mozRequestFullScreen) {
-                        videoElement.mozRequestFullScreen();
-                        return;
-                    } else if (videoElement.msRequestFullscreen) {
-                        videoElement.msRequestFullscreen();
-                        return;
-                    }
-                }
-                
-                // Fallback to custom expansion
+                // For now, always use custom expansion to ensure it works
+                // We can add native fullscreen back later once the basic functionality works
                 expandVideoCustom(taskId, task, videoElement);
+                
             } catch (error) {
                 console.error('Error expanding video:', error);
             }
@@ -3182,16 +3158,30 @@
         // Custom video expansion (when native fullscreen not available)
         function expandVideoCustom(taskId, task, videoElement) {
             try {
+                // Check if already expanded
+                if (document.getElementById('video-expand-overlay')) {
+                    console.log('Video already expanded');
+                    return;
+                }
+                
                 // NEW APPROACH: Expand video in place using CSS without moving it in DOM
                 const currentTime = videoElement.tagName === 'VIDEO' ? videoElement.currentTime : 0;
                 const wasPlaying = videoElement.tagName === 'VIDEO' ? !videoElement.paused : false;
                 
                 console.log('Custom expand - Current time:', currentTime, 'Was playing:', wasPlaying);
                 
-                // Get container
-                const container = document.getElementById(`video-container-${taskId}`);
+                // Get container - try multiple ways
+                let container = document.getElementById(`video-container-${taskId}`);
                 if (!container) {
-                    console.error('Video container not found');
+                    // Try to find the parent container
+                    container = videoElement.closest('.video-container');
+                    if (!container) {
+                        container = videoElement.parentElement;
+                    }
+                }
+                
+                if (!container) {
+                    console.error('Video container not found, cannot expand');
                     return;
                 }
                 
@@ -3230,12 +3220,15 @@
                 
                 // Store original styles
                 const originalStyles = {
-                    position: container.style.position,
-                    zIndex: container.style.zIndex,
-                    width: container.style.width,
-                    height: container.style.height,
-                    maxWidth: container.style.maxWidth,
-                    maxHeight: container.style.maxHeight
+                    position: container.style.position || '',
+                    zIndex: container.style.zIndex || '',
+                    width: container.style.width || '',
+                    height: container.style.height || '',
+                    maxWidth: container.style.maxWidth || '',
+                    maxHeight: container.style.maxHeight || '',
+                    top: container.style.top || '',
+                    left: container.style.left || '',
+                    transform: container.style.transform || ''
                 };
                 container.setAttribute('data-original-styles', JSON.stringify(originalStyles));
                 
