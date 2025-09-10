@@ -3127,7 +3127,10 @@
             return `${minutes}:${secs.toString().padStart(2, '0')}`;
         }
         
-        // Simple video expansion - NO cloning, just move and resize
+        // Simple video expansion using CSS only - no DOM movement
+        let currentExpandedVideo = null;
+        let currentExpandedOverlay = null;
+        
         function expandVideo(taskId) {
             console.log('expandVideo called with taskId:', taskId);
             
@@ -3137,80 +3140,116 @@
                 return;
             }
             
-            // Store current state
+            // Store current state BEFORE any changes
             const currentTime = video.currentTime;
             const wasPlaying = !video.paused;
+            console.log('Current time before expand:', currentTime, 'Playing:', wasPlaying);
             
-            // Create overlay
+            // Get the video container
+            const container = video.parentElement;
+            
+            // Store original container styles
+            const originalStyles = {
+                position: container.style.position || '',
+                top: container.style.top || '',
+                left: container.style.left || '',
+                width: container.style.width || '',
+                height: container.style.height || '',
+                zIndex: container.style.zIndex || '',
+                transform: container.style.transform || ''
+            };
+            
+            // Create black background overlay
             const overlay = document.createElement('div');
-            overlay.id = 'video-overlay';
-            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:black;z-index:999999;';
+            overlay.id = 'video-expand-overlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:black;z-index:999998;';
+            document.body.appendChild(overlay);
+            
+            // Expand container using CSS (no DOM movement!)
+            container.style.position = 'fixed';
+            container.style.top = '0';
+            container.style.left = '0';
+            container.style.width = '100vw';
+            container.style.height = '100vh';
+            container.style.zIndex = '999999';
+            container.style.transform = 'none';
+            
+            // Make video fill the container
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.objectFit = 'contain';
             
             // Create back button
             const backBtn = document.createElement('button');
             backBtn.innerHTML = '← Back to Instructions';
             backBtn.style.cssText = 'position:fixed;top:20px;left:20px;padding:12px 24px;background:white;color:black;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;z-index:1000000;';
-            
-            // Store original video styles
-            const originalParent = video.parentElement;
-            const originalNextSibling = video.nextSibling;
-            const originalStyles = {
-                position: video.style.position,
-                width: video.style.width,
-                height: video.style.height,
-                zIndex: video.style.zIndex,
-                top: video.style.top,
-                left: video.style.left
-            };
-            
-            // Move video to overlay and make it fullscreen
-            overlay.appendChild(video);
-            video.style.position = 'fixed';
-            video.style.top = '0';
-            video.style.left = '0';
-            video.style.width = '100vw';
-            video.style.height = '100vh';
-            video.style.zIndex = '999999';
-            video.style.objectFit = 'contain';
-            
-            // Add overlay and button to body
-            document.body.appendChild(overlay);
             document.body.appendChild(backBtn);
             
-            // Restore playback position
-            video.currentTime = currentTime;
-            if (wasPlaying) {
-                video.play();
+            // Store references
+            currentExpandedVideo = video;
+            currentExpandedOverlay = overlay;
+            
+            // Since we're not moving the video, position should be preserved
+            // But just in case, ensure it:
+            if (Math.abs(video.currentTime - currentTime) > 0.1) {
+                console.log('Position was lost, restoring to:', currentTime);
+                video.currentTime = currentTime;
             }
             
-            // Back button handler
-            backBtn.onclick = function() {
-                // Move video back to original position
-                if (originalNextSibling) {
-                    originalParent.insertBefore(video, originalNextSibling);
-                } else {
-                    originalParent.appendChild(video);
-                }
+            if (wasPlaying) {
+                video.play().catch(e => console.log('Play failed:', e));
+            }
+            
+            // Back button click handler
+            const closeExpanded = function() {
+                console.log('Closing expanded video');
                 
-                // Restore original styles
-                video.style.position = originalStyles.position;
-                video.style.width = originalStyles.width;
-                video.style.height = originalStyles.height;
-                video.style.zIndex = originalStyles.zIndex;
-                video.style.top = originalStyles.top;
-                video.style.left = originalStyles.left;
+                // Store state before closing
+                const timeBeforeClose = video.currentTime;
+                const playingBeforeClose = !video.paused;
+                
+                // Restore container styles
+                container.style.position = originalStyles.position;
+                container.style.top = originalStyles.top;
+                container.style.left = originalStyles.left;
+                container.style.width = originalStyles.width;
+                container.style.height = originalStyles.height;
+                container.style.zIndex = originalStyles.zIndex;
+                container.style.transform = originalStyles.transform;
+                
+                // Reset video styles
+                video.style.width = '100%';
+                video.style.height = '100%';
                 video.style.objectFit = '';
                 
                 // Remove overlay and button
-                overlay.remove();
-                backBtn.remove();
+                if (overlay && overlay.parentNode) {
+                    overlay.remove();
+                }
+                if (backBtn && backBtn.parentNode) {
+                    backBtn.remove();
+                }
+                
+                // Clear references
+                currentExpandedVideo = null;
+                currentExpandedOverlay = null;
+                
+                // Ensure position is maintained
+                video.currentTime = timeBeforeClose;
+                if (playingBeforeClose) {
+                    video.play().catch(e => console.log('Resume play failed:', e));
+                }
+                
+                // Remove ESC handler
+                document.removeEventListener('keydown', escHandler);
             };
+            
+            backBtn.onclick = closeExpanded;
             
             // ESC key handler
             const escHandler = function(e) {
                 if (e.key === 'Escape') {
-                    backBtn.click();
-                    document.removeEventListener('keydown', escHandler);
+                    closeExpanded();
                 }
             };
             document.addEventListener('keydown', escHandler);
@@ -3227,15 +3266,15 @@
         }
         
         function exitExpandedVideo() {
-            // Click the back button if it exists
-            const backBtn = document.querySelector('#video-overlay + button');
+            // Click any back button that exists
+            const backBtn = document.querySelector('button[onclick*="closeExpanded"]') || 
+                          document.querySelector('button:has-text("Back to Instructions")') ||
+                          Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Back to Instructions'));
             if (backBtn) backBtn.click();
         }
         
         function exitFullscreenVideo() {
-            // Click the back button if it exists  
-            const backBtn = document.querySelector('#video-overlay + button');
-            if (backBtn) backBtn.click();
+            exitExpandedVideo();
         }
         
         // NOTE: All old expansion code has been removed - using new simple approach above
