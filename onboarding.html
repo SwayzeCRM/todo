@@ -3127,13 +3127,13 @@
             return `${minutes}:${secs.toString().padStart(2, '0')}`;
         }
         
-        // Use Picture-in-Picture for video expansion
-        let currentPiPVideo = null;
-        let pipOverlay = null;
+        // Full-screen video expansion
+        let expandedVideoElement = null;
+        let expandedOverlay = null;
         
         function expandVideo(taskId) {
             try {
-                console.log('expandVideo called with taskId:', taskId, 'type:', typeof taskId);
+                console.log('expandVideo called with taskId:', taskId);
                 
                 const videoElement = document.getElementById(`task-video-${taskId}`);
                 if (!videoElement) {
@@ -3141,114 +3141,156 @@
                     return;
                 }
                 
-                // Only works for video elements
-                if (videoElement.tagName !== 'VIDEO') {
-                    console.log('Not a video element, using fallback');
-                    // For non-video elements, use the old custom expansion
-                    const task = currentChecklist.find(t => String(t.id) === String(taskId));
-                    expandVideoCustom(taskId, task, videoElement);
-                    return;
+                // Store current playback position
+                const currentTime = videoElement.currentTime;
+                const wasPlaying = !videoElement.paused;
+                
+                // Create full-screen overlay
+                expandedOverlay = document.createElement('div');
+                expandedOverlay.id = 'fullscreen-video-overlay';
+                expandedOverlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    width: 100vw;
+                    height: 100vh;
+                    background: black;
+                    z-index: 999999;
+                    margin: 0;
+                    padding: 0;
+                `;
+                
+                // Clone the video to avoid DOM manipulation issues
+                const clonedVideo = videoElement.cloneNode(true);
+                clonedVideo.id = 'expanded-video-element';
+                clonedVideo.style.cssText = `
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    object-fit: contain;
+                    background: black;
+                    z-index: 1000000;
+                `;
+                
+                // Remove any onclick handlers from cloned video
+                clonedVideo.onclick = null;
+                clonedVideo.controls = true;
+                
+                // Create "Back to Instructions" button
+                const backButton = document.createElement('button');
+                backButton.innerHTML = '← Back to Instructions';
+                backButton.style.cssText = `
+                    position: absolute;
+                    top: 20px;
+                    left: 20px;
+                    padding: 12px 24px;
+                    background: rgba(255, 255, 255, 0.9);
+                    color: #1a1a1a;
+                    border: none;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    z-index: 1000001;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                    transition: all 0.2s ease;
+                `;
+                
+                backButton.onmouseover = () => {
+                    backButton.style.background = 'rgba(255, 255, 255, 1)';
+                    backButton.style.transform = 'scale(1.05)';
+                };
+                
+                backButton.onmouseout = () => {
+                    backButton.style.background = 'rgba(255, 255, 255, 0.9)';
+                    backButton.style.transform = 'scale(1)';
+                };
+                
+                backButton.onclick = () => exitFullscreenVideo();
+                
+                // Add elements to overlay
+                expandedOverlay.appendChild(clonedVideo);
+                expandedOverlay.appendChild(backButton);
+                
+                // Add overlay to body
+                document.body.appendChild(expandedOverlay);
+                
+                // Restore video position and playback state
+                clonedVideo.currentTime = currentTime;
+                if (wasPlaying) {
+                    clonedVideo.play().catch(e => console.log('Could not resume playback:', e));
                 }
                 
-                // Check if Picture-in-Picture is supported
-                console.log('Checking PiP support...');
-                console.log('pictureInPictureEnabled in document?', 'pictureInPictureEnabled' in document);
-                console.log('document.pictureInPictureEnabled?', document.pictureInPictureEnabled);
+                // Pause original video
+                videoElement.pause();
                 
-                if (!('pictureInPictureEnabled' in document)) {
-                    console.log('Picture-in-Picture API not available in this browser, using fallback');
-                    const task = currentChecklist.find(t => String(t.id) === String(taskId));
-                    expandVideoCustom(taskId, task, videoElement);
-                    return;
-                }
+                // Store reference for cleanup
+                expandedVideoElement = clonedVideo;
                 
-                if (!document.pictureInPictureEnabled) {
-                    console.log('Picture-in-Picture is disabled by browser/permissions, using fallback');
-                    const task = currentChecklist.find(t => String(t.id) === String(taskId));
-                    expandVideoCustom(taskId, task, videoElement);
-                    return;
-                }
-                
-                // Enter Picture-in-Picture mode
-                if (document.pictureInPictureElement !== videoElement) {
-                    // Ensure video is playing before PiP (some browsers require this)
-                    const wasPlaying = !videoElement.paused;
-                    if (!wasPlaying) {
-                        videoElement.play().catch(e => console.log('Could not auto-play:', e));
-                    }
-                    
-                    videoElement.requestPictureInPicture()
-                        .then(() => {
-                            console.log('Entered Picture-in-Picture mode');
-                            currentPiPVideo = videoElement;
-                            createPiPOverlay(taskId);
-                        })
-                        .catch(err => {
-                            console.error('Failed to enter Picture-in-Picture:', err);
-                            // Fallback to custom expansion
-                            console.log('Falling back to custom expansion');
-                            const task = currentChecklist.find(t => String(t.id) === String(taskId));
-                            expandVideoCustom(taskId, task, videoElement);
-                        });
-                } else {
-                    // Exit PiP if already in it
-                    document.exitPictureInPicture();
-                }
+                // Add ESC key handler
+                document.addEventListener('keydown', handleEscKey);
                 
             } catch (error) {
-                console.error('Error with Picture-in-Picture:', error);
-                // Fallback to custom expansion
-                const task = currentChecklist.find(t => String(t.id) === String(taskId));
-                expandVideoCustom(taskId, task, videoElement);
+                console.error('Error expanding video:', error);
             }
         }
         
-        // Create overlay with "Back to Task" button when in PiP mode
-        function createPiPOverlay(taskId) {
-            // Remove any existing overlay
-            if (pipOverlay) {
-                pipOverlay.remove();
+        function exitFullscreenVideo() {
+            if (!expandedOverlay) return;
+            
+            // Get the original video element
+            const originalVideoId = expandedVideoElement.id.replace('expanded-video-element', 'task-video-');
+            const taskId = originalVideoId.match(/task-video-(.+)/)?.[1];
+            
+            if (taskId) {
+                const originalVideo = document.getElementById(`task-video-${taskId}`);
+                if (originalVideo && expandedVideoElement) {
+                    // Sync the playback position back
+                    originalVideo.currentTime = expandedVideoElement.currentTime;
+                    
+                    // Resume playback if expanded video was playing
+                    if (!expandedVideoElement.paused) {
+                        originalVideo.play().catch(e => console.log('Could not resume original:', e));
+                    }
+                }
             }
             
-            // Create overlay
-            pipOverlay = document.createElement('div');
-            pipOverlay.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 12px 24px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-                z-index: 100000;
-                cursor: pointer;
-                font-size: 16px;
-                font-weight: 600;
-                transition: transform 0.2s ease;
-            `;
-            pipOverlay.innerHTML = '← Back to Task';
-            pipOverlay.onmouseover = () => pipOverlay.style.transform = 'scale(1.05)';
-            pipOverlay.onmouseout = () => pipOverlay.style.transform = 'scale(1)';
-            pipOverlay.onclick = () => {
-                document.exitPictureInPicture();
-            };
+            // Remove overlay
+            if (expandedOverlay) {
+                expandedOverlay.remove();
+                expandedOverlay = null;
+            }
             
-            document.body.appendChild(pipOverlay);
+            // Clean up
+            expandedVideoElement = null;
+            document.removeEventListener('keydown', handleEscKey);
         }
         
-        // Clean up when exiting PiP
-        document.addEventListener('leavepictureinpicture', () => {
-            console.log('Left Picture-in-Picture mode');
-            if (pipOverlay) {
-                pipOverlay.remove();
-                pipOverlay = null;
+        function handleEscKey(e) {
+            if (e.key === 'Escape') {
+                exitFullscreenVideo();
             }
-            currentPiPVideo = null;
-        });
+        }
         
-        // Custom video expansion (fallback when PiP not available)
+        // Removed old PiP code - using simpler full-screen approach
+        
+        // Removed old expansion methods - using new full-screen approach
         function expandVideoCustom(taskId, task, videoElement) {
+            // Redirect to new expansion method
+            expandVideo(taskId);
+        }
+        
+        // Stub for old function - redirects to new method
+        function exitExpandedVideo() {
+            exitFullscreenVideo();
+        }
+        
+        // Remove all old expansion code below this line
+        if (false) { // Never execute old code
             try {
                 // Check if already expanded
                 if (document.getElementById('video-expand-overlay')) {
