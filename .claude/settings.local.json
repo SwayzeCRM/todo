@@ -11,7 +11,12 @@
       "Bash(git push:*)",
       "Bash(open /Users/timjames/Documents/Projects/todo/admin-modern.html)",
       "Bash(rm:*)",
-      "Bash(open /Users/timjames/Documents/Projects/todo/test-supabase.html)"
+      "Bash(open /Users/timjames/Documents/Projects/todo/test-supabase.html)",
+      "Bash(open /Users/timjames/Documents/Projects/todo/test-admin.html)",
+      "Bash(open:*)",
+      "Bash(sudo npm i -g @anthropic-ai/claude-code)",
+      "Bash(npm i:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": []
