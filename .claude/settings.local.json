@@ -16,7 +16,8 @@
       "Bash(open:*)",
       "Bash(sudo npm i -g @anthropic-ai/claude-code)",
       "Bash(npm i:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(sed:*)"
     ],
     "deny": [],
     "ask": []
