@@ -3151,15 +3151,19 @@
                 }
                 
                 // Check if Picture-in-Picture is supported
+                console.log('Checking PiP support...');
+                console.log('pictureInPictureEnabled in document?', 'pictureInPictureEnabled' in document);
+                console.log('document.pictureInPictureEnabled?', document.pictureInPictureEnabled);
+                
                 if (!('pictureInPictureEnabled' in document)) {
-                    console.log('Picture-in-Picture API not available, using fallback');
+                    console.log('Picture-in-Picture API not available in this browser, using fallback');
                     const task = currentChecklist.find(t => String(t.id) === String(taskId));
                     expandVideoCustom(taskId, task, videoElement);
                     return;
                 }
                 
                 if (!document.pictureInPictureEnabled) {
-                    console.log('Picture-in-Picture is disabled, using fallback');
+                    console.log('Picture-in-Picture is disabled by browser/permissions, using fallback');
                     const task = currentChecklist.find(t => String(t.id) === String(taskId));
                     expandVideoCustom(taskId, task, videoElement);
                     return;
@@ -3358,24 +3362,21 @@
                 
                 // Ensure video fills container properly
                 if (videoElement.tagName === 'VIDEO') {
-                    // Video fills full width of viewport, height scales proportionally
-                    videoElement.style.cssText = `
-                        position: fixed !important;
-                        top: 50% !important;
-                        left: 0 !important;
-                        transform: translateY(-50%) !important;
-                        width: 100vw !important;
-                        height: auto !important;
-                        max-width: none !important;
-                        max-height: 100vh !important;
-                        min-width: 100vw !important;
-                        object-fit: contain !important;
-                        background-color: black !important;
-                        border-radius: 0 !important;
-                        display: block !important;
-                        cursor: pointer !important;
-                        z-index: 100001 !important;
-                    `;
+                    // Reset all video styles first to clear any constraints
+                    videoElement.removeAttribute('style');
+                    
+                    // Apply new styles to make video fill screen
+                    videoElement.style.position = 'fixed';
+                    videoElement.style.top = '0';
+                    videoElement.style.left = '0';
+                    videoElement.style.width = '100vw';
+                    videoElement.style.height = '100vh';
+                    videoElement.style.maxWidth = 'none';
+                    videoElement.style.maxHeight = 'none';
+                    videoElement.style.objectFit = 'contain';
+                    videoElement.style.backgroundColor = 'black';
+                    videoElement.style.zIndex = '100001';
+                    videoElement.style.cursor = 'pointer';
                     
                     // Video doesn't need to be moved, so position is preserved!
                     // Just continue playing if it was playing
@@ -3548,12 +3549,11 @@
                         expandedContainer.style.cursor = 'pointer';
                     }
                     
-                    // Reset video styles - clear cssText first then restore
+                    // Reset video styles
                     const video = expandedContainer.querySelector('video');
-                    if (video && originalStyles.video) {
-                        // Clear all the overridden styles
-                        video.style.cssText = '';
-                        // Restore original inline styles
+                    if (video) {
+                        // Reset video to original state
+                        video.removeAttribute('style');
                         video.style.width = '100%';
                         video.style.height = '100%';
                         video.style.display = 'block';
