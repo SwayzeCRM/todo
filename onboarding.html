@@ -3135,6 +3135,12 @@
             try {
                 console.log('expandVideo called with taskId:', taskId);
                 
+                // Check if already expanded
+                if (expandedOverlay) {
+                    console.log('Already expanded, exiting');
+                    return;
+                }
+                
                 const videoElement = document.getElementById(`task-video-${taskId}`);
                 if (!videoElement) {
                     console.error('Video element not found for ID:', `task-video-${taskId}`);
@@ -3167,9 +3173,17 @@
                 `;
                 
                 // Clone the video to avoid DOM manipulation issues
-                const clonedVideo = videoElement.cloneNode(false); // Clone without children
+                const clonedVideo = videoElement.cloneNode(true); // Clone WITH children to get source elements
                 clonedVideo.id = 'expanded-video-element';
-                clonedVideo.src = videoElement.src || videoElement.querySelector('source')?.src;
+                
+                // If video doesn't have src attribute, it uses source elements
+                if (!videoElement.src && videoElement.querySelector('source')) {
+                    // Source elements are already cloned with the video
+                    console.log('Video uses source element');
+                } else if (videoElement.src) {
+                    clonedVideo.src = videoElement.src;
+                    console.log('Video src:', videoElement.src);
+                }
                 clonedVideo.style.cssText = `
                     position: absolute;
                     top: 0;
@@ -3310,7 +3324,8 @@
             document.removeEventListener('keydown', handleEscKey);
         }
         
-        // Make function globally accessible
+        // Make functions globally accessible
+        window.expandVideo = expandVideo;
         window.exitFullscreenVideo = exitFullscreenVideo;
         
         function handleEscKey(e) {
