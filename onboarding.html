@@ -3150,11 +3150,135 @@
                     console.error('Video element not found for ID:', `task-video-${taskId}`);
                     return;
                 }
-            
-            // Store whether original video was playing (only for VIDEO elements)
+                
+                // NEW APPROACH: Try native fullscreen first (won't reset video)
+                if (videoElement.tagName === 'VIDEO') {
+                    // Try to use native fullscreen API which preserves video state
+                    if (videoElement.requestFullscreen) {
+                        videoElement.requestFullscreen().catch(err => {
+                            console.log('Native fullscreen failed, using custom expand:', err);
+                            expandVideoCustom(taskId, task, videoElement);
+                        });
+                        return;
+                    } else if (videoElement.webkitRequestFullscreen) {
+                        videoElement.webkitRequestFullscreen();
+                        return;
+                    } else if (videoElement.mozRequestFullScreen) {
+                        videoElement.mozRequestFullScreen();
+                        return;
+                    } else if (videoElement.msRequestFullscreen) {
+                        videoElement.msRequestFullscreen();
+                        return;
+                    }
+                }
+                
+                // Fallback to custom expansion
+                expandVideoCustom(taskId, task, videoElement);
+            } catch (error) {
+                console.error('Error expanding video:', error);
+            }
+        }
+        
+        // Custom video expansion (when native fullscreen not available)
+        function expandVideoCustom(taskId, task, videoElement) {
+            try {
+                // NEW APPROACH: Expand video in place using CSS without moving it in DOM
+                const currentTime = videoElement.tagName === 'VIDEO' ? videoElement.currentTime : 0;
+                const wasPlaying = videoElement.tagName === 'VIDEO' ? !videoElement.paused : false;
+                
+                console.log('Custom expand - Current time:', currentTime, 'Was playing:', wasPlaying);
+                
+                // Get container
+                const container = document.getElementById(`video-container-${taskId}`);
+                if (!container) {
+                    console.error('Video container not found');
+                    return;
+                }
+                
+                // Create overlay without moving the video
+                const overlay = document.createElement('div');
+                overlay.id = 'video-expand-overlay';
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.95);
+                    z-index: 99999;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                `;
+                
+                // Create close button
+                const closeBtn = document.createElement('button');
+                closeBtn.innerHTML = '← Back to Instructions';
+                closeBtn.style.cssText = `
+                    position: absolute;
+                    top: 20px;
+                    left: 20px;
+                    padding: 10px 20px;
+                    background: rgba(255, 255, 255, 0.1);
+                    color: white;
+                    border: 1px solid white;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    z-index: 100000;
+                `;
+                closeBtn.onclick = () => exitExpandedVideo();
+                
+                // Store original styles
+                const originalStyles = {
+                    position: container.style.position,
+                    zIndex: container.style.zIndex,
+                    width: container.style.width,
+                    height: container.style.height,
+                    maxWidth: container.style.maxWidth,
+                    maxHeight: container.style.maxHeight
+                };
+                container.setAttribute('data-original-styles', JSON.stringify(originalStyles));
+                
+                // Expand the container in place
+                container.style.position = 'fixed';
+                container.style.top = '50%';
+                container.style.left = '50%';
+                container.style.transform = 'translate(-50%, -50%)';
+                container.style.width = '90vw';
+                container.style.height = '90vh';
+                container.style.maxWidth = '90vw';
+                container.style.maxHeight = '90vh';
+                container.style.zIndex = '100000';
+                
+                // Ensure video fills container
+                if (videoElement.tagName === 'VIDEO') {
+                    videoElement.style.width = '100%';
+                    videoElement.style.height = '100%';
+                    videoElement.style.objectFit = 'contain';
+                    
+                    // Video doesn't need to be moved, so position is preserved!
+                    // Just continue playing if it was playing
+                    if (wasPlaying) {
+                        videoElement.play().catch(e => console.log('Play failed:', e));
+                    }
+                }
+                
+                // Add overlay and button to DOM
+                document.body.appendChild(overlay);
+                overlay.appendChild(closeBtn);
+                
+                // Mark as expanded
+                container.setAttribute('data-expanded', 'true');
+            } catch (error) {
+                console.error('Error in custom video expansion:', error);
+            }
+        }
+        
+        // Keep the old expansion code as fallback
+        function expandVideoOld(taskId, task, videoElement) {
+            const wasMuted = videoElement.tagName === 'VIDEO' ? videoElement.muted : false;
             const wasPlaying = videoElement.tagName === 'VIDEO' ? !videoElement.paused : false;
             const currentTime = videoElement.tagName === 'VIDEO' ? videoElement.currentTime : 0;
-            const wasMuted = videoElement.tagName === 'VIDEO' ? videoElement.muted : false;
             
             // Store original parent and next sibling for restoration
             const originalParent = videoElement.parentNode;
@@ -3283,6 +3407,42 @@
         
         // Exit expanded video mode
         function exitExpandedVideo() {
+            // Check for new CSS-based expansion first
+            const overlay = document.getElementById('video-expand-overlay');
+            if (overlay) {
+                // Find expanded container
+                const expandedContainer = document.querySelector('[data-expanded="true"]');
+                if (expandedContainer) {
+                    // Restore original styles
+                    const originalStyles = JSON.parse(expandedContainer.getAttribute('data-original-styles') || '{}');
+                    expandedContainer.style.position = originalStyles.position || '';
+                    expandedContainer.style.top = '';
+                    expandedContainer.style.left = '';
+                    expandedContainer.style.transform = '';
+                    expandedContainer.style.width = originalStyles.width || '';
+                    expandedContainer.style.height = originalStyles.height || '';
+                    expandedContainer.style.maxWidth = originalStyles.maxWidth || '';
+                    expandedContainer.style.maxHeight = originalStyles.maxHeight || '';
+                    expandedContainer.style.zIndex = originalStyles.zIndex || '';
+                    
+                    // Reset video styles
+                    const video = expandedContainer.querySelector('video');
+                    if (video) {
+                        video.style.width = '';
+                        video.style.height = '';
+                        video.style.objectFit = '';
+                    }
+                    
+                    expandedContainer.removeAttribute('data-expanded');
+                    expandedContainer.removeAttribute('data-original-styles');
+                }
+                
+                // Remove overlay
+                overlay.remove();
+                return;
+            }
+            
+            // Fallback to old method
             const expandedContainer = document.getElementById('expanded-video-container');
             if (!expandedContainer) return;
             
