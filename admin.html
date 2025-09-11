@@ -8772,9 +8772,37 @@ Current Supabase limits:
                 </div>
                 
                 <div class="form-group" style="margin-bottom: 16px;">
-                    <label for="newTaskVideoUrl" style="display: block; margin-bottom: 8px; font-weight: 500;">Video URL (optional)</label>
-                    <input type="url" id="newTaskVideoUrl" style="width: 100%; padding: 12px; border: 1px solid #E5E7EB; border-radius: 4px;" placeholder="https://youtube.com/watch?v=... or https://vimeo.com/...">
-                    <small style="color: #6B7280;">Add a YouTube or Vimeo video URL for this task</small>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Video (optional)</label>
+                    <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 12px;">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="newTaskUseVideoUrl" onchange="toggleNewTaskVideoMode()" style="width: 18px; height: 18px; margin-right: 8px;">
+                            <span style="color: #374151;">Use video URL instead</span>
+                        </label>
+                    </div>
+                    
+                    <div id="newTaskVideoUploadInput">
+                        <input type="file" id="newTaskVideoFile" accept="video/*" onchange="handleNewTaskVideoFileSelect(event)" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                        <small style="color: #6B7280; display: block; margin-top: 5px;">
+                            Supported formats: MP4, WebM, MOV. Large files may take time to upload.<br>
+                            <span style="color: #ef4444;">Note: Supabase free tier limits files to 50MB. For larger videos, use the URL option with YouTube, Vimeo, or other video hosting services.</span>
+                        </small>
+                        <div id="newTaskVideoUploadProgress" style="display: none; margin-top: 10px;">
+                            <div style="background: #e5e7eb; border-radius: 4px; height: 8px;">
+                                <div id="newTaskVideoProgressBar" style="background: #3b82f6; height: 100%; border-radius: 4px; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                            <small id="newTaskVideoProgressText" style="color: #6B7280; margin-top: 5px; display: block;">Uploading...</small>
+                        </div>
+                    </div>
+                    
+                    <div id="newTaskVideoUrlInput" style="display: none;">
+                        <input type="url" id="newTaskVideoUrl" style="width: 100%; padding: 12px; border: 1px solid #E5E7EB; border-radius: 4px;" placeholder="https://youtube.com/watch?v=... or https://vimeo.com/...">
+                        <small style="color: #6B7280;">Paste a YouTube, Vimeo, or direct video URL</small>
+                    </div>
+                    
+                    <div id="newTaskVideoPreview" style="display: none; margin-top: 10px;">
+                        <video id="newTaskVideoPreviewElement" controls style="width: 100%; max-height: 300px; border-radius: 8px;"></video>
+                        <button type="button" onclick="removeNewTaskVideo()" style="margin-top: 8px; color: #ef4444; background: none; border: none; cursor: pointer;">Remove video</button>
+                    </div>
                 </div>
                 
                 <div class="form-group" style="margin-bottom: 16px;">
@@ -8802,6 +8830,45 @@ Current Supabase limits:
                 const embedGroup = document.getElementById('newTaskFormEmbedGroup');
                 embedGroup.style.display = checkbox.checked ? 'block' : 'none';
             };
+            
+            // Initialize video mode toggle for new task form
+            window.toggleNewTaskVideoMode = function() {
+                const useUrl = document.getElementById('newTaskUseVideoUrl').checked;
+                document.getElementById('newTaskVideoUploadInput').style.display = useUrl ? 'none' : 'block';
+                document.getElementById('newTaskVideoUrlInput').style.display = useUrl ? 'block' : 'none';
+            };
+            
+            // Handle video file selection for new task
+            window.handleNewTaskVideoFileSelect = async function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                // Check file size (50MB limit for Supabase free tier)
+                const maxSize = 50 * 1024 * 1024; // 50MB
+                if (file.size > maxSize) {
+                    showError('Video file is too large. Maximum size is 50MB. Consider using a video URL instead.');
+                    event.target.value = '';
+                    return;
+                }
+                
+                // Show preview
+                const preview = document.getElementById('newTaskVideoPreview');
+                const previewElement = document.getElementById('newTaskVideoPreviewElement');
+                preview.style.display = 'block';
+                previewElement.src = URL.createObjectURL(file);
+                
+                // Store file for upload
+                window.newTaskVideoFile = file;
+            };
+            
+            // Remove video preview for new task
+            window.removeNewTaskVideo = function() {
+                document.getElementById('newTaskVideoFile').value = '';
+                document.getElementById('newTaskVideoUrl').value = '';
+                document.getElementById('newTaskVideoPreview').style.display = 'none';
+                document.getElementById('newTaskVideoPreviewElement').src = '';
+                window.newTaskVideoFile = null;
+            };
         }
         
         // Create new task
@@ -8812,13 +8879,61 @@ Current Supabase limits:
                 const description = document.getElementById('newTaskDescription').value;
                 const instructionTitle = document.getElementById('newTaskInstructions').value;
                 const instructionContent = document.getElementById('newTaskContent').value;
-                const videoUrl = document.getElementById('newTaskVideoUrl').value;
+                const useVideoUrl = document.getElementById('newTaskUseVideoUrl').checked;
                 const hasFormEmbed = document.getElementById('newTaskHasFormEmbed').checked;
                 const formEmbedCode = document.getElementById('newTaskFormEmbedCode').value;
                 
                 if (!title) {
                     showError('Title is required');
                     return;
+                }
+                
+                let finalVideoUrl = null;
+                
+                // Handle video upload or URL
+                if (useVideoUrl) {
+                    // Use video URL directly
+                    finalVideoUrl = document.getElementById('newTaskVideoUrl').value;
+                } else if (window.newTaskVideoFile) {
+                    // Upload video file
+                    try {
+                        // Show upload progress
+                        const progressDiv = document.getElementById('newTaskVideoUploadProgress');
+                        const progressBar = document.getElementById('newTaskVideoProgressBar');
+                        const progressText = document.getElementById('newTaskVideoProgressText');
+                        
+                        progressDiv.style.display = 'block';
+                        progressText.textContent = 'Uploading video...';
+                        
+                        // Create unique filename
+                        const timestamp = Date.now();
+                        const filename = `task-videos/${taskId}-${timestamp}-${window.newTaskVideoFile.name}`;
+                        
+                        // Upload to Supabase storage
+                        const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                            .from('task-assets')
+                            .upload(filename, window.newTaskVideoFile, {
+                                cacheControl: '3600',
+                                upsert: false
+                            });
+                        
+                        if (uploadError) throw uploadError;
+                        
+                        // Get public URL
+                        const { data: urlData } = supabaseClient.storage
+                            .from('task-assets')
+                            .getPublicUrl(filename);
+                        
+                        finalVideoUrl = urlData.publicUrl;
+                        
+                        progressBar.style.width = '100%';
+                        progressText.textContent = 'Upload complete!';
+                        
+                    } catch (uploadError) {
+                        console.error('Video upload error:', uploadError);
+                        showError('Failed to upload video: ' + uploadError.message);
+                        return;
+                    }
                 }
                 
                 // Get next position for this group
@@ -8839,7 +8954,7 @@ Current Supabase limits:
                     description: description || null,
                     instruction_title: instructionTitle || title,
                     instruction_content: instructionContent || null,
-                    video_url: videoUrl || null,
+                    video_url: finalVideoUrl || null,
                     form_embed_code: hasFormEmbed && formEmbedCode ? formEmbedCode : null,
                     position: nextPosition,
                     task_group_id: groupId,
@@ -8855,6 +8970,9 @@ Current Supabase limits:
                 if (error) throw error;
                 
                 showSuccess('Task created successfully!');
+                
+                // Clear stored video file
+                window.newTaskVideoFile = null;
                 
                 // Go back to task management
                 setTimeout(() => {
