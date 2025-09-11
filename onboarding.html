@@ -3199,10 +3199,16 @@
                 return;
             }
             
-            // Store current state
-            const currentTime = video.currentTime;
-            const wasPlaying = !video.paused;
-            console.log('Storing position:', currentTime, 'Playing:', wasPlaying);
+            // Store current state (only for video elements, not iframes)
+            let currentTime = 0;
+            let wasPlaying = false;
+            if (video.tagName === 'VIDEO') {
+                currentTime = video.currentTime;
+                wasPlaying = !video.paused;
+                console.log('Storing position:', currentTime, 'Playing:', wasPlaying);
+            } else {
+                console.log('Element is iframe, no playback state to store');
+            }
             
             // Hide the overlay expand button if it exists
             const overlayBtn = container.querySelector('button[title*="Expand"]');
@@ -3363,8 +3369,8 @@
             `;
             
             const exitExpanded = () => {
-                // Restore video position
-                if (Math.abs(video.currentTime - currentTime) > 0.1) {
+                // Restore video position (only for video elements, not iframes)
+                if (video.tagName === 'VIDEO' && Math.abs(video.currentTime - currentTime) > 0.1) {
                     video.currentTime = currentTime;
                 }
                 
@@ -3388,8 +3394,8 @@
                     overlayBtn.style.display = '';
                 }
                 
-                // Resume playback if needed
-                if (wasPlaying) {
+                // Resume playback if needed (only for video elements, not iframes)
+                if (wasPlaying && video.tagName === 'VIDEO') {
                     video.play().catch(e => console.log('Resume play failed:', e));
                 }
             };
@@ -3406,12 +3412,14 @@
             };
             document.addEventListener('keydown', escapeHandler);
             
-            // Restore video position and playback
-            if (Math.abs(video.currentTime - currentTime) > 0.1) {
-                video.currentTime = currentTime;
-            }
-            if (wasPlaying) {
-                video.play().catch(e => console.log('Play failed:', e));
+            // Restore video position and playback (only for video elements, not iframes)
+            if (video.tagName === 'VIDEO') {
+                if (Math.abs(video.currentTime - currentTime) > 0.1) {
+                    video.currentTime = currentTime;
+                }
+                if (wasPlaying) {
+                    video.play().catch(e => console.log('Play failed:', e));
+                }
             }
         }
         
