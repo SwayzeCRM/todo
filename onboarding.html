@@ -3169,6 +3169,33 @@
             return `${minutes}:${secs.toString().padStart(2, '0')}`;
         }
         
+        // Diagnostic function to check fullscreen availability
+        function checkFullscreenSupport() {
+            console.log('=== Fullscreen Diagnostic ===');
+            console.log('Fullscreen enabled:', document.fullscreenEnabled);
+            console.log('In iframe:', window.self !== window.top);
+            console.log('Protocol:', window.location.protocol);
+            
+            const video = document.querySelector('video');
+            if (video) {
+                console.log('Video ready state:', video.readyState);
+                console.log('Video network state:', video.networkState);
+                console.log('Video source:', video.currentSrc || video.src);
+                
+                // Check if fullscreen API exists
+                const hasAPI = !!(
+                    video.requestFullscreen ||
+                    video.webkitRequestFullscreen ||
+                    video.mozRequestFullScreen ||
+                    video.msRequestFullscreen
+                );
+                console.log('Fullscreen API available:', hasAPI);
+            }
+        }
+        
+        // Make diagnostic function globally available
+        window.checkFullscreenSupport = checkFullscreenSupport;
+        
         // Video expansion using native Fullscreen API
         function expandVideo(taskId) {
             const video = document.getElementById(`task-video-${taskId}`);
@@ -3574,7 +3601,10 @@
                                        controls
                                        controlsList="nodownload"
                                        playsinline
-                                       webkit-playsinline>
+                                       webkit-playsinline
+                                       allowfullscreen
+                                       webkitallowfullscreen
+                                       mozallowfullscreen>
                                     <source src="${videoUrl}" type="video/mp4">
                                     Your browser does not support the video tag.
                                 </video>
