@@ -3333,6 +3333,13 @@
             const originalParent = container.parentNode;
             const originalNextSibling = container.nextSibling;
             
+            // Store video state BEFORE moving (moving resets video position)
+            let savedTime = 0;
+            if (video.tagName === 'VIDEO') {
+                savedTime = video.currentTime;
+                console.log('Saved video position before move:', savedTime);
+            }
+            
             // Move container to overlay
             overlay.appendChild(container);
             document.body.appendChild(overlay);
@@ -3372,10 +3379,15 @@
                 font-size: 16px;
             `;
             
+            // Make sure back button is appended to the overlay
+            overlay.appendChild(backBtn);
+            
             const exitExpanded = () => {
-                // Restore video position (only for video elements, not iframes)
-                if (video.tagName === 'VIDEO' && Math.abs(video.currentTime - currentTime) > 0.1) {
-                    video.currentTime = currentTime;
+                // Save current position before moving back
+                let exitTime = 0;
+                if (video.tagName === 'VIDEO') {
+                    exitTime = video.currentTime;
+                    console.log('Saving position before exit:', exitTime);
                 }
                 
                 // Move container back
@@ -3398,9 +3410,15 @@
                     overlayBtn.style.display = '';
                 }
                 
-                // Resume playback if needed (only for video elements, not iframes)
-                if (wasPlaying && video.tagName === 'VIDEO') {
-                    video.play().catch(e => console.log('Resume play failed:', e));
+                // Restore position and resume playback if needed (only for video elements, not iframes)
+                if (video.tagName === 'VIDEO') {
+                    if (exitTime > 0) {
+                        video.currentTime = exitTime;
+                        console.log('Restored position after exit:', exitTime);
+                    }
+                    if (wasPlaying) {
+                        video.play().catch(e => console.log('Resume play failed:', e));
+                    }
                 }
             };
             
@@ -3418,8 +3436,10 @@
             
             // Restore video position and playback (only for video elements, not iframes)
             if (video.tagName === 'VIDEO') {
-                if (Math.abs(video.currentTime - currentTime) > 0.1) {
-                    video.currentTime = currentTime;
+                // Restore to saved position (DOM move resets video)
+                if (savedTime > 0) {
+                    video.currentTime = savedTime;
+                    console.log('Restored video position to:', savedTime);
                 }
                 if (wasPlaying) {
                     video.play().catch(e => console.log('Play failed:', e));
