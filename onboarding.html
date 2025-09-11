@@ -3331,6 +3331,15 @@
                 const savedTime = video.currentTime;
                 const wasVideoPlaying = !video.paused;
                 
+                console.log('=== VIDEO EXPANSION DEBUG ===');
+                console.log('Original video state:', {
+                    currentTime: savedTime,
+                    duration: video.duration,
+                    paused: video.paused,
+                    readyState: video.readyState,
+                    src: video.src || video.currentSrc
+                });
+                
                 // Pause original video immediately
                 video.pause();
                 
@@ -3338,8 +3347,26 @@
                 videoClone = video.cloneNode(true);
                 videoClone.id = `${video.id}-clone`;
                 
-                // Set clone's state to match original
-                videoClone.currentTime = savedTime;
+                console.log('Clone created, setting time to:', savedTime);
+                
+                // Wait for clone to be ready before setting time
+                const setupClone = () => {
+                    console.log('Setting up clone - readyState:', videoClone.readyState);
+                    videoClone.currentTime = savedTime;
+                    
+                    // Start clone playing if original was playing
+                    if (wasVideoPlaying) {
+                        videoClone.play()
+                            .then(() => console.log('Clone playing successfully'))
+                            .catch(e => console.log('Clone play failed:', e));
+                    }
+                    
+                    console.log('Clone state after setup:', {
+                        currentTime: videoClone.currentTime,
+                        duration: videoClone.duration,
+                        paused: videoClone.paused
+                    });
+                };
                 
                 // Hide original video
                 originalVideoDisplay = video.style.display;
@@ -3348,12 +3375,12 @@
                 // Replace video in container with clone
                 video.parentNode.replaceChild(videoClone, video);
                 
-                // Start clone playing if original was playing
-                if (wasVideoPlaying) {
-                    videoClone.play().catch(e => console.log('Clone play failed:', e));
+                // Set up clone after it's in the DOM
+                if (videoClone.readyState >= 1) {
+                    setupClone();
+                } else {
+                    videoClone.addEventListener('loadedmetadata', setupClone, { once: true });
                 }
-                
-                console.log('Created video clone with time:', savedTime, 'Playing:', wasVideoPlaying);
             }
             
             // Move container to overlay
@@ -3402,25 +3429,37 @@
             const exitExpanded = () => {
                 // Handle video clone sync back to original
                 if (videoClone && video.tagName === 'VIDEO') {
+                    console.log('=== VIDEO EXIT DEBUG ===');
+                    console.log('Clone exists, syncing back to original');
+                    
                     // Get clone's current state
                     const cloneTime = videoClone.currentTime;
                     const cloneWasPlaying = !videoClone.paused;
                     
-                    console.log('Syncing clone state back - time:', cloneTime, 'playing:', cloneWasPlaying);
+                    console.log('Clone final state:', {
+                        currentTime: cloneTime,
+                        duration: videoClone.duration,
+                        playing: cloneWasPlaying
+                    });
                     
                     // Pause clone before replacing
                     videoClone.pause();
                     
                     // Replace clone with original video
-                    videoClone.parentNode.replaceChild(video, videoClone);
+                    const cloneParent = videoClone.parentNode;
+                    cloneParent.replaceChild(video, videoClone);
                     
                     // Restore original video state
                     video.currentTime = cloneTime;
-                    video.style.display = originalVideoDisplay;
+                    video.style.display = originalVideoDisplay || '';
+                    
+                    console.log('Original video restored with time:', video.currentTime);
                     
                     // Resume playback if clone was playing
                     if (cloneWasPlaying) {
-                        video.play().catch(e => console.log('Original video resume failed:', e));
+                        video.play()
+                            .then(() => console.log('Original video resumed playing'))
+                            .catch(e => console.log('Original video resume failed:', e));
                     }
                     
                     // Clean up clone
