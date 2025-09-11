@@ -1853,6 +1853,17 @@
         .task-group-header.completed .task-group-progress {
             color: #047857;
         }
+        
+        /* Hide native fullscreen button since it doesn't work in iframe */
+        video::-webkit-media-controls-fullscreen-button {
+            display: none !important;
+        }
+        video::-moz-media-controls-fullscreen-button {
+            display: none !important;
+        }
+        video::-ms-media-controls-fullscreen-button {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -3191,12 +3202,70 @@
                 );
                 console.log('Fullscreen API available:', hasAPI);
             }
+            
+            // Check for video player frameworks
+            console.log('=== Video Framework Detection ===');
+            console.log('Video.js detected:', !!window.videojs);
+            console.log('Plyr detected:', !!window.Plyr);
+            console.log('JWPlayer detected:', !!window.jwplayer);
+            console.log('MediaElement.js detected:', !!window.mejs);
         }
         
         // Make diagnostic function globally available
         window.checkFullscreenSupport = checkFullscreenSupport;
         
-        // Video expansion using native Fullscreen API
+        // Robust video state preservation functions
+        function preserveVideoStateRobustly(video, targetContainer) {
+            // Save ALL relevant state
+            const state = {
+                currentTime: video.currentTime,
+                paused: video.paused,
+                playbackRate: video.playbackRate,
+                volume: video.volume,
+                muted: video.muted,
+                src: video.src || video.currentSrc,
+                poster: video.poster
+            };
+            
+            console.log('Saving video state:', state);
+            
+            // Move the video
+            targetContainer.appendChild(video);
+            
+            // Restore state after DOM settles
+            requestAnimationFrame(() => {
+                if (video.readyState >= 1) { // HAVE_METADATA
+                    restoreVideoState(video, state);
+                } else {
+                    video.addEventListener('loadedmetadata', () => {
+                        restoreVideoState(video, state);
+                    }, { once: true });
+                }
+            });
+            
+            return state;
+        }
+        
+        function restoreVideoState(video, state) {
+            console.log('Restoring video state:', state);
+            
+            try {
+                video.currentTime = state.currentTime;
+                video.playbackRate = state.playbackRate;
+                video.volume = state.volume;
+                video.muted = state.muted;
+                
+                if (!state.paused) {
+                    video.play().catch(e => console.log('Play failed:', e));
+                }
+                
+                console.log('State restored. Current time now:', video.currentTime);
+            } catch (e) {
+                console.error('Failed to restore state:', e);
+            }
+        }
+        
+        // Video expansion using CSS modal (works in iframe environments)
         function expandVideo(taskId) {
             const video = document.getElementById(`task-video-${taskId}`);
             const container = document.getElementById(`video-container-${taskId}`);
@@ -3224,89 +3293,10 @@
             const backBtn = document.createElement('button');
             backBtn.textContent = '← Back to Instructions';
             backBtn.className = 'back-to-instructions';
-            backBtn.addEventListener('click', () => {
-                if (document.fullscreenElement) {
-                    document.exitFullscreen();
-                }
-            });
-            container.appendChild(backBtn);
             
-            // Fullscreen change handler
-            const fullscreenChangeHandler = () => {
-                if (document.fullscreenElement === container) {
-                    // Entered fullscreen
-                    console.log('Entered fullscreen');
-                    
-                    // Restore video position if needed
-                    if (Math.abs(video.currentTime - currentTime) > 0.1) {
-                        console.log('Restoring position to:', currentTime);
-                        video.currentTime = currentTime;
-                    }
-                    
-                    // Resume playback if it was playing
-                    if (wasPlaying) {
-                        video.play().catch(e => console.log('Play failed:', e));
-                    }
-                } else {
-                    // Exited fullscreen
-                    console.log('Exited fullscreen');
-                    
-                    // Clean up
-                    backBtn.remove();
-                    if (overlayBtn) {
-                        overlayBtn.style.display = '';
-                    }
-                    
-                    // Reset video styles
-                    video.style.width = '';
-                    video.style.height = '';
-                    video.style.objectFit = '';
-                    
-                    // Remove the event listener
-                    document.removeEventListener('fullscreenchange', fullscreenChangeHandler);
-                    document.removeEventListener('webkitfullscreenchange', fullscreenChangeHandler);
-                    
-                    // Resume playback if it was playing
-                    if (wasPlaying) {
-                        video.play().catch(e => console.log('Resume play failed:', e));
-                    }
-                }
-            };
-            
-            // Add fullscreen change listener
-            document.addEventListener('fullscreenchange', fullscreenChangeHandler);
-            document.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
-            
-            // Request fullscreen
-            const requestFullscreen = container.requestFullscreen ||
-                                    container.webkitRequestFullscreen ||
-                                    container.mozRequestFullScreen ||
-                                    container.msRequestFullscreen;
-            
-            if (requestFullscreen) {
-                Promise.resolve(requestFullscreen.call(container))
-                    .then(() => {
-                        console.log('Fullscreen request successful');
-                        // Set video styles for fullscreen
-                        video.style.width = '100%';
-                        video.style.height = '100%';
-                        video.style.objectFit = 'cover';
-                    })
-                    .catch(err => {
-                        console.error('Failed to enter fullscreen:', err);
-                                
-                        // Clean up fullscreen listeners
-                        document.removeEventListener('fullscreenchange', fullscreenChangeHandler);
-                        document.removeEventListener('webkitfullscreenchange', fullscreenChangeHandler);
-                        
-                        // Use CSS-based fallback
-                        useCSSExpansion(taskId, container, video, backBtn, overlayBtn, currentTime, wasPlaying);
-                    });
-            } else {
-                console.error('Fullscreen API not supported');
-                // Use CSS-based fallback
-                useCSSExpansion(taskId, container, video, backBtn, overlayBtn, currentTime, wasPlaying);
-            }
+            // Always use CSS expansion (no fullscreen API attempts)
+            console.log('Using CSS modal for video expansion');
+            useCSSExpansion(taskId, container, video, backBtn, overlayBtn, currentTime, wasPlaying);
         }
         
         // CSS-based expansion fallback (when Fullscreen API is blocked)
@@ -3332,10 +3322,38 @@
             const originalParent = container.parentNode;
             const originalNextSibling = container.nextSibling;
             
-            // Store video state BEFORE moving (moving resets video position)
-            let savedTime = 0;
+            // Clone-based approach for video elements
+            let videoClone = null;
+            let originalVideoDisplay = '';
+            
             if (video.tagName === 'VIDEO') {
-                savedTime = video.currentTime;
+                // Store current state before cloning
+                const savedTime = video.currentTime;
+                const wasVideoPlaying = !video.paused;
+                
+                // Pause original video immediately
+                video.pause();
+                
+                // Clone the video element
+                videoClone = video.cloneNode(true);
+                videoClone.id = `${video.id}-clone`;
+                
+                // Set clone's state to match original
+                videoClone.currentTime = savedTime;
+                
+                // Hide original video
+                originalVideoDisplay = video.style.display;
+                video.style.display = 'none';
+                
+                // Replace video in container with clone
+                video.parentNode.replaceChild(videoClone, video);
+                
+                // Start clone playing if original was playing
+                if (wasVideoPlaying) {
+                    videoClone.play().catch(e => console.log('Clone play failed:', e));
+                }
+                
+                console.log('Created video clone with time:', savedTime, 'Playing:', wasVideoPlaying);
             }
             
             // Move container to overlay
@@ -3353,7 +3371,9 @@
                 background: black;
             `;
             
-            video.style.cssText = `
+            // Apply styles to the clone if it exists, otherwise to the original video
+            const activeVideo = videoClone || video;
+            activeVideo.style.cssText = `
                 width: 100%;
                 height: 100%;
                 object-fit: contain;
@@ -3380,10 +3400,34 @@
             overlay.appendChild(backBtn);
             
             const exitExpanded = () => {
-                // Save current position before moving back
-                let exitTime = 0;
-                if (video.tagName === 'VIDEO') {
-                    exitTime = video.currentTime;
+                // Handle video clone sync back to original
+                if (videoClone && video.tagName === 'VIDEO') {
+                    // Get clone's current state
+                    const cloneTime = videoClone.currentTime;
+                    const cloneWasPlaying = !videoClone.paused;
+                    
+                    console.log('Syncing clone state back - time:', cloneTime, 'playing:', cloneWasPlaying);
+                    
+                    // Pause clone before replacing
+                    videoClone.pause();
+                    
+                    // Replace clone with original video
+                    videoClone.parentNode.replaceChild(video, videoClone);
+                    
+                    // Restore original video state
+                    video.currentTime = cloneTime;
+                    video.style.display = originalVideoDisplay;
+                    
+                    // Resume playback if clone was playing
+                    if (cloneWasPlaying) {
+                        video.play().catch(e => console.log('Original video resume failed:', e));
+                    }
+                    
+                    // Clean up clone
+                    videoClone = null;
+                } else if (video.tagName !== 'VIDEO') {
+                    // For non-video elements (iframes), just reset styles
+                    video.style.cssText = 'width: 100%; height: 100%; display: block; cursor: pointer;';
                 }
                 
                 // Move container back
@@ -3393,9 +3437,13 @@
                     originalParent.appendChild(container);
                 }
                 
-                // Reset styles
+                // Reset container styles
                 container.style.cssText = 'position: relative;';
-                video.style.cssText = 'width: 100%; height: 100%; display: block; cursor: pointer;';
+                
+                // Reset video styles if it's not a clone scenario
+                if (!videoClone && video.tagName === 'VIDEO') {
+                    video.style.cssText = 'width: 100%; height: 100%; display: block; cursor: pointer;';
+                }
                 
                 // Remove overlay
                 overlay.remove();
@@ -3404,16 +3452,6 @@
                 backBtn.remove();
                 if (overlayBtn) {
                     overlayBtn.style.display = '';
-                }
-                
-                // Restore position and resume playback if needed (only for video elements, not iframes)
-                if (video.tagName === 'VIDEO') {
-                    if (exitTime > 0) {
-                        video.currentTime = exitTime;
-                    }
-                    if (wasPlaying) {
-                        video.play().catch(e => console.log('Resume play failed:', e));
-                    }
                 }
             };
             
@@ -3429,16 +3467,7 @@
             };
             document.addEventListener('keydown', escapeHandler);
             
-            // Restore video position and playback (only for video elements, not iframes)
-            if (video.tagName === 'VIDEO') {
-                // Restore to saved position (DOM move resets video)
-                if (savedTime > 0) {
-                    video.currentTime = savedTime;
-                }
-                if (wasPlaying) {
-                    video.play().catch(e => console.log('Play failed:', e));
-                }
-            }
+            // No need for additional state restoration - clone already has the correct state
         }
         
         // Stub functions for compatibility
@@ -3447,10 +3476,15 @@
         }
         
         function exitExpandedVideo() {
-            // Exit fullscreen if active
-            if (document.fullscreenElement) {
-                document.exitFullscreen();
-            }
+            // Exit any CSS expanded overlays
+            const overlays = document.querySelectorAll('[id^="expanded-overlay-"]');
+            overlays.forEach(overlay => {
+                // Find the back button and trigger its click
+                const backBtn = overlay.querySelector('.back-to-instructions');
+                if (backBtn) {
+                    backBtn.click();
+                }
+            });
         }
         
         function exitFullscreenVideo() {
