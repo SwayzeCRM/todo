@@ -2573,9 +2573,30 @@
                         profile_completed: existingUser.profile_completed
                     });
                     
-                    // URL parameter group assignment is ONLY for initial creation
-                    // If user already exists, respect their current group assignment
-                    // (they may have graduated or been manually reassigned)
+                    // ALWAYS update user's group based on URL parameter
+                    // This ensures users are automatically moved to new groups when URL changes
+                    if (groupSlug) {
+                        const newGroup = await findGroupBySlug(groupSlug);
+                        if (newGroup && newGroup.id !== existingUser.user_group_id) {
+                            console.log('Updating user group from', existingUser.user_group_id, 'to', newGroup.id);
+                            
+                            // Update user's group
+                            const { error: updateError } = await supabaseClient
+                                .from('onboarding_users')
+                                .update({ 
+                                    user_group_id: newGroup.id,
+                                    updated_at: new Date().toISOString()
+                                })
+                                .eq('id', existingUser.id);
+                            
+                            if (updateError) {
+                                console.error('Error updating user group:', updateError);
+                            } else {
+                                existingUser.user_group_id = newGroup.id;
+                                console.log('User group updated successfully');
+                            }
+                        }
+                    }
                     
                     // Check if profile is completed
                     if (!existingUser.profile_completed) {
@@ -2590,21 +2611,34 @@
                 // Create new user
                 console.log('Creating new user...');
                 
-                // Find the group to assign
-                let groupToAssign = null;
-                if (groupSlug) {
-                    groupToAssign = await findGroupBySlug(groupSlug);
-                    console.log('Group to assign:', groupToAssign);
-                    
-                    if (!groupToAssign) {
-                        console.log('No valid group found for parameter:', urlGroup);
-                        showError('Invalid or missing user group. Please contact your administrator.');
-                        return;
-                    }
-                } else {
-                    // No group parameter provided
-                    console.log('No group parameter provided');
-                    showError('No user group specified. Please contact your administrator for the correct link.');
+                // Find the group to assign (group is now mandatory)
+                const groupToAssign = await findGroupBySlug(groupSlug);
+                console.log('Group to assign:', groupToAssign);
+                
+                if (!groupToAssign) {
+                    console.log('No valid group found for parameter:', groupSlug);
+                    showError('Invalid group specified. Please contact support@dfycrm.com for assistance.');
+                    document.getElementById('app').innerHTML = `
+                        <div style="text-align: center; padding: 50px; background: #FEE2E2; border-radius: 8px; margin: 20px;">
+                            <h2 style="color: #DC2626; margin-bottom: 20px;">Invalid Group</h2>
+                            <p style="color: #7F1D1D; font-size: 18px; margin-bottom: 20px;">
+                                The group "${groupSlug}" is not valid.
+                            </p>
+                            <p style="color: #7F1D1D; margin-bottom: 30px;">
+                                Please contact support for assistance:
+                            </p>
+                            <a href="mailto:support@dfycrm.com" style="
+                                display: inline-block;
+                                background: #DC2626;
+                                color: white;
+                                padding: 12px 30px;
+                                border-radius: 8px;
+                                text-decoration: none;
+                                font-weight: bold;
+                                font-size: 16px;
+                            ">support@dfycrm.com</a>
+                        </div>
+                    `;
                     return;
                 }
                 
@@ -4033,8 +4067,29 @@
                 const params = getUrlParams();
                 console.log('URL parameters:', params);
 
-                if (!params.email || !params.locationId) {
-                    showError('Missing required parameters. Please access this page through your DFY CRM dashboard.');
+                if (!params.email || !params.locationId || !params.group) {
+                    showError('Missing required parameters. The group parameter is required.');
+                    document.getElementById('app').innerHTML = `
+                        <div style="text-align: center; padding: 50px; background: #FEE2E2; border-radius: 8px; margin: 20px;">
+                            <h2 style="color: #DC2626; margin-bottom: 20px;">Access Error</h2>
+                            <p style="color: #7F1D1D; font-size: 18px; margin-bottom: 20px;">
+                                This onboarding page requires a valid group parameter in the URL.
+                            </p>
+                            <p style="color: #7F1D1D; margin-bottom: 30px;">
+                                Please contact support for the correct onboarding link:
+                            </p>
+                            <a href="mailto:support@dfycrm.com" style="
+                                display: inline-block;
+                                background: #DC2626;
+                                color: white;
+                                padding: 12px 30px;
+                                border-radius: 8px;
+                                text-decoration: none;
+                                font-weight: bold;
+                                font-size: 16px;
+                            ">support@dfycrm.com</a>
+                        </div>
+                    `;
                     return;
                 }
 

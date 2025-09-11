@@ -1795,13 +1795,15 @@
                 document.getElementById('editUserProfileCompleted').checked = user.profile_completed || false;
                 document.getElementById('editUserNotifications').checked = user.notifications_enabled !== false;
 
-                // Populate user groups dropdown
+                // Populate user groups dropdown (read-only - groups are set by URL parameter)
                 const groupSelect = document.getElementById('editUserGroup');
                 groupSelect.innerHTML = '<option value="">No Group</option>';
                 userGroups.forEach(group => {
                     const selected = user.user_group_id === group.id ? 'selected' : '';
                     groupSelect.innerHTML += `<option value="${group.id}" ${selected}>${group.group_name}</option>`;
                 });
+                // Disable the select since groups are managed by URL parameter
+                groupSelect.disabled = true;
 
                 // Populate tasks checklist
                 const completedTasks = user.completed_tasks || [];
@@ -1849,7 +1851,8 @@
                     last_name: document.getElementById('editUserLastName').value || null,
                     cell_phone: document.getElementById('editUserPhone').value || null,
                     company_name: document.getElementById('editUserCompany').value || null,
-                    user_group_id: document.getElementById('editUserGroup').value || null,
+                    // user_group_id is not updated here - it's managed by URL parameter on login
+                    // user_group_id: document.getElementById('editUserGroup').value || null,
                     completed_tasks: completedTasks,
                     profile_completed: document.getElementById('editUserProfileCompleted').checked,
                     notifications_enabled: document.getElementById('editUserNotifications').checked,
@@ -3430,10 +3433,10 @@
                     <h3>Group Assignment</h3>
                     <div class="form-group">
                         <label for="editUserGroup">User Group</label>
-                        <select id="editUserGroup">
+                        <select id="editUserGroup" disabled style="background: #f3f4f6; cursor: not-allowed;">
                             <option value="">No Group</option>
                         </select>
-                        <small>Assign user to a group for targeted task sequences</small>
+                        <small style="color: #ef4444;">Groups are automatically assigned based on the URL parameter used during login</small>
                     </div>
                 </div>
 
