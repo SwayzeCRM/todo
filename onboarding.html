@@ -3309,6 +3309,9 @@
         // CSS-based expansion fallback (when Fullscreen API is blocked)
         function useCSSExpansion(taskId, container, video, backBtn, overlayBtn, currentTime, wasPlaying) {
             console.log('Using CSS-based expansion fallback');
+            console.log('Container:', container);
+            console.log('Video element:', video);
+            console.log('Video tagName:', video.tagName);
             
             // Create an overlay div
             const overlay = document.createElement('div');
@@ -3333,6 +3336,7 @@
             // Move container to overlay
             overlay.appendChild(container);
             document.body.appendChild(overlay);
+            console.log('Overlay created and added to body');
             
             // Set container and video styles
             container.style.cssText = `
