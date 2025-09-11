@@ -3171,31 +3171,11 @@
         
         // Video expansion using native Fullscreen API
         function expandVideo(taskId) {
-            console.log('=== EXPAND VIDEO DEBUG ===');
-            console.log('expandVideo called with taskId:', taskId);
-            console.log('Type of taskId:', typeof taskId);
-            
-            // Log all video elements
-            const allVideos = document.querySelectorAll('[id^="task-video-"]');
-            console.log('All video elements found:', allVideos.length);
-            allVideos.forEach(v => console.log('  -', v.id));
-            
-            // Log all containers
-            const allContainers = document.querySelectorAll('[id^="video-container-"]');
-            console.log('All container elements found:', allContainers.length);
-            allContainers.forEach(c => console.log('  -', c.id));
-            
             const video = document.getElementById(`task-video-${taskId}`);
             const container = document.getElementById(`video-container-${taskId}`);
             
-            console.log('Looking for video:', `task-video-${taskId}`, 'Found:', !!video);
-            console.log('Looking for container:', `video-container-${taskId}`, 'Found:', !!container);
-            
             if (!video || !container) {
-                console.error('Video or container not found!');
-                console.error('Video element:', video);
-                console.error('Container element:', container);
-                alert(`Cannot expand video: ${!video ? 'Video' : 'Container'} element not found for task ${taskId}`);
+                console.error('Cannot expand video: Element not found');
                 return;
             }
             
@@ -3205,9 +3185,6 @@
             if (video.tagName === 'VIDEO') {
                 currentTime = video.currentTime;
                 wasPlaying = !video.paused;
-                console.log('Storing position:', currentTime, 'Playing:', wasPlaying);
-            } else {
-                console.log('Element is iframe, no playback state to store');
             }
             
             // Hide the overlay expand button if it exists
@@ -3290,8 +3267,7 @@
                     })
                     .catch(err => {
                         console.error('Failed to enter fullscreen:', err);
-                        console.log('Using CSS-based expansion as fallback');
-                        
+                                
                         // Clean up fullscreen listeners
                         document.removeEventListener('fullscreenchange', fullscreenChangeHandler);
                         document.removeEventListener('webkitfullscreenchange', fullscreenChangeHandler);
@@ -3308,10 +3284,6 @@
         
         // CSS-based expansion fallback (when Fullscreen API is blocked)
         function useCSSExpansion(taskId, container, video, backBtn, overlayBtn, currentTime, wasPlaying) {
-            console.log('Using CSS-based expansion fallback');
-            console.log('Container:', container);
-            console.log('Video element:', video);
-            console.log('Video tagName:', video.tagName);
             
             // Create an overlay div
             const overlay = document.createElement('div');
@@ -3337,13 +3309,11 @@
             let savedTime = 0;
             if (video.tagName === 'VIDEO') {
                 savedTime = video.currentTime;
-                console.log('Saved video position before move:', savedTime);
             }
             
             // Move container to overlay
             overlay.appendChild(container);
             document.body.appendChild(overlay);
-            console.log('Overlay created and added to body');
             
             // Set container and video styles
             container.style.cssText = `
@@ -3387,7 +3357,6 @@
                 let exitTime = 0;
                 if (video.tagName === 'VIDEO') {
                     exitTime = video.currentTime;
-                    console.log('Saving position before exit:', exitTime);
                 }
                 
                 // Move container back
@@ -3414,7 +3383,6 @@
                 if (video.tagName === 'VIDEO') {
                     if (exitTime > 0) {
                         video.currentTime = exitTime;
-                        console.log('Restored position after exit:', exitTime);
                     }
                     if (wasPlaying) {
                         video.play().catch(e => console.log('Resume play failed:', e));
@@ -3439,7 +3407,6 @@
                 // Restore to saved position (DOM move resets video)
                 if (savedTime > 0) {
                     video.currentTime = savedTime;
-                    console.log('Restored video position to:', savedTime);
                 }
                 if (wasPlaying) {
                     video.play().catch(e => console.log('Play failed:', e));
