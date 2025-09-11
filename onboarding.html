@@ -3284,17 +3284,134 @@
                     })
                     .catch(err => {
                         console.error('Failed to enter fullscreen:', err);
-                        // Clean up on failure
-                        backBtn.remove();
-                        if (overlayBtn) {
-                            overlayBtn.style.display = '';
-                        }
+                        console.log('Using CSS-based expansion as fallback');
+                        
+                        // Clean up fullscreen listeners
                         document.removeEventListener('fullscreenchange', fullscreenChangeHandler);
                         document.removeEventListener('webkitfullscreenchange', fullscreenChangeHandler);
+                        
+                        // Use CSS-based fallback
+                        useCSSExpansion(taskId, container, video, backBtn, overlayBtn, currentTime, wasPlaying);
                     });
             } else {
                 console.error('Fullscreen API not supported');
+                // Use CSS-based fallback
+                useCSSExpansion(taskId, container, video, backBtn, overlayBtn, currentTime, wasPlaying);
+            }
+        }
+        
+        // CSS-based expansion fallback (when Fullscreen API is blocked)
+        function useCSSExpansion(taskId, container, video, backBtn, overlayBtn, currentTime, wasPlaying) {
+            console.log('Using CSS-based expansion fallback');
+            
+            // Create an overlay div
+            const overlay = document.createElement('div');
+            overlay.id = `expanded-overlay-${taskId}`;
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: black;
+                z-index: 99999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+            
+            // Store original parent and position
+            const originalParent = container.parentNode;
+            const originalNextSibling = container.nextSibling;
+            
+            // Move container to overlay
+            overlay.appendChild(container);
+            document.body.appendChild(overlay);
+            
+            // Set container and video styles
+            container.style.cssText = `
+                width: 100vw;
+                height: 100vh;
+                position: relative;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: black;
+            `;
+            
+            video.style.cssText = `
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                max-width: 100vw;
+                max-height: 100vh;
+            `;
+            
+            // Update back button to work with CSS expansion
+            backBtn.style.cssText = `
+                position: absolute;
+                top: 20px;
+                left: 20px;
+                z-index: 100000;
+                background: rgba(0,0,0,0.8);
+                color: white;
+                border: 2px solid white;
+                padding: 10px 20px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 16px;
+            `;
+            
+            const exitExpanded = () => {
+                // Restore video position
+                if (Math.abs(video.currentTime - currentTime) > 0.1) {
+                    video.currentTime = currentTime;
+                }
+                
+                // Move container back
+                if (originalNextSibling) {
+                    originalParent.insertBefore(container, originalNextSibling);
+                } else {
+                    originalParent.appendChild(container);
+                }
+                
+                // Reset styles
+                container.style.cssText = 'position: relative;';
+                video.style.cssText = 'width: 100%; height: 100%; display: block; cursor: pointer;';
+                
+                // Remove overlay
+                overlay.remove();
+                
+                // Clean up
                 backBtn.remove();
+                if (overlayBtn) {
+                    overlayBtn.style.display = '';
+                }
+                
+                // Resume playback if needed
+                if (wasPlaying) {
+                    video.play().catch(e => console.log('Resume play failed:', e));
+                }
+            };
+            
+            // Update back button click handler
+            backBtn.onclick = exitExpanded;
+            
+            // Add escape key handler
+            const escapeHandler = (e) => {
+                if (e.key === 'Escape') {
+                    exitExpanded();
+                    document.removeEventListener('keydown', escapeHandler);
+                }
+            };
+            document.addEventListener('keydown', escapeHandler);
+            
+            // Restore video position and playback
+            if (Math.abs(video.currentTime - currentTime) > 0.1) {
+                video.currentTime = currentTime;
+            }
+            if (wasPlaying) {
+                video.play().catch(e => console.log('Play failed:', e));
             }
         }
         
