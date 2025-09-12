@@ -2577,24 +2577,65 @@
                     // This ensures users are automatically moved to new groups when URL changes
                     if (groupSlug) {
                         const newGroup = await findGroupBySlug(groupSlug);
-                        if (newGroup && newGroup.id !== existingUser.user_group_id) {
-                            console.log('Updating user group from', existingUser.user_group_id, 'to', newGroup.id);
-                            
-                            // Update user's group
-                            const { error: updateError } = await supabaseClient
-                                .from('onboarding_users')
-                                .update({ 
-                                    user_group_id: newGroup.id,
-                                    updated_at: new Date().toISOString()
-                                })
-                                .eq('id', existingUser.id);
-                            
-                            if (updateError) {
-                                console.error('Error updating user group:', updateError);
+                        if (newGroup) {
+                            if (newGroup.id !== existingUser.user_group_id) {
+                                console.log('User group changed from', existingUser.user_group_id, 'to', newGroup.id);
+                                
+                                // Load tasks for the new group
+                                const tasks = await loadTasks();
+                                
+                                // Get all task groups that belong to this user group
+                                const { data: taskGroups, error: taskGroupsError } = await supabaseClient
+                                    .from('task_groups')
+                                    .select('id')
+                                    .eq('user_group_id', newGroup.id)
+                                    .eq('is_active', true);
+                                
+                                if (taskGroupsError) {
+                                    console.error('Error fetching task groups:', taskGroupsError);
+                                }
+                                
+                                const taskGroupIds = taskGroups ? taskGroups.map(tg => tg.id) : [];
+                                console.log('Task groups for user group', newGroup.id, ':', taskGroupIds);
+                                
+                                // Create new checklist for the new group
+                                const newChecklist = tasks
+                                    .filter(task => {
+                                        // Include tasks that belong to task groups of this user group
+                                        return task.task_group_id && taskGroupIds.includes(task.task_group_id);
+                                    })
+                                    .map(task => ({
+                                        id: task.task_id,
+                                        completed: false  // Reset all tasks to incomplete for new group
+                                    }));
+                                
+                                console.log('Resetting checklist for new group with', newChecklist.length, 'tasks');
+                                
+                                // Update user's group and reset checklist
+                                const { error: updateError } = await supabaseClient
+                                    .from('onboarding_users')
+                                    .update({ 
+                                        user_group_id: newGroup.id,
+                                        checklist: newChecklist,
+                                        completed_tasks: [],  // Clear completed tasks
+                                        updated_at: new Date().toISOString()
+                                    })
+                                    .eq('id', existingUser.id);
+                                
+                                if (updateError) {
+                                    console.error('Error updating user group:', updateError);
+                                } else {
+                                    existingUser.user_group_id = newGroup.id;
+                                    existingUser.checklist = newChecklist;
+                                    existingUser.completed_tasks = [];
+                                    console.log('User group and checklist updated successfully');
+                                }
                             } else {
-                                existingUser.user_group_id = newGroup.id;
-                                console.log('User group updated successfully');
+                                console.log('User already in group:', newGroup.group_name);
                             }
+                        } else {
+                            console.error('Invalid group slug:', groupSlug);
+                            showError('Invalid group specified in URL. Please contact support@dfycrm.com');
                         }
                     }
                     
