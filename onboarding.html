@@ -2520,24 +2520,42 @@
                 // First try to find by exact slug match
                 const { data: groups, error } = await supabaseClient
                     .from('user_groups')
-                    .select('*');
+                    .select('*')
+                    .eq('is_active', true);
                     
                 if (error) {
                     console.error('Error fetching groups:', error);
                     return null;
                 }
                 
-                // Look for matching group by slug
-                const matchingGroup = groups.find(group => 
-                    createUrlSlug(group.group_name) === groupSlug.toLowerCase()
-                );
+                console.log('Available groups:', groups?.map(g => g.group_name));
+                console.log('Looking for group with slug:', groupSlug);
+                
+                // Look for matching group by multiple methods
+                const matchingGroup = groups.find(group => {
+                    // Try exact name match (case insensitive)
+                    if (group.group_name.toLowerCase() === groupSlug.toLowerCase()) {
+                        return true;
+                    }
+                    // Try slug match
+                    if (createUrlSlug(group.group_name) === groupSlug.toLowerCase()) {
+                        return true;
+                    }
+                    // Try removing spaces and special chars
+                    const simplifiedName = group.group_name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const simplifiedSlug = groupSlug.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    if (simplifiedName === simplifiedSlug) {
+                        return true;
+                    }
+                    return false;
+                });
                 
                 if (matchingGroup) {
                     console.log('Found matching group:', matchingGroup);
                     return matchingGroup;
                 }
                 
-                // If no slug match, return null
+                console.log('No matching group found for slug:', groupSlug);
                 return null;
             } catch (error) {
                 console.error('Error finding group:', error);
@@ -2659,27 +2677,37 @@
                 if (!groupToAssign) {
                     console.log('No valid group found for parameter:', groupSlug);
                     showError('Invalid group specified. Please contact support@dfycrm.com for assistance.');
-                    document.getElementById('app').innerHTML = `
-                        <div style="text-align: center; padding: 50px; background: #FEE2E2; border-radius: 8px; margin: 20px;">
-                            <h2 style="color: #DC2626; margin-bottom: 20px;">Invalid Group</h2>
-                            <p style="color: #7F1D1D; font-size: 18px; margin-bottom: 20px;">
-                                The group "${groupSlug}" is not valid.
-                            </p>
-                            <p style="color: #7F1D1D; margin-bottom: 30px;">
-                                Please contact support for assistance:
-                            </p>
-                            <a href="mailto:support@dfycrm.com" style="
-                                display: inline-block;
-                                background: #DC2626;
-                                color: white;
-                                padding: 12px 30px;
-                                border-radius: 8px;
-                                text-decoration: none;
-                                font-weight: bold;
-                                font-size: 16px;
-                            ">support@dfycrm.com</a>
-                        </div>
-                    `;
+                    
+                    // Check if app element exists before setting innerHTML
+                    const appElement = document.getElementById('app');
+                    if (appElement) {
+                        appElement.innerHTML = `
+                            <div style="text-align: center; padding: 50px; background: #FEE2E2; border-radius: 8px; margin: 20px;">
+                                <h2 style="color: #DC2626; margin-bottom: 20px;">Invalid Group</h2>
+                                <p style="color: #7F1D1D; font-size: 18px; margin-bottom: 20px;">
+                                    The group "${groupSlug}" is not valid or does not exist in the system.
+                                </p>
+                                <p style="color: #6B7280; background: #F3F4F6; padding: 12px; border-radius: 6px; margin: 20px 0;">
+                                    Please ensure a user group named "<strong>DFY</strong>" exists in the admin panel.
+                                </p>
+                                <p style="color: #7F1D1D; margin-bottom: 30px;">
+                                    Contact support for assistance:
+                                </p>
+                                <a href="mailto:support@dfycrm.com" style="
+                                    display: inline-block;
+                                    background: #DC2626;
+                                    color: white;
+                                    padding: 12px 30px;
+                                    border-radius: 8px;
+                                    text-decoration: none;
+                                    font-weight: bold;
+                                    font-size: 16px;
+                                ">support@dfycrm.com</a>
+                            </div>
+                        `;
+                    } else {
+                        console.error('App element not found in DOM');
+                    }
                     return;
                 }
                 
