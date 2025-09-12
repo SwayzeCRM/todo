@@ -4108,13 +4108,58 @@
                 const params = getUrlParams();
                 console.log('URL parameters:', params);
 
+                // Check for template variables that weren't replaced
+                if (params.email === '{{user.email}}' || params.locationId === '{{location.id}}') {
+                    showError('Invalid URL - template variables detected');
+                    document.getElementById('app').innerHTML = `
+                        <div style="text-align: center; padding: 50px; background: #FEE2E2; border-radius: 8px; margin: 20px;">
+                            <h2 style="color: #DC2626; margin-bottom: 20px;">Invalid URL Parameters</h2>
+                            <p style="color: #7F1D1D; font-size: 18px; margin-bottom: 20px;">
+                                The URL contains template variables that need to be replaced with actual values.
+                            </p>
+                            <p style="color: #6B7280; background: #F3F4F6; padding: 12px; border-radius: 6px; margin: 20px 0; font-family: monospace; font-size: 14px;">
+                                Current URL has:<br>
+                                email = ${params.email || '(missing)'}<br>
+                                locationId = ${params.locationId || '(missing)'}<br>
+                                group = ${params.group || '(missing)'}
+                            </p>
+                            <p style="color: #7F1D1D; margin-bottom: 20px;">
+                                For testing, use actual values like:<br>
+                                <code style="background: #F3F4F6; padding: 8px; border-radius: 4px; display: inline-block; margin-top: 10px;">
+                                    ?email=test@example.com&locationId=test123&group=dfy
+                                </code>
+                            </p>
+                            <p style="color: #7F1D1D; margin-bottom: 30px;">
+                                For production use, contact support:
+                            </p>
+                            <a href="mailto:support@dfycrm.com" style="
+                                display: inline-block;
+                                background: #DC2626;
+                                color: white;
+                                padding: 12px 30px;
+                                border-radius: 8px;
+                                text-decoration: none;
+                                font-weight: bold;
+                                font-size: 16px;
+                            ">support@dfycrm.com</a>
+                        </div>
+                    `;
+                    return;
+                }
+
                 if (!params.email || !params.locationId || !params.group) {
                     showError('Missing required parameters. The group parameter is required.');
                     document.getElementById('app').innerHTML = `
                         <div style="text-align: center; padding: 50px; background: #FEE2E2; border-radius: 8px; margin: 20px;">
                             <h2 style="color: #DC2626; margin-bottom: 20px;">Access Error</h2>
                             <p style="color: #7F1D1D; font-size: 18px; margin-bottom: 20px;">
-                                This onboarding page requires a valid group parameter in the URL.
+                                This onboarding page requires valid email, locationId, and group parameters in the URL.
+                            </p>
+                            <p style="color: #6B7280; background: #F3F4F6; padding: 12px; border-radius: 6px; margin: 20px 0; font-family: monospace; font-size: 14px;">
+                                Current parameters:<br>
+                                email = ${params.email || '(missing)'}<br>
+                                locationId = ${params.locationId || '(missing)'}<br>
+                                group = ${params.group || '(missing)'}
                             </p>
                             <p style="color: #7F1D1D; margin-bottom: 30px;">
                                 Please contact support for the correct onboarding link:
