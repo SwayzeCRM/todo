@@ -2162,6 +2162,12 @@
 
         // Filter tasks based on user targeting
         function filterTasksForUser(tasks, user) {
+            // If no user, return empty array
+            if (!user) {
+                console.warn('filterTasksForUser called without user');
+                return [];
+            }
+            
             return tasks.filter(task => {
                 const targetType = task.target_type;
                 
@@ -2591,20 +2597,41 @@
                 const formattedName = groupName.toUpperCase().replace(/_/g, ' ');
                 console.log('Attempting to create group:', formattedName);
                 
+                // Create group with only the fields that exist in the table
+                const groupData = {
+                    group_name: formattedName,
+                    group_description: `Auto-created group for ${formattedName}`
+                };
+                
+                // Add timestamps if they exist in the schema
+                const now = new Date().toISOString();
+                groupData.created_at = now;
+                groupData.updated_at = now;
+                
                 const { data: newGroup, error } = await supabaseClient
                     .from('user_groups')
-                    .insert([{
-                        group_name: formattedName,
-                        group_description: `Auto-created group for ${formattedName}`,
-                        is_active: true,
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                    }])
+                    .insert([groupData])
                     .select()
                     .single();
                 
                 if (error) {
                     console.error('Error creating group:', error);
+                    // If error is about is_active, try without it
+                    if (error.message?.includes('is_active')) {
+                        console.log('Retrying without is_active field...');
+                        delete groupData.is_active;
+                        const { data: retryGroup, error: retryError } = await supabaseClient
+                            .from('user_groups')
+                            .insert([groupData])
+                            .select()
+                            .single();
+                        
+                        if (retryError) {
+                            console.error('Retry also failed:', retryError);
+                            return null;
+                        }
+                        return retryGroup;
+                    }
                     return null;
                 }
                 
@@ -2732,7 +2759,7 @@
                     showError('Invalid group specified. Please contact support@dfycrm.com for assistance.');
                     
                     // Check if app element exists before setting innerHTML
-                    const appElement = document.getElementById('app');
+                    const appElement = document.getElementById('mainContainer');
                     if (appElement) {
                         appElement.innerHTML = `
                             <div style="text-align: center; padding: 50px; background: #FEE2E2; border-radius: 8px; margin: 20px;">
@@ -4192,7 +4219,7 @@
                 // Check for template variables that weren't replaced
                 if (params.email === '{{user.email}}' || params.locationId === '{{location.id}}') {
                     showError('Invalid URL - template variables detected');
-                    document.getElementById('app').innerHTML = `
+                    document.getElementById('mainContainer').innerHTML = `
                         <div style="text-align: center; padding: 50px; background: #FEE2E2; border-radius: 8px; margin: 20px;">
                             <h2 style="color: #DC2626; margin-bottom: 20px;">Invalid URL Parameters</h2>
                             <p style="color: #7F1D1D; font-size: 18px; margin-bottom: 20px;">
@@ -4230,7 +4257,7 @@
 
                 if (!params.email || !params.locationId || !params.group) {
                     showError('Missing required parameters. The group parameter is required.');
-                    document.getElementById('app').innerHTML = `
+                    document.getElementById('mainContainer').innerHTML = `
                         <div style="text-align: center; padding: 50px; background: #FEE2E2; border-radius: 8px; margin: 20px;">
                             <h2 style="color: #DC2626; margin-bottom: 20px;">Access Error</h2>
                             <p style="color: #7F1D1D; font-size: 18px; margin-bottom: 20px;">
@@ -4262,6 +4289,12 @@
 
                 // Load user and tasks
                 const user = await loadUser(params.email, params.locationId, params.group);
+                
+                if (!user) {
+                    console.error('Failed to load or create user');
+                    showError('Failed to initialize user. Please refresh the page or contact support.');
+                    return;
+                }
                 
                 currentUser = user;
                 
