@@ -2520,21 +2520,36 @@
                 // First try to find by exact slug match
                 const { data: groups, error } = await supabaseClient
                     .from('user_groups')
-                    .select('*')
-                    .eq('is_active', true);
+                    .select('*');
                     
                 if (error) {
                     console.error('Error fetching groups:', error);
+                    console.error('Full error details:', error);
+                    
+                    // If table doesn't exist or other error, try to create default group
+                    if (error.code === '42P01' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+                        console.log('User groups table might not exist, attempting to create default group...');
+                        return await createDefaultGroup(groupSlug);
+                    }
                     return null;
                 }
                 
-                console.log('Available groups:', groups?.map(g => g.group_name));
+                // Filter for active groups only if they have is_active field
+                const activeGroups = groups?.filter(g => g.is_active !== false) || [];
+                
+                console.log('Available groups:', activeGroups?.map(g => ({ id: g.id, name: g.group_name, active: g.is_active })));
                 console.log('Looking for group with slug:', groupSlug);
                 
+                // If no groups exist, create the requested one
+                if (!activeGroups || activeGroups.length === 0) {
+                    console.log('No groups exist, creating default group:', groupSlug);
+                    return await createDefaultGroup(groupSlug);
+                }
+                
                 // Look for matching group by multiple methods
-                const matchingGroup = groups.find(group => {
+                const matchingGroup = activeGroups.find(group => {
                     // Try exact name match (case insensitive)
-                    if (group.group_name.toLowerCase() === groupSlug.toLowerCase()) {
+                    if (group.group_name?.toLowerCase() === groupSlug.toLowerCase()) {
                         return true;
                     }
                     // Try slug match
@@ -2542,7 +2557,7 @@
                         return true;
                     }
                     // Try removing spaces and special chars
-                    const simplifiedName = group.group_name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const simplifiedName = group.group_name?.toLowerCase().replace(/[^a-z0-9]/g, '');
                     const simplifiedSlug = groupSlug.toLowerCase().replace(/[^a-z0-9]/g, '');
                     if (simplifiedName === simplifiedSlug) {
                         return true;
@@ -2555,10 +2570,48 @@
                     return matchingGroup;
                 }
                 
+                // If no match found and it's a common group name, create it
+                const commonGroups = ['dfy', 'diy', 'hybrid', 'connect_dashboard', 'connect-dashboard'];
+                if (commonGroups.includes(groupSlug.toLowerCase())) {
+                    console.log('Creating standard group:', groupSlug);
+                    return await createDefaultGroup(groupSlug);
+                }
+                
                 console.log('No matching group found for slug:', groupSlug);
                 return null;
             } catch (error) {
                 console.error('Error finding group:', error);
+                return null;
+            }
+        }
+        
+        // Create a default group if it doesn't exist
+        async function createDefaultGroup(groupName) {
+            try {
+                const formattedName = groupName.toUpperCase().replace(/_/g, ' ');
+                console.log('Attempting to create group:', formattedName);
+                
+                const { data: newGroup, error } = await supabaseClient
+                    .from('user_groups')
+                    .insert([{
+                        group_name: formattedName,
+                        group_description: `Auto-created group for ${formattedName}`,
+                        is_active: true,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    }])
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.error('Error creating group:', error);
+                    return null;
+                }
+                
+                console.log('Successfully created group:', newGroup);
+                return newGroup;
+            } catch (error) {
+                console.error('Error in createDefaultGroup:', error);
                 return null;
             }
         }
